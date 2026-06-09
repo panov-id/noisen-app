@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-large="0">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Noisen</title>
+<meta name="description" content="Minimal PWA for meditative sound generation. Place nodes, shape sound.">
+<meta name="theme-color" content="#08080e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta property="og:title" content="Noisen">
+<meta property="og:description" content="Minimal PWA for meditative sound generation.">
+<meta property="og:image" content="https://noisen.space/marketing/og.png">
+<meta property="og:url" content="https://noisen.space">
+<meta name="twitter:card" content="summary_large_image">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<style>
+/* ── themes ────────────────────────────────────────────────── */
+:root {
+  --bg:         #f0ede8;
+  --bg2:        rgba(240,237,232,0.93);
+  --border:     rgba(40,35,30,0.11);
+  --text:       rgba(40,35,30,0.85);
+  --text-dim:   rgba(40,35,30,0.42);
+  --text-faint: rgba(40,35,30,0.24);
+  --thumb:      rgba(40,35,30,0.72);
+  --track:      rgba(40,35,30,0.14);
+  --shadow:     rgba(0,0,0,0.10);
+  --accent:     rgb(50,110,220);
+  --accent-dim: rgba(50,110,220,0.14);
+  --spec-bg:    rgba(40,35,30,0.04);
+}
+[data-theme="dark"] {
+  --bg:         #08080e;
+  --bg2:        rgba(11,11,20,0.94);
+  --border:     rgba(255,255,255,0.08);
+  --text:       rgba(255,255,255,0.83);
+  --text-dim:   rgba(255,255,255,0.36);
+  --text-faint: rgba(255,255,255,0.16);
+  --thumb:      rgba(255,255,255,0.80);
+  --track:      rgba(255,255,255,0.12);
+  --shadow:     rgba(0,0,0,0.45);
+  --accent:     rgb(90,162,255);
+  --accent-dim: rgba(90,162,255,0.14);
+  --spec-bg:    rgba(255,255,255,0.04);
+}
+[data-large="1"] { --fs:18px; --fs-sm:15px; --fs-xs:13px; }
+[data-large="0"] { --fs:15px; --fs-sm:12px; --fs-xs:11px; }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); overflow:hidden;
+  width:100vw; height:100vh;
+  font-family:'SF Mono','Fira Code',ui-monospace,monospace;
+  font-size:var(--fs,13px); user-select:none; color:var(--text);
+  transition:background .2s, color .2s;
+}
+canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
+
+/* ── tooltip ──────────────────────────────────────────────── */
+#tooltip {
+  position:fixed; z-index:200; display:none; pointer-events:none;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:8px; padding:5px 9px; font-size:10px; color:var(--text);
+  box-shadow:0 4px 16px var(--shadow); max-width:180px; line-height:1.5;
+}
+.tip-title { font-weight:bold; }
+.tip-desc  { color:var(--text-dim); font-size:9px; }
+
+/* ── top bar ──────────────────────────────────────────────── */
+#topbar {
+  position:fixed; top:0; left:0; right:0; height:46px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 14px; background:var(--bg2); border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px); z-index:30;
+}
+#app-name { font-size:12px; letter-spacing:.2em; color:var(--text); opacity:.55; }
+.topbar-right { display:flex; align-items:center; gap:5px; }
+.topbar-sep { width:1px; height:20px; background:var(--border); margin:0 3px; flex-shrink:0; }
+.icon-btn {
+  width:30px; height:30px; border-radius:7px;
+  border:1px solid var(--border); background:transparent; color:var(--text-dim);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .13s; flex-shrink:0; text-decoration:none;
+}
+.icon-btn svg { width:15px; height:15px; }
+.icon-btn:hover, .icon-btn.active {
+  background:var(--accent-dim); border-color:var(--accent); color:var(--accent);
+}
+#pwa-btn {
+  display:none; padding:0 10px; height:26px; border-radius:7px;
+  border:1px solid var(--accent); background:var(--accent-dim); color:var(--accent);
+  font-size:10px; letter-spacing:.06em; cursor:pointer; font-family:inherit;
+}
+
+/* ── bottom panel ─────────────────────────────────────────── */
+#bottom {
+  position:fixed; bottom:0; left:0; right:0;
+  height:var(--panel-h, 194px);
+  display:flex; background:var(--bg2);
+  border-top:1px solid var(--border);
+  backdrop-filter:blur(32px); z-index:30;
+  transition:height .22s ease;
+}
+
+/* play button (lives in topbar) */
+#play-btn {
+  width:32px; height:32px; border-radius:8px;
+  border:1.5px solid var(--border); background:transparent; color:var(--text);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .18s; flex-shrink:0;
+}
+#play-btn:hover { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+#play-btn.on { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+#play-btn svg { width:14px; height:14px; }
+
+/* param area — full width now that play col is gone */
+#param-area { flex:1; min-width:0; position:relative; overflow:hidden; }
+
+.param-view {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+  transform:translateY(5px);
+}
+.param-view.active { opacity:1; pointer-events:auto; transform:translateY(0); }
+
+/* ── global view ──────────────────────────────────────────── */
+#global-view { gap:0; }
+
+/* analytics strip */
+#analytics-strip {
+  display:flex; align-items:center; gap:14px;
+  padding:8px 14px 5px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.an-item {
+  display:flex; flex-direction:column; gap:1px; min-width:0;
+}
+.an-label { font-size:8px; text-transform:uppercase; letter-spacing:.14em; color:var(--text-faint); }
+.an-value { font-size:11px; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.an-sep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+
+/* spectrum canvas */
+#spectrum-wrap {
+  padding:6px 14px 0; flex-shrink:0;
+}
+#spectrum-canvas {
+  width:100%; height:32px; display:block;
+  border-radius:6px; background:var(--spec-bg);
+}
+
+/* global cards row */
+#global-cards {
+  display:flex; gap:7px; padding:8px 14px 10px;
+  overflow-x:auto; flex:1; align-items:stretch;
+  scrollbar-width:none;
+}
+#global-cards::-webkit-scrollbar { display:none; }
+
+/* ── node view ────────────────────────────────────────────── */
+#node-view { gap:0; }
+
+/* node header: type selector + actions */
+#node-header {
+  display:flex; align-items:center; gap:0;
+  padding:8px 10px 7px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  gap:8px;
+}
+.node-color-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+#node-label {
+  font-size:10px; color:var(--text-dim); letter-spacing:.06em; white-space:nowrap;
+}
+.type-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
+
+/* type selector buttons */
+#type-btns {
+  display:flex; gap:4px; align-items:center; flex:1;
+}
+.type-btn {
+  display:flex; align-items:center; gap:4px;
+  padding:4px 8px; border-radius:7px; border:1px solid var(--border);
+  background:transparent; color:var(--text-dim);
+  cursor:pointer; font-size:9px; letter-spacing:.06em; text-transform:uppercase;
+  font-family:inherit; transition:all .12s; white-space:nowrap;
+}
+.type-btn svg { width:13px; height:13px; flex-shrink:0; }
+.type-btn:hover { border-color:var(--node-color, var(--accent)); color:var(--node-color, var(--accent)); }
+.type-btn.active {
+  background:var(--node-color-dim, var(--accent-dim));
+  border-color:var(--node-color, var(--accent));
+  color:var(--node-color, var(--accent));
+}
+
+/* action buttons */
+#node-actions { display:flex; gap:4px; align-items:center; }
+.action-btn {
+  width:28px; height:28px; border-radius:7px;
+  border:1px solid var(--border); background:transparent; color:var(--text-dim);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .12s; flex-shrink:0;
+}
+.action-btn svg { width:14px; height:14px; }
+.action-btn:hover { border-color:var(--accent); color:var(--accent); }
+.action-btn.danger:hover { border-color:#e03030; color:#e03030; }
+.action-btn.muted { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+#node-close { }
+
+/* node info strip */
+#node-info-strip {
+  display:flex; align-items:center; gap:12px;
+  padding:5px 14px 4px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.ni-item {
+  display:flex; gap:4px; align-items:baseline;
+}
+.ni-label { font-size:8px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-faint); }
+.ni-value { font-size:11px; color:var(--text); font-variant-numeric:tabular-nums; }
+
+/* node cards row */
+#node-cards {
+  display:flex; gap:7px; padding:8px 14px 10px;
+  overflow-x:auto; flex:1; align-items:stretch;
+  scrollbar-width:none;
+}
+#node-cards::-webkit-scrollbar { display:none; }
+
+/* ── param card ───────────────────────────────────────────── */
+.param-card {
+  display:flex; flex-direction:column; gap:5px;
+  padding:8px 10px 7px; border-radius:11px;
+  border:1px solid var(--border); background:rgba(128,128,128,.03);
+  min-width:72px; flex:1; transition:border-color .14s, background .14s;
+}
+.param-card:hover {
+  border-color:var(--card-accent, var(--border));
+  background:var(--card-accent-dim, transparent);
+}
+.card-top { display:flex; align-items:center; justify-content:space-between; }
+.card-icon { color:var(--text-dim); display:flex; align-items:center; }
+.card-icon svg { width:13px; height:13px; }
+.card-val {
+  font-size:11px; color:var(--card-accent, var(--text));
+  font-variant-numeric:tabular-nums; font-weight:500;
+}
+.card-slider {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:3px; border-radius:2px; border:none;
+  outline:none; cursor:pointer; touch-action:none;
+  background:linear-gradient(to right,
+    var(--card-accent, var(--thumb)) 0%,
+    var(--card-accent, var(--thumb)) var(--pct,50%),
+    var(--track) var(--pct,50%), var(--track) 100%
+  );
+}
+.card-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+  background:var(--card-accent, var(--thumb)); box-shadow:0 1px 5px rgba(0,0,0,.2); cursor:pointer;
+}
+.card-slider::-moz-range-thumb {
+  width:15px; height:15px; border-radius:50%; border:none;
+  background:var(--card-accent, var(--thumb)); cursor:pointer;
+}
+.card-label { font-size:8px; text-transform:uppercase; letter-spacing:.13em; color:var(--text-faint); }
+
+/* ── onboarding wizard ────────────────────────────────────── */
+#wizard {
+  position:fixed; inset:0; z-index:150;
+  background:rgba(0,0,0,0.55);
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(2px);
+  transition:opacity .22s ease;
+}
+#wizard.hide { opacity:0; pointer-events:none; }
+#wizard-card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:20px; padding:24px 24px 20px; width:min(400px,90vw);
+  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+  transform:translateY(0); transition:transform .22s ease;
+}
+#wizard.hide #wizard-card { transform:translateY(12px); }
+.wiz-step-bar { display:flex; gap:5px; margin-bottom:18px; }
+.wiz-pip {
+  height:3px; border-radius:2px; flex:1;
+  background:var(--border); transition:background .25s;
+}
+.wiz-pip.done   { background:var(--accent); }
+.wiz-pip.active { background:var(--accent); opacity:.5; }
+.wiz-icon { font-size:28px; margin-bottom:10px; display:block; line-height:1; }
+.wiz-title {
+  font-size:15px; font-weight:700; color:var(--text);
+  margin-bottom:8px; letter-spacing:.01em;
+}
+.wiz-body {
+  font-size:12px; color:var(--text-dim); line-height:1.8;
+  margin-bottom:18px; min-height:72px;
+}
+.wiz-footer { display:flex; align-items:center; justify-content:space-between; }
+.wiz-skip {
+  font-size:11px; color:var(--text-faint); background:none; border:none;
+  cursor:pointer; font-family:inherit; letter-spacing:.06em; padding:0;
+}
+.wiz-skip:hover { color:var(--text-dim); }
+.wiz-nav { display:flex; gap:8px; }
+.wiz-prev {
+  height:34px; padding:0 14px; border-radius:9px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text-dim); font-family:inherit; font-size:11px;
+  cursor:pointer; transition:all .12s;
+}
+.wiz-prev:hover { border-color:var(--accent); color:var(--accent); }
+.wiz-next {
+  height:34px; padding:0 18px; border-radius:9px;
+  border:1px solid var(--accent); background:var(--accent-dim);
+  color:var(--accent); font-family:inherit; font-size:11px;
+  letter-spacing:.04em; cursor:pointer; transition:all .12s;
+}
+.wiz-next:hover { background:var(--accent); color:#fff; }
+
+/* highlight ring on wizard-targeted elements */
+.wizard-ring {
+  outline:2px solid var(--accent) !important;
+  outline-offset:3px;
+  box-shadow:0 0 0 6px var(--accent-dim) !important;
+  border-radius:9px;
+  transition:outline .2s, box-shadow .2s;
+}
+
+/* ? help button in topbar */
+#help-btn { font-size:13px; font-weight:700; }
+
+/* ── nodes overview overlay ───────────────────────────────── */
+#nodes-overlay {
+  position:fixed; inset:0; z-index:90;
+  background:rgba(0,0,0,0.42);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .18s ease;
+}
+#nodes-overlay.open { opacity:1; pointer-events:auto; }
+#nodes-sheet {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:16px; width:min(460px, 92vw); max-height:62vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 18px 52px rgba(0,0,0,0.36);
+  overflow:hidden;
+}
+.nodes-sheet-header {
+  padding:12px 14px 10px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.nodes-sheet-title { font-size:11px; letter-spacing:.12em; color:var(--text-dim); }
+#nodes-list {
+  overflow-y:auto; flex:1; padding:7px;
+  display:flex; flex-direction:column; gap:3px;
+  scrollbar-width:thin;
+}
+.node-row {
+  display:flex; align-items:center; gap:9px;
+  padding:7px 10px; border-radius:9px;
+  border:1px solid var(--border); cursor:pointer;
+  transition:all .12s; flex-shrink:0;
+}
+.node-row:hover { background:var(--accent-dim); border-color:var(--accent); }
+.node-row-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.node-row-id { font-size:9px; color:var(--text-faint); min-width:18px; }
+.node-row-icon { width:15px; height:15px; flex-shrink:0; color:var(--text-dim); }
+.node-row-icon svg { width:15px; height:15px; }
+.node-row-type { font-size:8px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-dim); min-width:54px; }
+.node-row-freq { font-size:11px; font-variant-numeric:tabular-nums; color:var(--text); flex:1; }
+.node-row-filter { font-size:9px; color:var(--text-faint); min-width:46px; }
+.node-row-vol { font-size:9px; color:var(--text-faint); min-width:30px; text-align:right; }
+.node-row-muted-tag {
+  font-size:8px; text-transform:uppercase; letter-spacing:.1em;
+  color:var(--text-faint); border:1px solid var(--border);
+  border-radius:4px; padding:1px 5px;
+}
+
+/* ── presets overlay ──────────────────────────────────────── */
+#presets-overlay {
+  position:fixed; inset:0; z-index:90;
+  background:rgba(0,0,0,0.42);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .18s ease;
+}
+#presets-overlay.open { opacity:1; pointer-events:auto; }
+#presets-sheet {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:16px; width:min(460px, 92vw); max-height:72vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 18px 52px rgba(0,0,0,0.36); overflow:hidden;
+}
+.presets-header {
+  padding:12px 14px 10px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.presets-header-title { font-size:11px; letter-spacing:.12em; color:var(--text-dim); }
+
+/* save row */
+.presets-save-row {
+  display:flex; gap:6px; align-items:center;
+  padding:10px 12px; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+#preset-name-input {
+  flex:1; height:32px; border-radius:8px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text); font-family:inherit; font-size:12px;
+  padding:0 10px; outline:none; transition:border-color .13s;
+}
+#preset-name-input:focus { border-color:var(--accent); }
+#preset-name-input::placeholder { color:var(--text-faint); }
+.preset-action-btn {
+  height:32px; padding:0 12px; border-radius:8px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text-dim); font-family:inherit; font-size:11px;
+  letter-spacing:.05em; cursor:pointer; white-space:nowrap;
+  transition:all .12s; flex-shrink:0;
+}
+.preset-action-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.preset-action-btn.primary {
+  border-color:var(--accent); color:var(--accent); background:var(--accent-dim);
+}
+.preset-action-btn.share {
+  padding:0 10px;
+}
+
+/* share confirm banner */
+#share-confirm {
+  display:none; font-size:10px; color:var(--accent);
+  padding:4px 12px; letter-spacing:.05em;
+}
+
+/* preset list */
+#presets-list {
+  overflow-y:auto; flex:1; padding:7px;
+  display:flex; flex-direction:column; gap:3px;
+  scrollbar-width:thin;
+}
+.preset-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:9px;
+  border:1px solid var(--border); flex-shrink:0;
+}
+.preset-row-name {
+  flex:1; font-size:12px; color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.preset-row-nodes { font-size:9px; color:var(--text-faint); white-space:nowrap; }
+.preset-row-load {
+  height:26px; padding:0 10px; border-radius:6px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text-dim); font-family:inherit; font-size:10px;
+  cursor:pointer; transition:all .11s; flex-shrink:0;
+}
+.preset-row-load:hover { border-color:var(--accent); color:var(--accent); }
+.preset-row-share {
+  width:26px; height:26px; border-radius:6px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text-dim); cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:all .11s; flex-shrink:0;
+}
+.preset-row-share svg { width:13px; height:13px; }
+.preset-row-share:hover { border-color:var(--accent); color:var(--accent); }
+.preset-row-del {
+  width:26px; height:26px; border-radius:6px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--text-faint); cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:all .11s; flex-shrink:0;
+}
+.preset-row-del svg { width:13px; height:13px; }
+.preset-row-del:hover { border-color:#e03030; color:#e03030; }
+.presets-empty {
+  padding:24px; text-align:center; font-size:11px; color:var(--text-faint);
+}
+
+/* ── toast notification ───────────────────────────────────── */
+#toast {
+  position:fixed; bottom:calc(var(--panel-h, 194px) + 12px); left:50%; transform:translateX(-50%);
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:20px; padding:7px 16px; font-size:11px; letter-spacing:.06em;
+  color:var(--text); box-shadow:0 4px 20px var(--shadow);
+  pointer-events:none; z-index:80;
+  opacity:0; transition:opacity .3s ease;
+  white-space:nowrap;
+}
+
+/* ── responsive — mobile portrait ────────────────────────────
+   breakpoint: ≤ 480px (covers all phone portrait orientations)   */
+@media (max-width: 480px) {
+
+  /* topbar: hide github link, reduce gaps */
+  #topbar { padding: 0 10px; }
+  #topbar a.icon-btn { display: none; }
+  .topbar-right { gap: 4px; }
+  .icon-btn { width: 34px; height: 34px; }
+
+  /* bottom panel: taller to give breathing room */
+  :root { --panel-h: 228px; }
+
+  /* analytics strip: horizontal scroll, compact */
+  #analytics-strip {
+    gap: 10px; padding: 6px 10px 4px;
+    overflow-x: auto; flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  #analytics-strip::-webkit-scrollbar { display: none; }
+  .an-value { font-size: 12px; }
+
+  /* spectrum: slightly shorter */
+  #spectrum-canvas { height: 26px; }
+  #spectrum-wrap { padding: 5px 10px 0; }
+
+  /* global cards: smaller min-width, more padding room */
+  #global-cards { padding: 7px 10px 8px; gap: 5px; }
+
+  /* node header: compact, type buttons icon-only */
+  #node-header { padding: 7px 8px; gap: 6px; }
+  .type-btn { padding: 6px 7px; }
+  .type-btn span { display: none; }
+  .type-btn svg { width: 16px; height: 16px; }
+  #type-btns { overflow-x: auto; scrollbar-width: none; }
+  #type-btns::-webkit-scrollbar { display: none; }
+
+  /* node info strip: horizontal scroll */
+  #node-info-strip {
+    overflow-x: auto; scrollbar-width: none;
+    gap: 9px; padding: 5px 10px 4px;
+  }
+  #node-info-strip::-webkit-scrollbar { display: none; }
+  /* hide less critical columns on very small screens */
+  #node-info-strip .an-sep:nth-child(6),
+  #node-info-strip .an-sep:nth-child(6) + .ni-item { display: none; }
+
+  /* node cards: compact */
+  #node-cards { padding: 7px 10px 8px; gap: 5px; }
+
+  /* param card: adjust */
+  .param-card { min-width: 68px; padding: 7px 8px 6px; }
+  .card-val { font-size: 12px; }
+
+  /* slider: bigger thumb for finger touch */
+  .card-slider { height: 4px; border-radius: 3px; }
+  .card-slider::-webkit-slider-thumb { width: 20px; height: 20px; }
+  .card-slider::-moz-range-thumb    { width: 20px; height: 20px; }
+
+  /* action buttons: slightly bigger touch target */
+  .action-btn { width: 32px; height: 32px; }
+
+  /* nodes overlay sheet */
+  #nodes-sheet { width: 96vw; max-height: 72vh; border-radius: 14px; }
+  .node-row-filter { display: none; }
+  .node-row { padding: 9px 10px; }
+
+  /* presets sheet */
+  #presets-sheet { width: 96vw; max-height: 76vh; border-radius: 14px; }
+
+  /* cards: wrap to 2 rows so sliders are usable on narrow screens */
+  #global-cards, #node-cards {
+    flex-wrap: wrap; overflow-x: visible;
+    align-content: flex-start;
+  }
+  .param-card {
+    flex: 1 1 calc(50% - 8px); min-width: 0; max-width: calc(50% - 4px);
+  }
+}
+
+/* ── touch device: even bigger slider thumb ───────────────── */
+@media (hover: none) and (pointer: coarse) {
+  .card-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .card-slider::-moz-range-thumb    { width: 22px; height: 22px; }
+}
+
+/* noise color buttons inside card */
+.nc-group { display:flex; gap:3px; flex:1; align-items:center; margin:2px 0; }
+.nc-btn {
+  flex:1; padding:3px 0; border-radius:4px; font-size:8px; letter-spacing:.06em;
+  border:1px solid var(--border); background:transparent; color:var(--text-dim);
+  cursor:pointer; font-family:inherit; text-transform:uppercase; transition:all .11s;
+}
+.nc-btn.active {
+  background:var(--card-accent, var(--accent));
+  border-color:var(--card-accent, var(--accent)); color:#fff;
+}
+</style>
+</head>
+<body>
+
+<canvas id="main"></canvas>
+
+<!-- top bar -->
+<div id="topbar">
+  <div id="app-name">NOISEN</div>
+  <div class="topbar-right">
+    <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
+       class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+    </a>
+    <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">＋ Install</button>
+    <button id="theme-toggle" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
+      <svg id="ti-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      </svg>
+      <svg id="ti-dark" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <button id="random-btn" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+        <line x1="4" y1="4" x2="9" y2="9"/>
+      </svg>
+    </button>
+    <button id="presets-btn" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+      </svg>
+    </button>
+    <button id="nodes-overview-btn" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
+        <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
+        <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+      </svg>
+    </button>
+    <button id="reset-view" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+      </svg>
+    </button>
+    <button id="large-toggle" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
+      <svg viewBox="0 0 20 20" fill="currentColor">
+        <text x="1" y="16" font-size="15" font-family="monospace" font-weight="bold">A</text>
+        <text x="12" y="13" font-size="9" font-family="monospace">a</text>
+      </svg>
+    </button>
+    <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+    <div class="topbar-sep"></div>
+    <button id="play-btn" data-tip="Play / Stop" data-tip-desc="Start or stop sound">
+      <svg id="pi-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="pi-stop" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- unified bottom panel -->
+<div id="bottom">
+  <div id="param-area">
+
+    <!-- ── global view ───────────────────────────────────── -->
+    <div id="global-view" class="param-view active">
+
+      <!-- analytics strip -->
+      <div id="analytics-strip">
+        <div class="an-item">
+          <span class="an-label">Nodes</span>
+          <span class="an-value" id="an-nodes">0</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Freq range</span>
+          <span class="an-value" id="an-range">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Connections</span>
+          <span class="an-value" id="an-conn">0</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Pan spread</span>
+          <span class="an-value" id="an-pan">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Gravity</span>
+          <span class="an-value" id="an-grav">50%</span>
+        </div>
+      </div>
+
+      <!-- spectrum visualization -->
+      <div id="spectrum-wrap">
+        <canvas id="spectrum-canvas" height="32"></canvas>
+      </div>
+
+      <!-- global param cards -->
+      <div id="global-cards">
+        <div class="param-card" style="--card-accent:var(--accent);--card-accent-dim:var(--accent-dim)"
+          data-tip="Master volume" data-tip-desc="Overall output level">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span>
+            <span class="card-val" id="gv-vol-val">70%</span>
+          </div>
+          <input type="range" class="card-slider" id="vol" min="0" max="100" value="70" style="--pct:70%">
+          <span class="card-label">Volume</span>
+        </div>
+        <div class="param-card" data-tip="Gravity" data-tip-desc="Pitch pull between nearby nodes">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><path d="M5.64 5.64l2.12 2.12M15.54 15.54l2.12 2.12M5.64 18.36l2.12-2.12M15.54 8.46l2.12-2.12" stroke-width="1.3"/></svg></span>
+            <span class="card-val" id="gv-grav-val">50%</span>
+          </div>
+          <input type="range" class="card-slider" id="grav" min="0" max="100" value="50" style="--pct:50%">
+          <span class="card-label">Gravity</span>
+        </div>
+        <div class="param-card" data-tip="Tone" data-tip-desc="Master low-pass filter">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 18 Q6 18 8 12 Q10 6 14 6 Q18 6 22 6"/></svg></span>
+            <span class="card-val" id="gv-tone-val">60%</span>
+          </div>
+          <input type="range" class="card-slider" id="tone" min="0" max="100" value="60" style="--pct:60%">
+          <span class="card-label">Tone</span>
+        </div>
+        <div class="param-card" data-tip="Wave spread" data-tip-desc="Wave radiation radius">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" stroke-opacity=".5"/><circle cx="12" cy="12" r="10" stroke-opacity=".25"/></svg></span>
+            <span class="card-val" id="gv-spread-val">40%</span>
+          </div>
+          <input type="range" class="card-slider" id="spread" min="0" max="100" value="40" style="--pct:40%">
+          <span class="card-label">Spread</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── node view ─────────────────────────────────────── -->
+    <div id="node-view" class="param-view">
+
+      <!-- header: dot + label + type buttons + actions -->
+      <div id="node-header">
+        <div class="node-color-dot" id="node-dot"></div>
+        <span id="node-label">Node</span>
+        <div class="type-sep"></div>
+        <div id="type-btns"></div>
+        <div class="type-sep"></div>
+        <div id="node-actions">
+          <button class="action-btn" id="act-mute" data-tip="Mute" data-tip-desc="Silence this node with a fade">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          </button>
+          <button class="action-btn danger" id="act-delete" data-tip="Delete" data-tip-desc="Remove this node permanently">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+          <button class="action-btn" id="node-close" data-tip="Close" data-tip-desc="Return to global controls">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- node info: live freq / filter / pan badges -->
+      <div id="node-info-strip">
+        <div class="ni-item" data-tip="Frequency" data-tip-desc="Current pitch, including gravity pull">
+          <span class="ni-label">Freq</span>
+          <span class="ni-value" id="ni-freq">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Filter cutoff" data-tip-desc="Y position controls brightness">
+          <span class="ni-label">Filter</span>
+          <span class="ni-value" id="ni-filter">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Stereo pan" data-tip-desc="Left/right position">
+          <span class="ni-label">Pan</span>
+          <span class="ni-value" id="ni-pan">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Gravity pull" data-tip-desc="Total pitch pull from connected nodes">
+          <span class="ni-label">Grav pull</span>
+          <span class="ni-value" id="ni-grav">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Volume" data-tip-desc="Node output level">
+          <span class="ni-label">Vol</span>
+          <span class="ni-value" id="ni-vol">—</span>
+        </div>
+      </div>
+
+      <!-- node param cards -->
+      <div id="node-cards"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- onboarding wizard -->
+<div id="wizard">
+  <div id="wizard-card">
+    <div class="wiz-step-bar" id="wiz-bar"></div>
+    <span class="wiz-icon" id="wiz-icon"></span>
+    <div class="wiz-title" id="wiz-title"></div>
+    <div class="wiz-body"  id="wiz-body"></div>
+    <div class="wiz-footer">
+      <button class="wiz-skip" id="wiz-skip">Skip</button>
+      <div class="wiz-nav">
+        <button class="wiz-prev" id="wiz-prev">← Back</button>
+        <button class="wiz-next" id="wiz-next">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- presets overlay -->
+<div id="presets-overlay">
+  <div id="presets-sheet">
+    <div class="presets-header">
+      <span class="presets-header-title">PRESETS</span>
+      <button class="action-btn" id="presets-overlay-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="presets-save-row">
+      <input id="preset-name-input" type="text" placeholder="Preset name…" maxlength="48" autocomplete="off" spellcheck="false">
+      <button class="preset-action-btn primary" id="preset-save-btn">Save</button>
+      <button class="preset-action-btn share" id="preset-share-current-btn" data-tip="Share current" data-tip-desc="Copy shareable link for current state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+    </div>
+    <div id="share-confirm">Link copied to clipboard ✓</div>
+    <div id="presets-list"></div>
+  </div>
+</div>
+
+<!-- nodes overview overlay -->
+<div id="nodes-overlay">
+  <div id="nodes-sheet">
+    <div class="nodes-sheet-header">
+      <span class="nodes-sheet-title">ALL NODES</span>
+      <button class="action-btn" id="nodes-overlay-close" data-tip="Close" data-tip-desc="">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="nodes-list"></div>
+  </div>
+</div>
+
+<div id="tooltip"><div class="tip-title" id="tip-title"></div><div class="tip-desc" id="tip-desc"></div></div>
+
+<script>
+// ── SVG icons ─────────────────────────────────────────────────
+const WAVE_ICONS = {
+  sine:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 C4 4 6 4 8 12 C10 20 12 20 14 12 C16 4 18 4 20 12"/></svg>`,
+  square:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,16 5,16 5,8 11,8 11,16 17,16 17,8 22,8"/></svg>`,
+  sawtooth:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,16 8,8 8,16 14,8 14,16 20,8 20,16"/></svg>`,
+  triangle:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,16 8,6 14,16 20,6"/></svg>`,
+  noise:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L3.5 8 L5 15 L6.5 9 L8 13 L9.5 7 L11 14 L12 10 L13 13 L14.5 9 L16 15 L17.5 8 L19 12 L20.5 10 L22 12"/></svg>`,
+};
+const PARAM_ICONS = {
+  vol:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`,
+  pan:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 12h8M4 8l4 4-4 4M20 8l-4 4 4 4"/></svg>`,
+  det:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="4" fill="none"/></svg>`,
+  vib:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 C4 8 6 8 8 12 C10 16 12 16 14 12 C16 8 18 8 20 12"/></svg>`,
+  dep:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`,
+  vcs:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`,
+  spr:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 12h8M5 8l-3 4 3 4M19 8l3 4-3 4"/></svg>`,
+  res:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L5 6 L8 18 L11 8 L14 16 L17 6 L20 18 L22 12"/></svg>`,
+  noise:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L3.5 8 L5 15 L6.5 9 L8 13 L9.5 7 L11 14 L12 10 L13 13 L14.5 9 L16 15 L17.5 8 L19 12 L20.5 10 L22 12"/></svg>`,
+};
+
+// ── Constants ─────────────────────────────────────────────────
+const TOP_H      = 46;
+const NODE_MIN_R = 13;
+const NODE_MAX_R = 40;
+// Fixed world width — frequency/pan mapping is invariant to screen resize
+const WORLD_WIDTH = 1920;
+// PANEL_H is dynamic — CSS media queries may change panel height on mobile
+let PANEL_H = 194;
+function updatePanelH() { PANEL_H = document.getElementById('bottom').offsetHeight || 194; }
+
+// ── Canvas ────────────────────────────────────────────────────
+const canvas = document.getElementById('main');
+const ctx    = canvas.getContext('2d');
+function resize() {
+  canvas.width  = innerWidth;
+  canvas.height = innerHeight;
+  updatePanelH();
+}
+resize();
+addEventListener('resize', resize);
+
+// ── Theme ────────────────────────────────────────────────────
+let isDark = false;
+function applyTheme(dark) {
+  isDark = dark;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.getElementById('ti-light').style.display = dark ? 'none' : '';
+  document.getElementById('ti-dark').style.display  = dark ? '' : 'none';
+}
+applyTheme(false);
+document.getElementById('theme-toggle').addEventListener('click', () => applyTheme(!isDark));
+
+// reset view button — animates smoothly to origin
+document.getElementById('reset-view').addEventListener('click', () => {
+  let startX = viewX, startY = viewY, t = 0;
+  velX = 0; velY = 0;
+  function animate() {
+    t += 0.08;
+    const ease = 1 - Math.pow(1 - Math.min(t, 1), 3);
+    viewX = startX * (1 - ease);
+    viewY = startY * (1 - ease);
+    if (t < 1) requestAnimationFrame(animate);
+    else { viewX = 0; viewY = 0; }
+  }
+  requestAnimationFrame(animate);
+});
+
+// ── Nodes overview overlay ────────────────────────────────────
+function fmtHz(hz) {
+  return hz >= 1000 ? `${(hz / 1000).toFixed(hz >= 10000 ? 0 : 1)}kHz` : `${Math.round(hz)}Hz`;
+}
+function buildNodesOverlay() {
+  const list = document.getElementById('nodes-list');
+  list.innerHTML = '';
+  if (nodes.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:24px;text-align:center;font-size:11px;color:var(--text-faint)';
+    empty.textContent = 'No nodes yet — tap the canvas to create one';
+    list.appendChild(empty); return;
+  }
+  for (const node of nodes) {
+    const freq = nodeFreq(node);
+    const filter = filterFromY(node.y);
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    if (node.muted) row.style.opacity = '.52';
+    row.innerHTML = `
+      <div class="node-row-dot" style="background:${TYPES[node.type].color}"></div>
+      <span class="node-row-id">#${node.id}</span>
+      <span class="node-row-icon">${WAVE_ICONS[node.type]}</span>
+      <span class="node-row-type">${node.type}</span>
+      <span class="node-row-freq">${fmtHz(freq)}</span>
+      <span class="node-row-filter">↓${fmtHz(filter)}</span>
+      <span class="node-row-vol">${Math.round(node.volume * 100)}%</span>
+      ${node.muted ? '<span class="node-row-muted-tag">muted</span>' : ''}
+    `;
+    row.addEventListener('click', () => { selectNode(node); closeNodesOverlay(); });
+    list.appendChild(row);
+  }
+}
+function openNodesOverlay() {
+  buildNodesOverlay();
+  document.getElementById('nodes-overlay').classList.add('open');
+}
+function closeNodesOverlay() {
+  document.getElementById('nodes-overlay').classList.remove('open');
+}
+document.getElementById('nodes-overview-btn').addEventListener('click', openNodesOverlay);
+document.getElementById('nodes-overlay-close').addEventListener('click', closeNodesOverlay);
+document.getElementById('nodes-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeNodesOverlay();
+});
+
+// ── Onboarding wizard ─────────────────────────────────────────
+const WIZARD_STEPS = [
+  {
+    icon: '✦',
+    title: 'Welcome to Noisen',
+    body: 'A generative sound canvas. No presets to browse, no menus to dig through — you draw sound by placing nodes directly on screen. Every position is a unique sonic texture. Tap anywhere on the dark canvas to place your first node.',
+    highlight: null,
+  },
+  {
+    icon: '↔',
+    title: 'X axis = frequency',
+    body: 'The horizontal position of a node sets its pitch. Far left → deep sub-bass (8 Hz). Far right → ultrasonic highs (40 kHz). The scale is logarithmic, so the middle of the canvas sits around 600 Hz — the heart of the human voice range. Drag a node left or right and hear the pitch sweep continuously.',
+    highlight: 'main',
+  },
+  {
+    icon: '↕',
+    title: 'Y axis = filter brightness',
+    body: 'Vertical position controls a low-pass filter cutoff. Top of canvas → filter fully open, full harmonic content. Bottom → filter almost closed, leaving only a muffled low rumble. Combine a high-pitched node placed low on the canvas for a dark, filtered sine tone — very different from the same note placed high.',
+    highlight: 'main',
+  },
+  {
+    icon: '◎',
+    title: 'Gravity between nodes',
+    body: 'Nodes pull each other\'s pitch. The closer two nodes are, the stronger the gravitational attraction — their frequencies drift toward each other. With high gravity, a cluster of nodes converges into a single drone. Low gravity preserves independence. Use the Gravity slider in the panel to tune how strongly nodes interact.',
+    highlight: 'grav',
+  },
+  {
+    icon: '◈',
+    title: 'Wave types & node panel',
+    body: 'Tap any node to open its panel. Five wave types: Sine (pure tone), Triangle (soft and hollow), Square (buzzy, hollow), Sawtooth (bright, rich), Noise (textural — white, pink, or brown). Each type has unique parameters: detune in cents, vibrato rate and depth for oscillators, voice stacking and spread for square/sawtooth, resonance Q for noise.',
+    highlight: null,
+  },
+  {
+    icon: '⟳',
+    title: 'Pan & stereo field',
+    body: 'A node\'s horizontal world position also sets its stereo pan automatically — left side of canvas = left speaker, right side = right speaker. You can override this per node in the panel with a manual pan slider. The stereo field is audible even on headphones with a single node by placing it anywhere but center.',
+    highlight: null,
+  },
+  {
+    icon: '▶',
+    title: 'Play button',
+    body: 'The ▶ button in the top bar starts audio. On iOS, audio requires this first tap to unlock the Web Audio context — after that it plays silently even with the mute switch on. Press again to stop. Node positions, types, and parameters are preserved — press play again to resume exactly as you left it.',
+    highlight: 'play-btn',
+  },
+  {
+    icon: '⚄',
+    title: 'Random harmonic generator',
+    body: 'The shuffle button generates a full configuration from a random musical scale: Major, Natural Minor, Pentatonic, Minor Pentatonic, Dorian, Mixolydian, Lydian, or Phrygian. Nodes land precisely on note frequencies for that root and scale. Gravity is kept light so intervals stay recognisable. Hit it repeatedly — each result is unique.',
+    highlight: 'random-btn',
+  },
+  {
+    icon: '💾',
+    title: 'Save & share presets',
+    body: 'The floppy icon opens the Presets panel. Name your configuration and save it to this device (localStorage). The share button generates a URL — the entire state is encoded in the link as compressed base64. Anyone who opens the link gets your exact nodes, types, volumes, and global parameters. No server, no account.',
+    highlight: 'presets-btn',
+  },
+  {
+    icon: '∞',
+    title: 'Infinite canvas',
+    body: 'The workspace is infinite — drag the background to pan. Momentum carries the view after you release. Use the crosshair button in the toolbar to snap back to the origin. The frequency scale is fixed regardless of screen size or zoom — a node at world X = 960 is always 220 Hz (A3), on any device.',
+    highlight: 'reset-view',
+  },
+];
+
+let wizardStep = 0;
+let wizardRingEl = null;
+
+function wizardSetRing(elementId) {
+  if (wizardRingEl) wizardRingEl.classList.remove('wizard-ring');
+  wizardRingEl = elementId ? document.getElementById(elementId) : null;
+  if (wizardRingEl) wizardRingEl.classList.add('wizard-ring');
+}
+
+function wizardRender() {
+  const step  = WIZARD_STEPS[wizardStep];
+  const total = WIZARD_STEPS.length;
+  const bar   = document.getElementById('wiz-bar');
+  bar.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'wiz-pip' + (i < wizardStep ? ' done' : i === wizardStep ? ' active' : '');
+    bar.appendChild(pip);
+  }
+  document.getElementById('wiz-icon').textContent  = step.icon;
+  document.getElementById('wiz-title').textContent = step.title;
+  document.getElementById('wiz-body').textContent  = step.body;
+  document.getElementById('wiz-next').textContent  =
+    wizardStep === total - 1 ? 'Let\'s go ✓' : 'Next →';
+  document.getElementById('wiz-prev').style.visibility =
+    wizardStep === 0 ? 'hidden' : 'visible';
+  wizardSetRing(step.highlight);
+}
+
+function wizardOpen() {
+  const el = document.getElementById('wizard');
+  el.style.display = 'flex';
+  requestAnimationFrame(() => el.classList.remove('hide'));
+  wizardStep = 0;
+  wizardRender();
+}
+
+function wizardClose() {
+  const el = document.getElementById('wizard');
+  el.classList.add('hide');
+  wizardSetRing(null);
+  setTimeout(() => { el.style.display = 'none'; }, 260);
+  localStorage.setItem('noisen-wizard-done', '1');
+}
+
+document.getElementById('wiz-next').addEventListener('click', () => {
+  if (wizardStep < WIZARD_STEPS.length - 1) { wizardStep++; wizardRender(); }
+  else wizardClose();
+});
+document.getElementById('wiz-prev').addEventListener('click', () => {
+  if (wizardStep > 0) { wizardStep--; wizardRender(); }
+});
+document.getElementById('wiz-skip').addEventListener('click', wizardClose);
+document.getElementById('help-btn').addEventListener('click', wizardOpen);
+
+// show on first visit; hide immediately if already seen
+if (!localStorage.getItem('noisen-wizard-done')) {
+  wizardRender();
+} else {
+  document.getElementById('wizard').style.display = 'none';
+}
+
+// ── Random harmonic preset ────────────────────────────────────
+const SCALES = {
+  'Major':            [0, 2, 4, 5, 7, 9, 11],
+  'Minor':            [0, 2, 3, 5, 7, 8, 10],
+  'Pentatonic':       [0, 2, 4, 7, 9],
+  'Minor pentatonic': [0, 3, 5, 7, 10],
+  'Dorian':           [0, 2, 3, 5, 7, 9, 10],
+  'Mixolydian':       [0, 2, 4, 5, 7, 9, 10],
+  'Lydian':           [0, 2, 4, 6, 7, 9, 11],
+  'Phrygian':         [0, 1, 3, 5, 7, 8, 10],
+};
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+// semitone 0 = C0 ≈ 16.35 Hz; A4 = semitone 57
+function semitoneToFreq(s) { return 440 * Math.pow(2, (s - 57) / 12); }
+function freqToWorldX(freq) { return Math.log2(Math.max(8, freq) / 8) / 12.3 * WORLD_WIDTH; }
+
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  clearTimeout(el._t);
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2600);
+}
+
+function generateHarmonicPreset() {
+  // clear canvas
+  for (const n of [...nodes]) removeNode(n);
+  nodeSeq = 0;
+
+  // pick scale and root
+  const scaleNames = Object.keys(SCALES);
+  const scaleName  = scaleNames[Math.floor(Math.random() * scaleNames.length)];
+  const scale      = SCALES[scaleName];
+  const rootNote   = Math.floor(Math.random() * 12);
+  const rootOctave = 3 + Math.floor(Math.random() * 2); // octave 3 or 4
+  const rootBase   = rootOctave * 12 + rootNote;
+
+  // 3-6 nodes; build pool of scale notes across 1-2 octaves then pick randomly
+  const count = 3 + Math.floor(Math.random() * 4);
+  const pool  = [];
+  for (let oct = 0; oct <= 1; oct++)
+    for (const step of scale) pool.push(rootBase + step + oct * 12);
+
+  // shuffle pool and pick count unique semitones
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const chosen = pool.slice(0, count);
+
+  const canvasArea = canvas.height - PANEL_H - TOP_H;
+  // prefer sine/triangle for harmony; occasionally a square for colour
+  const typePool = ['sine','sine','sine','triangle','triangle','square'];
+
+  for (const semi of chosen) {
+    const freq = semitoneToFreq(semi);
+    const wx   = freqToWorldX(freq);
+    // Y in upper-mid zone (bright filter): 10–60% from top of canvas area
+    const wy   = TOP_H + canvasArea * (0.10 + Math.random() * 0.50);
+    const type = typePool[Math.floor(Math.random() * typePool.length)];
+    const vol  = 0.35 + Math.random() * 0.30;
+    // slight detune for warmth (±8 cents)
+    const tp   = { ...TYPE_DEFAULTS[type], detune: (Math.random() - 0.5) * 16 };
+
+    const node = { id: ++nodeSeq, x: wx, y: wy, type, muted: false, volume: vol,
+      panOverride: null, typeParams: tp,
+      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null };
+    nodes.push(node); createAudio(node);
+  }
+  syncCount();
+
+  // gentle global params suited for harmony
+  applyGlobal({
+    vol:    65 + Math.floor(Math.random() * 15),  // 65-80
+    grav:   20 + Math.floor(Math.random() * 20),  // 20-40  — light gravity keeps pitch clear
+    tone:   60 + Math.floor(Math.random() * 25),  // 60-85
+    spread: 30 + Math.floor(Math.random() * 30),  // 30-60
+  });
+
+  viewX = 0; viewY = 0; velX = 0; velY = 0;
+
+  const rootName = NOTE_NAMES[rootNote] + rootOctave;
+  showToast(`${rootName} ${scaleName} — ${count} nodes`);
+
+  // pre-fill preset name input with scale info
+  const nameInput = document.getElementById('preset-name-input');
+  if (nameInput) nameInput.value = `${rootName} ${scaleName}`;
+}
+
+// ── Presets ───────────────────────────────────────────────────
+function encodePreset(preset) {
+  const json = JSON.stringify(preset);
+  const bytes = new TextEncoder().encode(json);
+  // URL-safe base64
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodePreset(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function captureState(name) {
+  return {
+    name: name || 'Untitled',
+    v: 1,
+    global: {
+      vol:    Math.round(masterVolume    * 100),
+      grav:   Math.round(gravityStrength * 100),
+      tone:   Math.round(masterTone      * 100),
+      spread: Math.round(waveSpread      * 100),
+    },
+    nodes: nodes.map(n => ({
+      x: Math.round(n.x), y: Math.round(n.y),
+      type: n.type, volume: n.volume,
+      muted: n.muted, panOverride: n.panOverride,
+      typeParams: { ...n.typeParams },
+    })),
+  };
+}
+
+function applyGlobal(g) {
+  masterVolume    = g.vol    / 100;
+  gravityStrength = g.grav   / 100;
+  masterTone      = g.tone   / 100;
+  waveSpread      = g.spread / 100;
+  masterGain.gain.value = masterVolume;
+  masterFilter.frequency.value = toneHz(masterTone);
+  // sync sliders + labels
+  const syncSlider = (id, valId, v) => {
+    const el = document.getElementById(id);
+    el.value = v; setSliderPct(el, v, 0, 100);
+    document.getElementById(valId).textContent = `${v}%`;
+  };
+  syncSlider('vol',    'gv-vol-val',    g.vol);
+  syncSlider('grav',   'gv-grav-val',   g.grav);
+  syncSlider('tone',   'gv-tone-val',   g.tone);
+  syncSlider('spread', 'gv-spread-val', g.spread);
+  document.getElementById('an-grav').textContent = `${g.grav}%`;
+}
+
+function applyPreset(preset) {
+  // clear all nodes
+  for (const n of [...nodes]) removeNode(n);
+  nodeSeq = 0;
+  // apply global params
+  applyGlobal(preset.global);
+  // add nodes with saved state
+  for (const nd of preset.nodes) {
+    const node = { id: ++nodeSeq, x: nd.x, y: nd.y,
+      type: nd.type, muted: nd.muted, volume: nd.volume,
+      panOverride: nd.panOverride,
+      typeParams: { ...nd.typeParams },
+      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null };
+    nodes.push(node); createAudio(node);
+  }
+  syncCount();
+  // reset view to see nodes
+  viewX = 0; viewY = 0; velX = 0; velY = 0;
+}
+
+// localStorage helpers
+function getSavedPresets() {
+  try { return JSON.parse(localStorage.getItem('noisen-presets') || '[]'); } catch { return []; }
+}
+function setSavedPresets(list) { localStorage.setItem('noisen-presets', JSON.stringify(list)); }
+
+function sharePreset(preset) {
+  const url = location.origin + location.pathname + '?p=' + encodePreset(preset);
+  navigator.clipboard.writeText(url).catch(() => {});
+  const c = document.getElementById('share-confirm');
+  c.style.display = 'block';
+  clearTimeout(c._t); c._t = setTimeout(() => { c.style.display = 'none'; }, 2200);
+}
+
+function buildPresetsList() {
+  const list = document.getElementById('presets-list');
+  list.innerHTML = '';
+  const saved = getSavedPresets();
+  if (saved.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'presets-empty';
+    empty.textContent = 'No saved presets yet — set up some nodes and hit Save';
+    list.appendChild(empty); return;
+  }
+  for (let i = 0; i < saved.length; i++) {
+    const p = saved[i];
+    const row = document.createElement('div');
+    row.className = 'preset-row';
+    row.innerHTML = `
+      <span class="preset-row-name">${p.name}</span>
+      <span class="preset-row-nodes">${p.nodes.length} node${p.nodes.length !== 1 ? 's' : ''}</span>
+      <button class="preset-row-share" title="Share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+      <button class="preset-row-load">Load</button>
+      <button class="preset-row-del">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    `;
+    row.querySelector('.preset-row-load').addEventListener('click', () => {
+      applyPreset(p); closePresetsOverlay();
+    });
+    row.querySelector('.preset-row-share').addEventListener('click', () => sharePreset(p));
+    row.querySelector('.preset-row-del').addEventListener('click', () => {
+      const updated = getSavedPresets().filter((_, j) => j !== i);
+      setSavedPresets(updated); buildPresetsList();
+    });
+    list.appendChild(row);
+  }
+}
+
+function openPresetsOverlay() {
+  document.getElementById('preset-name-input').value = '';
+  document.getElementById('share-confirm').style.display = 'none';
+  buildPresetsList();
+  document.getElementById('presets-overlay').classList.add('open');
+}
+function closePresetsOverlay() {
+  document.getElementById('presets-overlay').classList.remove('open');
+}
+
+document.getElementById('random-btn').addEventListener('click', generateHarmonicPreset);
+document.getElementById('presets-btn').addEventListener('click', openPresetsOverlay);
+document.getElementById('presets-overlay-close').addEventListener('click', closePresetsOverlay);
+document.getElementById('presets-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closePresetsOverlay();
+});
+document.getElementById('preset-save-btn').addEventListener('click', () => {
+  const name = document.getElementById('preset-name-input').value.trim() || 'Untitled';
+  const preset = captureState(name);
+  const list = getSavedPresets();
+  list.unshift(preset);
+  setSavedPresets(list);
+  buildPresetsList();
+  document.getElementById('preset-name-input').value = '';
+});
+document.getElementById('preset-share-current-btn').addEventListener('click', () => {
+  sharePreset(captureState(document.getElementById('preset-name-input').value.trim() || 'Shared'));
+});
+
+// auto-load from URL ?p=
+(function() {
+  const params = new URLSearchParams(location.search);
+  const encoded = params.get('p');
+  if (!encoded) return;
+  try {
+    const preset = decodePreset(encoded);
+    // defer until audio engine is available
+    setTimeout(() => applyPreset(preset), 80);
+  } catch (err) {
+    console.warn('Failed to decode preset from URL', err);
+  }
+})();
+
+let largeText = false;
+document.getElementById('large-toggle').addEventListener('click', () => {
+  largeText = !largeText;
+  document.documentElement.dataset.large = largeText ? '1' : '0';
+  document.getElementById('large-toggle').classList.toggle('active', largeText);
+});
+
+// ── PWA ──────────────────────────────────────────────────────
+let deferredInstall = null;
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e;
+  document.getElementById('pwa-btn').style.display = 'block';
+});
+document.getElementById('pwa-btn').addEventListener('click', () => {
+  if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; }
+});
+
+// ── Tooltip ───────────────────────────────────────────────────
+const tipEl = document.getElementById('tooltip');
+document.addEventListener('pointermove', e => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) { tipEl.style.display = 'none'; return; }
+  document.getElementById('tip-title').textContent = el.dataset.tip || '';
+  document.getElementById('tip-desc').textContent  = el.dataset.tipDesc || '';
+  tipEl.style.display = 'block';
+  const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  tipEl.style.left = `${Math.min(e.clientX + 12, innerWidth  - tw - 6)}px`;
+  tipEl.style.top  = `${Math.min(e.clientY + 12, innerHeight - th - 6)}px`;
+});
+document.addEventListener('pointerleave', () => { tipEl.style.display = 'none'; });
+
+// ── Types ────────────────────────────────────────────────────
+const TYPES = {
+  sine:     { color:'#3a7bd5', rgb:[58,123,213]   },
+  square:   { color:'#c47c20', rgb:[196,124,32]   },
+  sawtooth: { color:'#9a2ab8', rgb:[154,42,184]   },
+  triangle: { color:'#1fa0aa', rgb:[31,160,170]   },
+  noise:    { color:'#1d9e5a', rgb:[29,158,90]    },
+};
+const TYPE_DEFAULTS = {
+  sine:     { detune:0, vibratoRate:0, vibratoDepth:0 },
+  square:   { detune:0, spread:0, voices:1 },
+  sawtooth: { detune:0, spread:0, voices:1 },
+  triangle: { detune:0, vibratoRate:0, vibratoDepth:0 },
+  noise:    { color:'pink', resonance:1 },
+};
+
+// ── Audio globals ─────────────────────────────────────────────
+let masterVolume = 0.7, gravityStrength = 0.5, masterTone = 0.6, waveSpread = 0.4;
+let isPlaying = false;
+const masterGain   = new Tone.Gain(masterVolume);
+const masterFilter = new Tone.Filter(toneHz(masterTone), 'lowpass');
+const limiter      = new Tone.Limiter(-3).toDestination();
+masterGain.connect(masterFilter); masterFilter.connect(limiter);
+function toneHz(t) { return Math.pow(10, t * 3.5 + 1.3); }
+
+function setSliderPct(el, val, min, max) {
+  el.style.setProperty('--pct', ((val - min) / (max - min) * 100).toFixed(1) + '%');
+}
+
+document.getElementById('vol').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  masterVolume = v / 100; masterGain.gain.rampTo(masterVolume, .05);
+  document.getElementById('gv-vol-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('grav').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  gravityStrength = v / 100;
+  document.getElementById('gv-grav-val').textContent = `${v}%`;
+  document.getElementById('an-grav').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('tone').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  masterTone = v / 100; masterFilter.frequency.rampTo(toneHz(masterTone), .1);
+  document.getElementById('gv-tone-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('spread').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  waveSpread = v / 100;
+  document.getElementById('gv-spread-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+
+// ── State ─────────────────────────────────────────────────────
+let nodes = [], ripples = [];
+let selectedNode = null;
+let dragNode = null, dragStartClientX = 0, dragStartClientY = 0, dragStartNodeX = 0, dragStartNodeY = 0;
+let pDown = 0, pNode = null, didDrag = false;
+let nodeSeq = 0;
+
+// ── Viewport pan ──────────────────────────────────────────────
+let viewX = 0, viewY = 0;                 // world offset (world origin at top-left of screen)
+let panStartViewX = 0, panStartViewY = 0; // view at pan start
+let panStartClientX = 0, panStartClientY = 0;
+let isPanning = false;
+let velX = 0, velY = 0;                   // momentum velocity
+let lastMoveX = 0, lastMoveY = 0, lastMoveTime = 0;
+
+function screenToWorld(sx, sy) { return { x: sx + viewX, y: sy + viewY }; }
+function worldToScreen(wx, wy) { return { x: wx - viewX, y: wy - viewY }; }
+
+// ── Frequency math (uses world coordinates) ───────────────────
+// World X = 0 → 8Hz, world X = WORLD_WIDTH → ~40kHz; scale never changes on resize
+function freqFromX(wx)  { return Math.pow(2, (wx / WORLD_WIDTH) * 12.3) * 8; }
+function filterFromY(wy) {
+  const t = 1 - (wy - TOP_H) / (canvas.height - PANEL_H - TOP_H);
+  return Math.pow(10, Math.max(0, Math.min(1, t)) * 3.8 + 1.5);
+}
+function autoPan(wx) { return Math.max(-1, Math.min(1, (wx / WORLD_WIDTH) * 2 - 1)); }
+function effectivePan(n) { return n.panOverride !== null ? n.panOverride : autoPan(n.x); }
+function nodeRadius(n) { return NODE_MIN_R + (NODE_MAX_R - NODE_MIN_R) * n.volume; }
+
+function gravityFactor(a, b) {
+  const d = Math.hypot(a.x - b.x, a.y - b.y);
+  return Math.max(0, 1 - d / (Math.hypot(canvas.width, canvas.height) * .65)) * gravityStrength * 2;
+}
+function nodeFreq(n) {
+  let base = freqFromX(n.x) + (n.typeParams?.detune || 0), pull = 0;
+  for (const o of nodes) {
+    if (o === n || o.muted) continue;
+    pull += (freqFromX(o.x) - base) * gravityFactor(n, o) * .3;
+  }
+  return Math.max(8, Math.min(40000, base + pull));
+}
+function gravityPull(n) {
+  let pull = 0;
+  for (const o of nodes) { if (o !== n && !o.muted) pull += gravityFactor(n, o); }
+  return pull;
+}
+
+// ── Audio ─────────────────────────────────────────────────────
+function createAudio(node) {
+  const panner = new Tone.Panner(effectivePan(node)).connect(masterGain);
+  const filter = new Tone.Filter(filterFromY(node.y), 'lowpass').connect(panner);
+  const gain   = new Tone.Gain(0).connect(filter);
+  let source, vibrato = null;
+  if (node.type === 'noise') {
+    source = new Tone.Noise(node.typeParams.color ?? 'pink');
+    filter.set({ Q: node.typeParams.resonance ?? 1 });
+    source.connect(gain);
+  } else if (node.type === 'square' || node.type === 'sawtooth') {
+    const v = node.typeParams.voices ?? 1;
+    source = v > 1
+      ? Object.assign(new Tone.FatOscillator(nodeFreq(node), node.type, node.typeParams.spread ?? 0), { count: v })
+      : new Tone.Oscillator(nodeFreq(node), node.type);
+    source.detune.value = node.typeParams.detune ?? 0;
+    source.connect(gain);
+  } else {
+    source = new Tone.Oscillator(nodeFreq(node), node.type);
+    source.detune.value = node.typeParams.detune ?? 0;
+    const rate = node.typeParams.vibratoRate ?? 0, depth = node.typeParams.vibratoDepth ?? 0;
+    if (rate > 0 && depth > 0) {
+      vibrato = new Tone.Vibrato(rate, depth / 1200);
+      source.connect(vibrato); vibrato.connect(gain);
+    } else source.connect(gain);
+  }
+  node.audio = { source, gain, filter, panner, vibrato };
+  if (isPlaying) { source.start?.(); if (!node.muted) gain.gain.rampTo(node.volume * .28, .3); }
+}
+
+function destroyAudio(node) {
+  if (!node.audio) return;
+  node.audio.gain.gain.rampTo(0, .15);
+  const a = node.audio; node.audio = null;
+  setTimeout(() => {
+    try { a.source.stop?.(); } catch {}
+    [a.vibrato, a.source, a.gain, a.filter, a.panner].forEach(x => { try { x?.disconnect(); } catch {} });
+  }, 220);
+}
+
+function updateAudio(node) {
+  if (!node.audio) return;
+  if (node.type !== 'noise') {
+    node.audio.source.frequency?.rampTo(nodeFreq(node), .06);
+    node.audio.source.detune?.rampTo(node.typeParams.detune ?? 0, .06);
+  }
+  node.audio.filter.frequency.rampTo(filterFromY(node.y), .06);
+  if (node.type === 'noise') node.audio.filter.set({ Q: node.typeParams.resonance ?? 1 });
+  node.audio.panner.pan.rampTo(effectivePan(node), .06);
+  node.audio.gain.gain.rampTo((isPlaying && !node.muted) ? node.volume * .28 : 0, .08);
+}
+
+function rebuildAudio(node) { destroyAudio(node); createAudio(node); }
+function startAll() { for (const n of nodes) { if (n.audio) { n.audio.source.start?.(); if (!n.muted) n.audio.gain.gain.rampTo(n.volume * .28, .3); } else createAudio(n); } }
+function stopAll()  { for (const n of nodes) if (n.audio) n.audio.gain.gain.rampTo(0, .4); }
+
+// ── Nodes ────────────────────────────────────────────────────
+// x, y are world coordinates
+function addNode(x, y) {
+  const node = { id: ++nodeSeq, x, y, type:'sine', muted:false, volume:.55, panOverride:null,
+    typeParams:{...TYPE_DEFAULTS.sine}, pulsePhase:Math.random()*Math.PI*2, rippleTimer:0, audio:null };
+  nodes.push(node); createAudio(node); syncCount();
+}
+function removeNode(node) {
+  if (selectedNode === node) deselectNode();
+  destroyAudio(node); nodes = nodes.filter(n => n !== node); syncCount();
+}
+function syncCount() {
+  const n = nodes.length;
+  document.getElementById('an-nodes').textContent = n;
+}
+function hitTest(clientX, clientY) {
+  // convert screen to world for hit testing
+  const wx = clientX + viewX, wy = clientY + viewY;
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (Math.hypot(wx - n.x, wy - n.y) <= nodeRadius(n) + 10) return n;
+  }
+  return null;
+}
+
+// ── Format helpers ────────────────────────────────────────────
+function fmtHz(hz) {
+  if (hz >= 1000) return `${(hz / 1000).toFixed(hz >= 10000 ? 0 : 1)}kHz`;
+  return `${Math.round(hz)}Hz`;
+}
+function fmtPan(p) {
+  return p < -.02 ? `L${Math.abs(Math.round(p*100))}%`
+       : p > .02  ? `R${Math.round(p*100)}%` : 'C';
+}
+
+// ── Node panel ────────────────────────────────────────────────
+const globalView = document.getElementById('global-view');
+const nodeView   = document.getElementById('node-view');
+const nodeCards  = document.getElementById('node-cards');
+
+function makeCard(opts) {
+  const card = document.createElement('div');
+  card.className = 'param-card';
+  if (opts.tip) { card.dataset.tip = opts.tip; card.dataset.tipDesc = opts.tipDesc || ''; }
+  const pct = ((opts.value - opts.min) / (opts.max - opts.min) * 100).toFixed(1) + '%';
+  card.innerHTML = `
+    <div class="card-top">
+      <span class="card-icon">${opts.icon}</span>
+      <span class="card-val" id="cv-${opts.id}">${opts.fmt(opts.value)}</span>
+    </div>
+    <input type="range" class="card-slider" id="cs-${opts.id}"
+      min="${opts.min}" max="${opts.max}" step="${opts.step}" value="${opts.value}" style="--pct:${pct}">
+    <span class="card-label">${opts.label}</span>`;
+  const slider = card.querySelector('input');
+  slider.addEventListener('input', () => {
+    const v = slider.valueAsNumber;
+    setSliderPct(slider, v, opts.min, opts.max);
+    card.querySelector('.card-val').textContent = opts.fmt(v);
+    opts.onChange(v);
+  });
+  return card;
+}
+
+function makeNoiseColorCard(node) {
+  const card = document.createElement('div');
+  card.className = 'param-card';
+  card.dataset.tip = 'Noise color';
+  card.dataset.tipDesc = 'Spectral character of the noise';
+  const colors = ['white','pink','brown'];
+  card.innerHTML = `
+    <div class="card-top">
+      <span class="card-icon">${PARAM_ICONS.noise}</span>
+      <span class="card-val" id="cv-nc">${node.typeParams.color}</span>
+    </div>
+    <div class="nc-group">
+      ${colors.map(c => `<button class="nc-btn${node.typeParams.color===c?' active':''}" data-c="${c}">${c}</button>`).join('')}
+    </div>
+    <span class="card-label">Color</span>`;
+  card.querySelectorAll('.nc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      node.typeParams.color = btn.dataset.c;
+      card.querySelector('.card-val').textContent = btn.dataset.c;
+      card.querySelectorAll('.nc-btn').forEach(b => b.classList.toggle('active', b.dataset.c === btn.dataset.c));
+      rebuildAudio(node);
+    });
+  });
+  return card;
+}
+
+function buildNodeCards(node) {
+  nodeCards.innerHTML = '';
+  const color = TYPES[node.type].color;
+  const [rr,gg,bb] = TYPES[node.type].rgb;
+  const colorDim = `rgba(${rr},${gg},${bb},.12)`;
+
+  // apply accent to node-cards container
+  nodeCards.style.setProperty('--card-accent', color);
+  nodeCards.style.setProperty('--card-accent-dim', colorDim);
+
+  const mkC = (id, icon, label, tip, tipDesc, min, max, step, val, fmt, onChange) =>
+    makeCard({ id, icon:PARAM_ICONS[icon]||icon, label, tip, tipDesc, min, max, step, value:val, fmt, onChange });
+
+  // vol
+  nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
+    5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; updateAudio(node); }));
+  // pan
+  nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right, overrides X-axis',
+    -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); }));
+
+  if (node.type==='sine'||node.type==='triangle') {
+    nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
+    nodeCards.appendChild(mkC('vib','vib','Vibrato Hz','Vibrato rate','LFO speed',0,20,.1,node.typeParams.vibratoRate,v=>`${(+v).toFixed(1)}Hz`,v=>{ node.typeParams.vibratoRate=v; rebuildAudio(node); }));
+    nodeCards.appendChild(mkC('dep','dep','Vib depth','Vibrato depth','Depth in cents',0,400,1,node.typeParams.vibratoDepth,v=>`${v}¢`,v=>{ node.typeParams.vibratoDepth=v; rebuildAudio(node); }));
+  } else if (node.type==='square'||node.type==='sawtooth') {
+    nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
+    nodeCards.appendChild(mkC('vcs','vcs','Voices','Voices','Detuned copies',1,5,1,node.typeParams.voices,v=>`×${v}`,v=>{ node.typeParams.voices=v; rebuildAudio(node); }));
+    nodeCards.appendChild(mkC('spr','spr','Spread','Spread','Cents between voices',0,100,1,node.typeParams.spread,v=>`${v}¢`,v=>{ node.typeParams.spread=v; rebuildAudio(node); }));
+  } else if (node.type==='noise') {
+    nodeCards.appendChild(makeNoiseColorCard(node));
+    nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
+  }
+
+  // tint each card with node color
+  nodeCards.querySelectorAll('.param-card').forEach(c => {
+    c.style.setProperty('--card-accent', color);
+    c.style.setProperty('--card-accent-dim', colorDim);
+  });
+}
+
+function buildTypeButtons(node) {
+  const row = document.getElementById('type-btns');
+  row.innerHTML = '';
+  Object.keys(TYPES).forEach(type => {
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (node.type === type ? ' active' : '');
+    btn.dataset.tip = type.charAt(0).toUpperCase() + type.slice(1);
+    btn.innerHTML = WAVE_ICONS[type] + `<span>${type}</span>`;
+    btn.addEventListener('click', () => {
+      node.type = type;
+      node.typeParams = { ...TYPE_DEFAULTS[type] };
+      rebuildAudio(node); selectNode(node);
+    });
+    row.appendChild(btn);
+  });
+}
+
+function updateNodeInfoStrip(node) {
+  if (!node) return;
+  const freq   = nodeFreq(node);
+  const filter = filterFromY(node.y);
+  const pan    = effectivePan(node);
+  const pull   = gravityPull(node);
+  document.getElementById('ni-freq').textContent   = fmtHz(freq);
+  document.getElementById('ni-filter').textContent = fmtHz(filter);
+  document.getElementById('ni-pan').textContent    = fmtPan(pan);
+  document.getElementById('ni-grav').textContent   = pull > .01 ? `${(pull*100).toFixed(0)}%` : '—';
+  document.getElementById('ni-vol').textContent    = `${Math.round(node.volume*100)}%`;
+}
+
+function selectNode(node) {
+  selectedNode = node;
+  const color = TYPES[node.type].color;
+  const [rr,gg,bb] = TYPES[node.type].rgb;
+  const colorDim = `rgba(${rr},${gg},${bb},.13)`;
+  document.documentElement.style.setProperty('--node-color', color);
+  document.documentElement.style.setProperty('--node-color-dim', colorDim);
+  document.getElementById('node-dot').style.background = color;
+  document.getElementById('node-dot').style.boxShadow  = `0 0 8px ${color}`;
+  document.getElementById('node-label').textContent = `Node ${node.id}`;
+  document.getElementById('act-mute').classList.toggle('muted', node.muted);
+  document.getElementById('act-mute').dataset.tip = node.muted ? 'Unmute' : 'Mute';
+  buildTypeButtons(node);
+  buildNodeCards(node);
+  updateNodeInfoStrip(node);
+  globalView.classList.remove('active');
+  nodeView.classList.add('active');
+}
+
+function deselectNode() {
+  selectedNode = null;
+  nodeView.classList.remove('active');
+  globalView.classList.add('active');
+  document.documentElement.style.removeProperty('--node-color');
+  document.documentElement.style.removeProperty('--node-color-dim');
+}
+window.deselectNode = deselectNode;
+
+// node action buttons
+document.getElementById('act-mute').addEventListener('click', () => {
+  if (!selectedNode) return;
+  selectedNode.muted = !selectedNode.muted;
+  updateAudio(selectedNode);
+  const btn = document.getElementById('act-mute');
+  btn.classList.toggle('muted', selectedNode.muted);
+  btn.dataset.tip = selectedNode.muted ? 'Unmute' : 'Mute';
+});
+document.getElementById('act-delete').addEventListener('click', () => {
+  if (!selectedNode) return;
+  removeNode(selectedNode);
+  deselectNode();
+});
+document.getElementById('node-close').addEventListener('click', deselectNode);
+
+// ── Play ──────────────────────────────────────────────────────
+const playBtn = document.getElementById('play-btn');
+playBtn.addEventListener('click', async () => {
+  await Tone.start();
+  isPlaying = !isPlaying;
+  document.getElementById('pi-play').style.display = isPlaying ? 'none' : '';
+  document.getElementById('pi-stop').style.display = isPlaying ? ''     : 'none';
+  playBtn.classList.toggle('on', isPlaying);
+  if (isPlaying) startAll(); else stopAll();
+});
+
+// ── Pointer ───────────────────────────────────────────────────
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const hit = hitTest(e.clientX, e.clientY);
+  if (hit) selectNode(hit);
+});
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.button === 2) return;
+  if (e.clientY < TOP_H || e.clientY > canvas.height - PANEL_H) return;
+  const hit = hitTest(e.clientX, e.clientY);
+  // when node selected: tap elsewhere = deselect; tap other node = switch
+  if (selectedNode && !hit) { deselectNode(); return; }
+  if (selectedNode && hit && hit !== selectedNode) { selectNode(hit); return; }
+  pDown = Date.now(); didDrag = false; velX = 0; velY = 0;
+  if (hit) {
+    dragNode = hit; pNode = hit;
+    dragStartClientX = e.clientX; dragStartClientY = e.clientY;
+    dragStartNodeX = hit.x; dragStartNodeY = hit.y;
+  } else {
+    isPanning = true; pNode = null;
+    panStartViewX = viewX; panStartViewY = viewY;
+    panStartClientX = e.clientX; panStartClientY = e.clientY;
+    lastMoveX = e.clientX; lastMoveY = e.clientY; lastMoveTime = Date.now();
+  }
+  canvas.setPointerCapture(e.pointerId);
+  canvas.style.cursor = hit ? 'grab' : 'grabbing';
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (dragNode) {
+    const dx = e.clientX - dragStartClientX, dy = e.clientY - dragStartClientY;
+    if (Math.hypot(dx, dy) > 4) didDrag = true;
+    dragNode.x = dragStartNodeX + dx;
+    dragNode.y = dragStartNodeY + dy;
+    updateAudio(dragNode);
+  } else if (isPanning) {
+    const dx = e.clientX - panStartClientX, dy = e.clientY - panStartClientY;
+    if (Math.hypot(dx, dy) > 4) didDrag = true;
+    viewX = panStartViewX - dx;
+    viewY = panStartViewY - dy;
+    // track velocity for momentum
+    const now = Date.now(), dt = Math.max(1, now - lastMoveTime);
+    velX = (lastMoveX - e.clientX) / dt * 16;
+    velY = (lastMoveY - e.clientY) / dt * 16;
+    lastMoveX = e.clientX; lastMoveY = e.clientY; lastMoveTime = now;
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  const dt = Date.now() - pDown;
+  if (dragNode) {
+    // noop — node already moved
+  } else if (isPanning) {
+    if (!didDrag && dt < 350 && e.clientY > TOP_H && e.clientY < canvas.height - PANEL_H) {
+      const w = screenToWorld(e.clientX, e.clientY);
+      addNode(w.x, w.y);
+    }
+    // keep velX/velY for momentum
+  }
+  if (pNode && !didDrag && dt < 400) selectNode(pNode);
+  dragNode = null; pNode = null; didDrag = false; isPanning = false;
+  canvas.style.cursor = 'crosshair';
+});
+
+// ── Spectrum canvas ───────────────────────────────────────────
+const specCanvas = document.getElementById('spectrum-canvas');
+const specCtx    = specCanvas.getContext('2d');
+
+// log-frequency x position
+const LOG_MIN = Math.log2(8), LOG_MAX = Math.log2(40000);
+function freqToSpecX(hz, w) {
+  return (Math.log2(Math.max(8, hz)) - LOG_MIN) / (LOG_MAX - LOG_MIN) * w;
+}
+
+const SPEC_TICKS = [20,50,100,200,500,1000,2000,5000,10000,20000];
+const TICK_LABELS = { 20:'20', 100:'100', 1000:'1k', 10000:'10k', 20000:'20k' };
+
+function drawSpectrum() {
+  const w = specCanvas.width, h = specCanvas.height;
+  specCtx.clearRect(0, 0, w, h);
+
+  // background
+  const bgColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(40,35,30,0.04)';
+  specCtx.fillStyle = bgColor;
+  specCtx.fillRect(0, 0, w, h);
+
+  const textColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(40,35,30,0.25)';
+  const tickColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(40,35,30,0.08)';
+
+  // tick lines + labels
+  specCtx.font = '8px SF Mono,Fira Code,monospace';
+  specCtx.textBaseline = 'bottom';
+  SPEC_TICKS.forEach(hz => {
+    const x = Math.round(freqToSpecX(hz, w));
+    specCtx.strokeStyle = tickColor;
+    specCtx.lineWidth = 1;
+    specCtx.beginPath(); specCtx.moveTo(x, 0); specCtx.lineTo(x, h); specCtx.stroke();
+    if (TICK_LABELS[hz]) {
+      specCtx.fillStyle = textColor;
+      specCtx.textAlign = hz < 2000 ? 'left' : 'center';
+      specCtx.fillText(TICK_LABELS[hz], x + (hz < 100 ? 2 : 0), h - 1);
+    }
+  });
+
+  // human hearing boundary (20–20kHz)
+  const xHear1 = freqToSpecX(20, w), xHear2 = freqToSpecX(20000, w);
+  const hearColor = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(40,35,30,0.03)';
+  specCtx.fillStyle = hearColor;
+  specCtx.fillRect(xHear1, 0, xHear2 - xHear1, h);
+
+  // active nodes
+  for (const node of nodes) {
+    if (node.muted) continue;
+    const [rr,gg,bb] = TYPES[node.type].rgb;
+    const freq  = nodeFreq(node);
+    const x     = freqToSpecX(freq, w);
+    const barH  = Math.round((h - 10) * (0.3 + node.volume * 0.7));
+    const alpha = isPlaying ? 0.7 + node.volume * 0.3 : 0.35;
+
+    // glow
+    const g = specCtx.createRadialGradient(x, h, 0, x, h, 20);
+    g.addColorStop(0, `rgba(${rr},${gg},${bb},${alpha * 0.35})`);
+    g.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
+    specCtx.fillStyle = g;
+    specCtx.fillRect(x - 20, 0, 40, h);
+
+    // vertical bar
+    specCtx.fillStyle = `rgba(${rr},${gg},${bb},${alpha})`;
+    specCtx.fillRect(x - 1.5, h - barH, 3, barH);
+
+    // dot at top of bar
+    specCtx.beginPath(); specCtx.arc(x, h - barH, 3, 0, Math.PI*2);
+    specCtx.fillStyle = `rgba(${rr},${gg},${bb},1)`; specCtx.fill();
+
+    // filter cutoff marker
+    const fc  = filterFromY(node.y);
+    const fcx = freqToSpecX(fc, w);
+    specCtx.strokeStyle = `rgba(${rr},${gg},${bb},0.22)`;
+    specCtx.setLineDash([2,3]); specCtx.lineWidth = 1;
+    specCtx.beginPath(); specCtx.moveTo(fcx, 0); specCtx.lineTo(fcx, h);
+    specCtx.stroke(); specCtx.setLineDash([]);
+  }
+}
+
+function resizeSpecCanvas() {
+  const wrap = document.getElementById('spectrum-wrap');
+  specCanvas.width = wrap.clientWidth - 28;
+}
+resizeSpecCanvas();
+addEventListener('resize', resizeSpecCanvas);
+
+// ── Analytics update ──────────────────────────────────────────
+function updateAnalytics() {
+  const active = nodes.filter(n => !n.muted);
+  document.getElementById('an-nodes').textContent = nodes.length;
+
+  if (active.length > 0) {
+    const freqs = active.map(n => nodeFreq(n)).sort((a,b) => a - b);
+    const lo = freqs[0], hi = freqs[freqs.length - 1];
+    document.getElementById('an-range').textContent =
+      lo === hi ? fmtHz(lo) : `${fmtHz(lo)}–${fmtHz(hi)}`;
+  } else {
+    document.getElementById('an-range').textContent = '—';
+  }
+
+  let connections = 0;
+  for (let i = 0; i < nodes.length; i++)
+    for (let j = i+1; j < nodes.length; j++)
+      if (gravityFactor(nodes[i], nodes[j]) > .04) connections++;
+  document.getElementById('an-conn').textContent = connections;
+
+  if (active.length > 1) {
+    const pans = active.map(n => effectivePan(n));
+    const spread = Math.max(...pans) - Math.min(...pans);
+    document.getElementById('an-pan').textContent =
+      spread < .05 ? 'narrow' : spread < .5 ? 'med' : spread < 1.2 ? 'wide' : 'full';
+  } else {
+    document.getElementById('an-pan').textContent = active.length === 1
+      ? fmtPan(effectivePan(active[0])) : '—';
+  }
+}
+
+// ── Ripples ───────────────────────────────────────────────────
+function spawnRipple(node) {
+  const freq  = nodeFreq(node);
+  const filterN = Math.max(0, 1 - (node.y - TOP_H) / (canvas.height - PANEL_H - TOP_H));
+  const maxR  = Math.hypot(canvas.width, canvas.height) * (.05 + filterN * .38 + waveSpread * .2);
+  const speed = .4 + Math.log2(Math.max(1, freq / 10)) * .45;
+  ripples.push({ x:node.x, y:node.y, rgb:TYPES[node.type].rgb, radius:nodeRadius(node), maxRadius:maxR, alpha:.12 + node.volume * .25, speed });
+}
+function rippleInterval(node) { return Math.max(14, 115 - Math.log2(Math.max(1, nodeFreq(node)/10)) * 8.5); }
+
+// ── Node waves ────────────────────────────────────────────────
+function drawNodeWaves(node, time) {
+  const [rr,gg,bb] = TYPES[node.type].rgb;
+  const freq     = nodeFreq(node);
+  const filterN  = Math.max(0, 1 - (node.y - TOP_H) / (canvas.height - PANEL_H - TOP_H));
+  const angSpeed = .0005 + Math.log2(Math.max(1, freq/10)) * .00055;
+  const maxR     = Math.hypot(canvas.width, canvas.height) * (.06 + filterN * .36 + waveSpread * .17);
+  const rings    = node.type==='noise' ? 6 : (node.type==='sine'||node.type==='triangle') ? 3 : 4;
+  const R        = nodeRadius(node);
+  for (let k = 0; k < rings; k++) {
+    const phase = (time * angSpeed + k/rings) % 1;
+    const r     = R + phase * maxR;
+    const alpha = node.volume * .17 * (1 - phase * .88) * (isPlaying ? 1 : .12);
+    if (alpha < .003) continue;
+    const g = ctx.createRadialGradient(node.x, node.y, r*.72, node.x, node.y, r);
+    g.addColorStop(0, `rgba(${rr},${gg},${bb},${alpha*.65})`);
+    g.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
+    ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI*2);
+    ctx.fillStyle = g; ctx.fill();
+  }
+}
+
+// ── Canvas render ─────────────────────────────────────────────
+function drawLinks() {
+  for (let i = 0; i < nodes.length; i++) for (let j = i+1; j < nodes.length; j++) {
+    const a = nodes[i], b = nodes[j], f = gravityFactor(a, b);
+    if (f < .04) continue;
+    const [ar,ag,ab] = TYPES[a.type].rgb, [br,bg,bb] = TYPES[b.type].rgb;
+    const g = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+    g.addColorStop(0, `rgba(${ar},${ag},${ab},${f*.35})`);
+    g.addColorStop(1, `rgba(${br},${bg},${bb},${f*.35})`);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle = g; ctx.lineWidth = f*2; ctx.stroke();
+  }
+}
+function drawRipples() {
+  for (let i = ripples.length-1; i >= 0; i--) {
+    const r = ripples[i];
+    r.radius += r.speed; r.alpha *= .965;
+    if (r.radius > r.maxRadius || r.alpha < .004) { ripples.splice(i,1); continue; }
+    const [rr,gg,bb] = r.rgb, prog = r.radius/r.maxRadius;
+    ctx.beginPath(); ctx.arc(r.x,r.y,r.radius,0,Math.PI*2);
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},${r.alpha*(1-prog*.6)})`;
+    ctx.lineWidth = 1.2*(1-prog*.45); ctx.stroke();
+  }
+}
+function drawNode(node, time) {
+  const {color,rgb} = TYPES[node.type], [rr,gg,bb] = rgb;
+  const R     = nodeRadius(node);
+  const pulse = isPlaying && !node.muted ? Math.sin(time*.003 + node.pulsePhase)*.28+.72 : .28;
+  const isSel = node === selectedNode;
+
+  if (isSel) {
+    ctx.beginPath(); ctx.arc(node.x,node.y,R+7,0,Math.PI*2);
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},.25)`;
+    ctx.lineWidth = 1; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.shadowColor = `rgba(${rr},${gg},${bb},.14)`; ctx.shadowBlur = R*1.4;
+  const disc = ctx.createRadialGradient(node.x,node.y,0,node.x,node.y,R);
+  disc.addColorStop(0, `rgba(${rr},${gg},${bb},${node.muted?.05:pulse*.26})`);
+  disc.addColorStop(1, `rgba(${rr},${gg},${bb},.01)`);
+  ctx.beginPath(); ctx.arc(node.x,node.y,R,0,Math.PI*2);
+  ctx.fillStyle = disc; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(node.x,node.y,R,0,Math.PI*2);
+  ctx.strokeStyle = node.muted ? 'rgba(128,125,120,.28)' : `rgba(${rr},${gg},${bb},${pulse*.8+.2})`;
+  ctx.lineWidth = 1.8; ctx.stroke();
+  // volume arc
+  if (!node.muted && node.volume > .05) {
+    ctx.beginPath(); ctx.arc(node.x,node.y,R+5,-Math.PI/2,-Math.PI/2+node.volume*Math.PI*2);
+    ctx.strokeStyle = `rgba(${rr},${gg},${bb},.35)`; ctx.lineWidth = 2.2; ctx.stroke();
+  }
+  // pan track
+  const pan = effectivePan(node), trackW = R*1.3;
+  const dotX = node.x + pan*trackW, dotY = node.y + R + 10;
+  ctx.beginPath(); ctx.moveTo(node.x-trackW,dotY); ctx.lineTo(node.x+trackW,dotY);
+  ctx.strokeStyle = `rgba(${rr},${gg},${bb},.17)`; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(dotX,dotY,2.8,0,Math.PI*2);
+  ctx.fillStyle = `rgba(${rr},${gg},${bb},.5)`; ctx.fill();
+  // id label
+  ctx.font = `${Math.max(9,Math.round(R*.42))}px SF Mono,Fira Code,monospace`;
+  ctx.fillStyle = node.muted ? 'rgba(128,125,120,.38)' : `rgba(${rr},${gg},${bb},.55)`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${node.id}`, node.x, node.y);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.beginPath(); ctx.arc(node.x,node.y,2.2,0,Math.PI*2);
+  ctx.fillStyle = node.muted ? 'rgba(128,125,120,.25)' : color; ctx.fill();
+}
+
+// ── Grid background ───────────────────────────────────────────
+function drawGrid() {
+  const step  = 120;
+  const color = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(40,35,30,0.04)';
+  ctx.strokeStyle = color; ctx.lineWidth = 1;
+  // vertical lines (x)
+  const startX = -((viewX % step) + step) % step;
+  for (let x = startX; x <= canvas.width; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, TOP_H); ctx.lineTo(x, canvas.height - PANEL_H); ctx.stroke();
+  }
+  // horizontal lines (y)
+  const startY = -((viewY % step) + step) % step;
+  for (let y = startY + TOP_H; y <= canvas.height - PANEL_H; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+  // origin cross (0,0 in world = screen at -viewX, -viewY)
+  const ox = -viewX, oy = -viewY;
+  if (ox > -10 && ox < canvas.width + 10 && oy > TOP_H - 10 && oy < canvas.height - PANEL_H + 10) {
+    const cc = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(40,35,30,0.12)';
+    ctx.strokeStyle = cc; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox-12,oy); ctx.lineTo(ox+12,oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox,oy-12); ctx.lineTo(ox,oy+12); ctx.stroke();
+  }
+}
+
+// ── View position indicator ───────────────────────────────────
+function drawViewIndicator() {
+  if (Math.abs(viewX) < 20 && Math.abs(viewY) < 20) return;
+  ctx.save();
+  ctx.font = '9px SF Mono,Fira Code,monospace';
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(40,35,30,0.22)';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillText(`${Math.round(viewX)}, ${Math.round(viewY)}`, canvas.width - 10, TOP_H + 8);
+  ctx.restore();
+}
+
+// ── Main loop ─────────────────────────────────────────────────
+let lastSlow = 0;
+
+function loop(time = 0) {
+  requestAnimationFrame(loop);
+
+  // momentum pan when not actively panning
+  if (!isPanning && !dragNode && (Math.abs(velX) > 0.3 || Math.abs(velY) > 0.3)) {
+    viewX += velX;
+    viewY += velY;
+    velX *= 0.88;
+    velY *= 0.88;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+
+  // apply world transform: all world-coordinate drawing happens inside save/restore
+  ctx.save();
+  ctx.translate(-viewX, -viewY);
+  for (const node of nodes) if (!node.muted) drawNodeWaves(node, time);
+  drawLinks();
+  drawRipples();
+  for (const node of nodes) drawNode(node, time);
+  ctx.restore();
+
+  drawViewIndicator();
+
+  if (isPlaying) {
+    for (const node of nodes) {
+      if (node.muted) continue;
+      node.rippleTimer++;
+      if (node.rippleTimer >= rippleInterval(node)) { node.rippleTimer = 0; spawnRipple(node); }
+    }
+  }
+
+  if (time - lastSlow > 100) {
+    for (const node of nodes) updateAudio(node);
+    if (selectedNode) updateNodeInfoStrip(selectedNode);
+    updateAnalytics();
+    drawSpectrum();
+    lastSlow = time;
+  }
+}
+
+loop();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
