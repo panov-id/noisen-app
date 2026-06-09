@@ -9,8 +9,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../../" && pwd)"
 
 : "${BUNNY_STORAGE_API_KEY:?Missing BUNNY_STORAGE_API_KEY}"
 : "${BUNNY_STORAGE_ZONE:?Missing BUNNY_STORAGE_ZONE}"
-REGION="${BUNNY_STORAGE_REGION:-de}"
-BASE_URL="https://${REGION}.storage.bunnycdn.com/${BUNNY_STORAGE_ZONE}"
+BASE_URL="https://storage.bunnycdn.com/${BUNNY_STORAGE_ZONE}"
 
 mime_type() {
   case "$1" in
