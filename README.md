@@ -1,2 +1,7 @@
-# noisen-app
-Quiet your mind with noise. Noisen is a minimal PWA for meditation and focus — ambient sounds generated in the browser, available anywhere, even offline.
+# Noisen — quiet your mind with noise.
+
+A minimal PWA for meditative sound generation.
+White noise, rain, binaural beats, and ambient tones.
+No accounts. No distractions. Just sound.
+
+Works offline · Installable on any device · Plays in silent mode
