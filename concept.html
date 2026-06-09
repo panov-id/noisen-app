@@ -1741,13 +1741,57 @@ document.getElementById('node-close').addEventListener('click', deselectNode);
 
 // ── Play ──────────────────────────────────────────────────────
 const playBtn = document.getElementById('play-btn');
+// ── Background audio keep-alive ───────────────────────────────
+// A looping silent <audio> element anchors the OS audio session so Web Audio
+// continues when the screen locks (critical on iOS Safari and Android Chrome).
+const keepAlive = new Audio();
+// Minimal silent MP3 frame — valid audio, produces no sound
+keepAlive.src = 'data:audio/mpeg;base64,/+MYxAAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+keepAlive.loop = true;
+
+function setupMediaSession(playing) {
+  if (!('mediaSession' in navigator)) return;
+  if (!navigator.mediaSession.metadata) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'Noisen',
+      artist: 'noisen.space',
+      artwork: [
+        { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+    });
+    navigator.mediaSession.setActionHandler('play',  () => {
+      if (!isPlaying) playBtn.click();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (isPlaying) playBtn.click();
+    });
+    navigator.mediaSession.setActionHandler('stop',  () => {
+      if (isPlaying) playBtn.click();
+    });
+  }
+  navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+}
+
+// Resume AudioContext when tab/screen becomes visible again (Android Chrome)
+document.addEventListener('visibilitychange', () => {
+  if (isPlaying) Tone.context.resume();
+});
+
 playBtn.addEventListener('click', async () => {
   await Tone.start();
   isPlaying = !isPlaying;
   document.getElementById('pi-play').style.display = isPlaying ? 'none' : '';
   document.getElementById('pi-stop').style.display = isPlaying ? ''     : 'none';
   playBtn.classList.toggle('on', isPlaying);
-  if (isPlaying) startAll(); else stopAll();
+  if (isPlaying) {
+    keepAlive.play().catch(() => {});
+    startAll();
+  } else {
+    keepAlive.pause();
+    stopAll();
+  }
+  setupMediaSession(isPlaying);
 });
 
 // ── Pointer ───────────────────────────────────────────────────
