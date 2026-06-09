@@ -1,0 +1,62 @@
+_format_version: "1.1"
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: ${ANON_KEY}
+  - username: service_role
+    keyauth_credentials:
+      - key: ${SERVICE_KEY}
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+services:
+  - name: auth
+    url: http://authentication:9999/
+    routes:
+      - name: auth-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+
+  - name: rest
+    url: http://api:3000/
+    routes:
+      - name: rest-all
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - anon
+            - admin
+
+  - name: meta
+    url: http://metadata:8080/
+    routes:
+      - name: meta-all
+        strip_path: true
+        paths:
+          - /pg/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
