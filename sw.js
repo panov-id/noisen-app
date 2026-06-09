@@ -1,7 +1,8 @@
-const CACHE = 'noisen-v1';
+const CACHE = 'noisen-__BUILD__';
 const PRECACHE = [
   '/',
   '/manifest.json',
+  '/silence.mp3',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
