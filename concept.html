@@ -1954,6 +1954,10 @@ masterFilter.connect(masterDelay);
 masterDelay.connect(masterReverb);
 masterReverb.connect(limiter);
 
+// recorder connected permanently at init — avoids modifying audio graph during playback
+const masterRecorder = new Tone.Recorder();
+limiter.connect(masterRecorder);
+
 // master analyser tapped before effects (raw mix of all nodes)
 const masterAnalyser = new Tone.Analyser('fft', 2048);
 masterAnalyser.smoothing = 0.85;
@@ -2449,7 +2453,7 @@ playBtn.addEventListener('click', async () => {
 });
 
 // ── Recording ────────────────────────────────────────────────
-let recorder = null, recInterval = null, recStartTime = 0;
+let isRecording = false, recInterval = null, recStartTime = 0;
 const recBtn   = document.getElementById('rec-btn');
 const recTimer = document.getElementById('rec-timer');
 
@@ -2459,26 +2463,23 @@ function fmtRecTime(ms) {
 }
 
 recBtn.addEventListener('click', async () => {
-  if (recorder && recorder.state === 'started') {
-    // stop recording
-    const blob = await recorder.stop();
-    recorder.disconnect(); recorder = null;
-    clearInterval(recInterval);
+  if (isRecording) {
+    isRecording = false;
     recBtn.classList.remove('recording');
     recTimer.style.display = 'none';
-    // download
+    clearInterval(recInterval);
+    // stop() resolves with blob — non-blocking since recorder was already running
+    const blob = await masterRecorder.stop();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `noisen-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.webm`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   } else {
-    // start recording — must be playing
     if (!isPlaying) { showToast('Start playback first'); return; }
-    recorder = new Tone.Recorder();
-    limiter.connect(recorder);
-    await recorder.start();
+    await masterRecorder.start();
+    isRecording = true;
     recStartTime = Date.now();
     recBtn.classList.add('recording');
     recTimer.style.display = '';
