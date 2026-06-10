@@ -507,6 +507,7 @@ function freqToFilterNorm(freq) {
 }
 function rnd(min, max) { return min + Math.random() * (max - min); }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rndDir() { return Math.random() > 0.5 ? 1 : -1; }
 
 function makeNode(freq, { type = 'sine', volume = 0.5, filterFreq = null, pan = null, orbits = [], reverb = 0, delayWet = 0 } = {}) {
   const canvasArea = canvas.height - state.panelHeight - TOP_H;
@@ -565,7 +566,7 @@ function generateBinaural() {
     nodes.push(makeNode(carrier * 0.5, {
       type: 'triangle', volume: rnd(0.20, 0.35),
       filterFreq: carrier * 2,
-      orbits: [{ target: 'volume', rate: rnd(0.05, 0.15), depth: 35, enabled: true }],
+      orbits: [{ target: 'volume', rate: rnd(0.05, 0.15), depth: 35, direction: rndDir(), enabled: true }],
     }));
   }
 
@@ -573,7 +574,7 @@ function generateBinaural() {
   nodes.push(makeNode(rnd(300, 800), {
     type: 'noise', volume: rnd(0.12, 0.22),
     filterFreq: rnd(400, 1200),
-    orbits: [{ target: 'filter', rate: rnd(0.03, 0.08), depth: 30, enabled: true }],
+    orbits: [{ target: 'filter', rate: rnd(0.03, 0.08), depth: 30, direction: rndDir(), enabled: true }],
   }));
 
   return { nodes, label: `${band.name} binaural · ${beat.toFixed(1)}Hz beat · ${band.desc}`, name: `${band.name} ${beat.toFixed(1)}Hz` };
@@ -597,8 +598,8 @@ function generateSolfeggio() {
       filterFreq: freq * rnd(4, 10),
       reverb: rnd(0.1, 0.3),
       orbits: [
-        { target: 'filter', rate: rnd(0.04, 0.12), depth: isBase ? 25 : 40, enabled: true },
-        ...(i > 0 ? [{ target: 'volume', rate: rnd(0.06, 0.18), depth: 30, enabled: true }] : []),
+        { target: 'filter', rate: rnd(0.04, 0.12), depth: isBase ? 25 : 40, direction: rndDir(), enabled: true },
+        ...(i > 0 ? [{ target: 'volume', rate: rnd(0.06, 0.18), depth: 30, direction: rndDir(), enabled: true }] : []),
       ],
     });
   });
@@ -624,14 +625,14 @@ function generateHarmonicSeries() {
 
     if (i === 0) {
       // fundamental: slow volume breath
-      orbs.push({ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, enabled: true });
+      orbs.push({ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, direction: rndDir(), enabled: true });
     } else if (i < 3) {
       // lower harmonics: slow filter sweep
-      orbs.push({ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, enabled: true });
+      orbs.push({ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, direction: rndDir(), enabled: true });
     } else {
       // upper harmonics: pan movement + optional filter
-      orbs.push({ target: 'pan', rate: rnd(0.08, 0.25), depth: Math.floor(rnd(30, 60)), enabled: true });
-      if (i >= 4) orbs.push({ target: 'volume', rate: rnd(0.12, 0.30), depth: 45, enabled: true });
+      orbs.push({ target: 'pan', rate: rnd(0.08, 0.25), depth: Math.floor(rnd(30, 60)), direction: rndDir(), enabled: true });
+      if (i >= 4) orbs.push({ target: 'volume', rate: rnd(0.12, 0.30), depth: 45, direction: rndDir(), enabled: true });
     }
 
     return makeNode(freq, {
@@ -656,14 +657,14 @@ function generateFullSpectrum() {
   nodes.push(makeNode(rnd(18, 45), {
     type: 'sine', volume: rnd(0.50, 0.65),
     filterFreq: rnd(50, 150),
-    orbits: [{ target: 'volume', rate: rnd(0.02, 0.07), depth: 55, enabled: true }],
+    orbits: [{ target: 'volume', rate: rnd(0.02, 0.07), depth: 55, direction: rndDir(), enabled: true }],
   }));
 
   // bass: warmth 80–300Hz
   nodes.push(makeNode(rnd(80, 300), {
     type: pick(['sine', 'triangle']), volume: rnd(0.30, 0.45),
     filterFreq: rnd(200, 700),
-    orbits: [{ target: 'filter', rate: rnd(0.04, 0.12), depth: 40, enabled: true }],
+    orbits: [{ target: 'filter', rate: rnd(0.04, 0.12), depth: 40, direction: rndDir(), enabled: true }],
   }));
 
   // low-mid: body 300–1200Hz
@@ -672,8 +673,8 @@ function generateFullSpectrum() {
     filterFreq: rnd(800, 3000),
     reverb: rnd(0.10, 0.25),
     orbits: [
-      { target: 'filter', rate: rnd(0.07, 0.18), depth: 40, enabled: true },
-      { target: 'pan',    rate: rnd(0.04, 0.12), depth: Math.floor(rnd(20, 50)), enabled: true },
+      { target: 'filter', rate: rnd(0.07, 0.18), depth: 40, direction: rndDir(), enabled: true },
+      { target: 'pan',    rate: rnd(0.04, 0.12), depth: Math.floor(rnd(20, 50)), direction: rndDir(), enabled: true },
     ],
   }));
 
@@ -683,8 +684,8 @@ function generateFullSpectrum() {
     filterFreq: rnd(3000, 9000),
     reverb: rnd(0.20, 0.40),
     orbits: [
-      { target: 'filter', rate: rnd(0.09, 0.22), depth: 50, enabled: true },
-      { target: 'pan',    rate: rnd(0.05, 0.14), depth: Math.floor(rnd(30, 65)), enabled: true },
+      { target: 'filter', rate: rnd(0.09, 0.22), depth: 50, direction: rndDir(), enabled: true },
+      { target: 'pan',    rate: rnd(0.05, 0.14), depth: Math.floor(rnd(30, 65)), direction: rndDir(), enabled: true },
     ],
   }));
 
@@ -694,8 +695,8 @@ function generateFullSpectrum() {
     filterFreq: rnd(10000, 20000),
     reverb: rnd(0.30, 0.55),
     orbits: [
-      { target: 'filter', rate: rnd(0.05, 0.15), depth: 60, enabled: true },
-      { target: 'pan',    rate: rnd(0.03, 0.09), depth: Math.floor(rnd(45, 75)), enabled: true },
+      { target: 'filter', rate: rnd(0.05, 0.15), depth: 60, direction: rndDir(), enabled: true },
+      { target: 'pan',    rate: rnd(0.03, 0.09), depth: Math.floor(rnd(45, 75)), direction: rndDir(), enabled: true },
     ],
   }));
 
@@ -730,9 +731,9 @@ function generateScale() {
   const nodes = pool.slice(0, count).map((semitone, i) => {
     const freq  = semitoneToFreq(semitone);
     const orbs  = [];
-    if (i === 0) orbs.push({ target: 'volume', rate: rnd(0.04, 0.12), depth: 35, enabled: true });
-    else if (i % 3 === 1) orbs.push({ target: 'filter', rate: rnd(0.06, 0.18), depth: 40, enabled: true });
-    else orbs.push({ target: 'pan', rate: rnd(0.05, 0.15), depth: Math.floor(rnd(20, 55)), enabled: true });
+    if (i === 0) orbs.push({ target: 'volume', rate: rnd(0.04, 0.12), depth: 35, direction: rndDir(), enabled: true });
+    else if (i % 3 === 1) orbs.push({ target: 'filter', rate: rnd(0.06, 0.18), depth: 40, direction: rndDir(), enabled: true });
+    else orbs.push({ target: 'pan', rate: rnd(0.05, 0.15), depth: Math.floor(rnd(20, 55)), direction: rndDir(), enabled: true });
 
     return makeNode(freq, {
       type: pick(['sine', 'sine', 'sine', 'triangle', 'square']),
@@ -775,8 +776,8 @@ function generatePolyrhythm() {
       filterFreq: freq * rnd(4, 10),
       pan: panned,
       orbits: [
-        { target: 'volume', rate, depth: Math.floor(rnd(50, 80)), enabled: true },
-        ...(i > 1 ? [{ target: 'filter', rate: rate * 0.7, depth: 30, enabled: true }] : []),
+        { target: 'volume', rate, depth: Math.floor(rnd(50, 80)), direction: rndDir(), enabled: true },
+        ...(i > 1 ? [{ target: 'filter', rate: rate * 0.7, depth: 30, direction: rndDir(), enabled: true }] : []),
       ],
     });
   });
@@ -806,8 +807,8 @@ function generateGamelan() {
       pan,
       reverb: rnd(0.15, 0.40),
       orbits: [
-        { target: 'pan',    rate: panRate,          depth: Math.floor(rnd(40, 75)), enabled: true },
-        { target: 'volume', rate: panRate * rnd(1.3, 2.5), depth: Math.floor(rnd(30, 60)), enabled: true },
+        { target: 'pan',    rate: panRate,          depth: Math.floor(rnd(40, 75)), direction: rndDir(), enabled: true },
+        { target: 'volume', rate: panRate * rnd(1.3, 2.5), depth: Math.floor(rnd(30, 60)), direction: rndDir(), enabled: true },
       ],
     });
   });
@@ -837,8 +838,8 @@ function generatePentatonicPulse() {
       pan: rnd(-0.6, 0.6),
       reverb: rnd(0.1, 0.3),
       orbits: [
-        { target: 'volume', rate, depth: Math.floor(rnd(45, 75)), enabled: true },
-        ...(i % 2 === 1 ? [{ target: 'pan', rate: rate * 0.6, depth: Math.floor(rnd(20, 50)), enabled: true }] : []),
+        { target: 'volume', rate, depth: Math.floor(rnd(45, 75)), direction: rndDir(), enabled: true },
+        ...(i % 2 === 1 ? [{ target: 'pan', rate: rate * 0.6, depth: Math.floor(rnd(20, 50)), direction: rndDir(), enabled: true }] : []),
       ],
     });
   });
@@ -869,8 +870,8 @@ function generateFibonacci() {
       pan,
       reverb: rnd(0.05, 0.25),
       orbits: [
-        { target: 'volume', rate, depth: Math.floor(rnd(35, 65)), enabled: true },
-        { target: 'filter', rate: rate * PHI, depth: Math.floor(rnd(25, 50)), enabled: true },
+        { target: 'volume', rate, depth: Math.floor(rnd(35, 65)), direction: rndDir(), enabled: true },
+        { target: 'filter', rate: rate * PHI, depth: Math.floor(rnd(25, 50)), direction: rndDir(), enabled: true },
       ],
     });
   });
@@ -899,8 +900,8 @@ function generateDroneSwarm() {
       pan: panPos * 0.7,
       reverb: rnd(0.2, 0.45),
       orbits: [
-        { target: 'volume', rate: panRate, depth: Math.floor(rnd(30, 55)), enabled: true },
-        { target: 'pan',    rate: panRate * rnd(0.4, 0.8), depth: Math.floor(rnd(20, 45)), enabled: true },
+        { target: 'volume', rate: panRate, depth: Math.floor(rnd(30, 55)), direction: rndDir(), enabled: true },
+        { target: 'pan',    rate: panRate * rnd(0.4, 0.8), depth: Math.floor(rnd(20, 45)), direction: rndDir(), enabled: true },
       ],
     });
   });
@@ -918,14 +919,14 @@ function generateDeepSub() {
   nodes.push(makeNode(root, {
     type: 'sine', volume: rnd(0.55, 0.72),
     filterFreq: rnd(60, 200),
-    orbits: [{ target: 'volume', rate: rnd(0.02, 0.06), depth: 60, enabled: true }],
+    orbits: [{ target: 'volume', rate: rnd(0.02, 0.06), depth: 60, direction: rndDir(), enabled: true }],
   }));
 
   // octave harmonic
   nodes.push(makeNode(root * 2, {
     type: pick(['sine', 'triangle']), volume: rnd(0.28, 0.45),
     filterFreq: root * rnd(3, 6),
-    orbits: [{ target: 'filter', rate: rnd(0.03, 0.09), depth: 50, enabled: true }],
+    orbits: [{ target: 'filter', rate: rnd(0.03, 0.09), depth: 50, direction: rndDir(), enabled: true }],
   }));
 
   // noise bed — adds warmth/texture to pure sub
@@ -933,7 +934,7 @@ function generateDeepSub() {
     type: 'noise', volume: rnd(0.08, 0.18),
     filterFreq: rnd(80, 300),
     reverb: rnd(0.2, 0.4),
-    orbits: [{ target: 'filter', rate: rnd(0.05, 0.12), depth: 45, enabled: true }],
+    orbits: [{ target: 'filter', rate: rnd(0.05, 0.12), depth: 45, direction: rndDir(), enabled: true }],
   }));
 
   // optional: a fifth or third above root
@@ -942,7 +943,7 @@ function generateDeepSub() {
       type: pick(['sine', 'sawtooth']), volume: rnd(0.14, 0.28),
       filterFreq: root * rnd(4, 8),
       pan: rnd(-0.5, 0.5),
-      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, enabled: true }],
+      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, direction: rndDir(), enabled: true }],
     }));
   }
 
@@ -966,8 +967,8 @@ function generateCrystalline() {
       pan,
       reverb: rnd(0.25, 0.55),
       orbits: [
-        { target: 'pan',    rate: rnd(0.04, 0.14), depth: Math.floor(rnd(30, 65)), enabled: true },
-        { target: 'volume', rate: rnd(0.07, 0.20), depth: Math.floor(rnd(35, 60)), enabled: true },
+        { target: 'pan',    rate: rnd(0.04, 0.14), depth: Math.floor(rnd(30, 65)), direction: rndDir(), enabled: true },
+        { target: 'volume', rate: rnd(0.07, 0.20), depth: Math.floor(rnd(35, 60)), direction: rndDir(), enabled: true },
       ],
     });
   });
@@ -977,7 +978,7 @@ function generateCrystalline() {
     nodes.push(makeNode(root * 0.25, {
       type: 'sine', volume: rnd(0.22, 0.38),
       filterFreq: root * 0.6,
-      orbits: [{ target: 'volume', rate: rnd(0.03, 0.08), depth: 45, enabled: true }],
+      orbits: [{ target: 'volume', rate: rnd(0.03, 0.08), depth: 45, direction: rndDir(), enabled: true }],
     }));
   }
 
@@ -1004,8 +1005,8 @@ function generateNoiseTexture() {
       pan: rnd(-0.7, 0.7),
       reverb: rnd(0.15, 0.45),
       orbits: [
-        { target: 'filter', rate: rnd(0.03, 0.10), depth: Math.floor(rnd(40, 70)), enabled: true },
-        ...(Math.random() > 0.5 ? [{ target: 'pan', rate: rnd(0.02, 0.08), depth: Math.floor(rnd(20, 50)), enabled: true }] : []),
+        { target: 'filter', rate: rnd(0.03, 0.10), depth: Math.floor(rnd(40, 70)), direction: rndDir(), enabled: true },
+        ...(Math.random() > 0.5 ? [{ target: 'pan', rate: rnd(0.02, 0.08), depth: Math.floor(rnd(20, 50)), direction: rndDir(), enabled: true }] : []),
       ],
     }));
   }
@@ -1017,7 +1018,7 @@ function generateNoiseTexture() {
       type: pick(['sine', 'triangle']), volume: rnd(0.20, 0.38),
       filterFreq: freq * rnd(3, 8),
       reverb: rnd(0.10, 0.30),
-      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 50, enabled: true }],
+      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 50, direction: rndDir(), enabled: true }],
     }));
   }
 
@@ -1039,8 +1040,8 @@ function generateStochastic() {
     const type   = pick(ALL_TYPES);
     const pan    = (i % 2 === 0 ? -1 : 1) * rnd(0, 0.8);
     const orbs   = [];
-    if (Math.random() > 0.3) orbs.push({ target: pick(['volume','filter','pan']), rate: rnd(0.03, 0.25), depth: Math.floor(rnd(30, 70)), enabled: true });
-    if (Math.random() > 0.6) orbs.push({ target: pick(['volume','filter']),        rate: rnd(0.05, 0.35), depth: Math.floor(rnd(25, 55)), enabled: true });
+    if (Math.random() > 0.3) orbs.push({ target: pick(['volume','filter','pan']), rate: rnd(0.03, 0.25), depth: Math.floor(rnd(30, 70)), direction: rndDir(), enabled: true });
+    if (Math.random() > 0.6) orbs.push({ target: pick(['volume','filter']),        rate: rnd(0.05, 0.35), depth: Math.floor(rnd(25, 55)), direction: rndDir(), enabled: true });
     return makeNode(Math.min(freq, 18000), {
       type, volume: rnd(0.18, 0.48), pan,
       filterFreq: Math.min(freq * rnd(2, 12), 20000),
@@ -1130,9 +1131,57 @@ function generateDrumWithBass() {
   const bassNode = makeNode(bassFreq, {
     type: 'sine', volume: rnd(0.4, 0.6),
     filterFreq: bassFreq * 3,
-    orbits: [{ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, enabled: true }],
+    orbits: [{ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, direction: rndDir(), enabled: true }],
   });
   return { nodes: [...nodes, bassNode], label: label + ' + bass', name: 'Drum + bass' };
+}
+
+function generateDrumWithPad() {
+  const { nodes, label } = generateDrumKit();
+  const root = pick([55, 65, 82, 110, 130, 165, 220]);
+  const ratios = pick([[1, 1.5, 2], [1, 1.25, 1.5, 2], [1, 2, 3]]);
+  const padNodes = ratios.map((r, i) => makeNode(root * r, {
+    type: pick(['triangle', 'sine', 'sawtooth']),
+    volume: rnd(0.15, 0.30),
+    filterFreq: root * r * rnd(2, 5),
+    reverb: rnd(0.3, 0.7),
+    orbits: [
+      { target: 'volume', rate: rnd(0.04, 0.12), depth: Math.floor(rnd(30, 55)), direction: rndDir(), enabled: true },
+      ...(i === 0 ? [{ target: 'filter', rate: rnd(0.03, 0.09), depth: Math.floor(rnd(25, 45)), direction: rndDir(), enabled: true }] : []),
+    ],
+  }));
+  return { nodes: [...nodes, ...padNodes], label: label + ' + pad', name: 'Drum + pad' };
+}
+
+function generateDrumWithDrone() {
+  const { nodes, label } = generateDrumKit();
+  const root = pick([40, 55, 65, 82, 110]);
+  const droneNodes = [root, root * 2, root * 0.5].slice(0, 2 + Math.floor(Math.random() * 2)).map(freq => makeNode(freq, {
+    type: pick(['sine', 'triangle', 'noise']),
+    volume: rnd(0.12, 0.25),
+    filterFreq: freq * rnd(1.5, 4),
+    reverb: rnd(0.4, 0.8),
+    orbits: [
+      { target: 'volume', rate: rnd(0.02, 0.07), depth: Math.floor(rnd(40, 65)), direction: rndDir(), enabled: true },
+      { target: 'pan',    rate: rnd(0.03, 0.10), depth: Math.floor(rnd(20, 45)), direction: rndDir(), enabled: true },
+    ],
+  }));
+  return { nodes: [...nodes, ...droneNodes], label: label + ' + drone', name: 'Drum + drone' };
+}
+
+function generateDrumWithTexture() {
+  const { nodes, label } = generateDrumKit();
+  const textureNode = makeNode(rnd(200, 2000), {
+    type: 'noise',
+    volume: rnd(0.10, 0.20),
+    filterFreq: rnd(300, 3000),
+    reverb: rnd(0.5, 0.9),
+    orbits: [
+      { target: 'filter', rate: rnd(0.05, 0.18), depth: Math.floor(rnd(35, 60)), direction: rndDir(), enabled: true },
+      { target: 'volume', rate: rnd(0.07, 0.22), depth: Math.floor(rnd(30, 55)), direction: rndDir(), enabled: true },
+    ],
+  });
+  return { nodes: [...nodes, textureNode], label: label + ' + texture', name: 'Drum + texture' };
 }
 
 // ── Dispatcher ────────────────────────────────────────────────
@@ -1154,8 +1203,11 @@ const ARCHETYPES = [
 ];
 
 const BEAT_ARCHETYPES = [
-  { weight: 3, fn: generateDrumKit      },
-  { weight: 2, fn: generateDrumWithBass },
+  { weight: 3, fn: generateDrumKit         },
+  { weight: 2, fn: generateDrumWithBass    },
+  { weight: 2, fn: generateDrumWithPad     },
+  { weight: 2, fn: generateDrumWithDrone   },
+  { weight: 2, fn: generateDrumWithTexture },
 ];
 
 let lastArchetypeFn = null;
