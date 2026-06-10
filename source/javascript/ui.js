@@ -124,6 +124,22 @@ function makeNoiseColorCard(node) {
   return card;
 }
 
+// ── Node tab state ────────────────────────────────────────────
+let activeNodeTab = 'sound';
+
+function switchNodeTab(tab) {
+  activeNodeTab = tab;
+  document.querySelectorAll('.node-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  if (state.selectedNode) buildNodeCards(state.selectedNode);
+}
+
+// Wire tab buttons once on load
+document.querySelectorAll('.node-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchNodeTab(btn.dataset.tab));
+});
+
 export function buildNodeCards(node) {
   nodeCards.innerHTML = '';
   const color    = TYPES[node.type].color;
@@ -138,46 +154,49 @@ export function buildNodeCards(node) {
 
   const fmtSec = v => v >= 1 ? `${(+v).toFixed(1)}s` : `${Math.round(v * 1000)}ms`;
 
-  nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
-    5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; updateAudio(node); }));
-  nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right, overrides X-axis',
-    -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); }));
+  if (activeNodeTab === 'sound') {
+    nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
+      5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; updateAudio(node); }));
+    nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right, overrides X-axis',
+      -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); }));
+    nodeCards.appendChild(mkC('fcut','fcut','Filter','Filter cutoff','Lowpass cutoff frequency',
+      0,100,1,Math.round((node.filterNorm??0.5)*100),v=>`${Math.round(filterFromNorm(v/100))}Hz`,v=>{ node.filterNorm=v/100; updateAudio(node); }));
+    if (node.type === 'sine' || node.type === 'triangle') {
+      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
+      nodeCards.appendChild(mkC('vib','vib','Vibrato Hz','Vibrato rate','LFO speed',0,20,.1,node.typeParams.vibratoRate,v=>`${(+v).toFixed(1)}Hz`,v=>{ node.typeParams.vibratoRate=v; rebuildAudio(node); }));
+      nodeCards.appendChild(mkC('dep','dep','Vib depth','Vibrato depth','Depth in cents',0,400,1,node.typeParams.vibratoDepth,v=>`${v}¢`,v=>{ node.typeParams.vibratoDepth=v; rebuildAudio(node); }));
+    } else if (node.type === 'square' || node.type === 'sawtooth') {
+      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
+      nodeCards.appendChild(mkC('vcs','vcs','Voices','Voices','Detuned copies',1,5,1,node.typeParams.voices,v=>`×${v}`,v=>{ node.typeParams.voices=v; rebuildAudio(node); }));
+      nodeCards.appendChild(mkC('spr','spr','Spread','Spread','Cents between voices',0,100,1,node.typeParams.spread,v=>`${v}¢`,v=>{ node.typeParams.spread=v; rebuildAudio(node); }));
+    } else if (node.type === 'noise') {
+      nodeCards.appendChild(makeNoiseColorCard(node));
+      nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
+    }
 
-  nodeCards.appendChild(mkC('atk','atk','Attack','Envelope attack','Fade-in time',
-    0.01,10,.01,node.attack??0.3,fmtSec,v=>{ node.attack=+v; if(node.audio) node.audio.envelope.attack=+v; }));
-  nodeCards.appendChild(mkC('dcy','dcy','Decay','Envelope decay','Fall to sustain level',
-    0.01,5,.01,node.decay??0.1,fmtSec,v=>{ node.decay=+v; if(node.audio) node.audio.envelope.decay=+v; }));
-  nodeCards.appendChild(mkC('sus','sus','Sustain','Envelope sustain','Held level',
-    0,100,1,node.sustain??100,v=>`${v}%`,v=>{ node.sustain=+v; if(node.audio) node.audio.envelope.sustain=v/100; }));
-  nodeCards.appendChild(mkC('rel','rel','Release','Envelope release','Fade-out time',
-    0.01,10,.01,node.release??0.8,fmtSec,v=>{ node.release=+v; if(node.audio) node.audio.envelope.release=+v; }));
+  } else if (activeNodeTab === 'envelope') {
+    nodeCards.appendChild(mkC('atk','atk','Attack','Envelope attack','Fade-in time',
+      0.01,10,.01,node.attack??0.3,fmtSec,v=>{ node.attack=+v; if(node.audio) node.audio.envelope.attack=+v; }));
+    nodeCards.appendChild(mkC('dcy','dcy','Decay','Envelope decay','Fall to sustain level',
+      0.01,5,.01,node.decay??0.1,fmtSec,v=>{ node.decay=+v; if(node.audio) node.audio.envelope.decay=+v; }));
+    nodeCards.appendChild(mkC('sus','sus','Sustain','Envelope sustain','Held level',
+      0,100,1,node.sustain??100,v=>`${v}%`,v=>{ node.sustain=+v; if(node.audio) node.audio.envelope.sustain=v/100; }));
+    nodeCards.appendChild(mkC('rel','rel','Release','Envelope release','Fade-out time',
+      0.01,10,.01,node.release??0.8,fmtSec,v=>{ node.release=+v; if(node.audio) node.audio.envelope.release=+v; }));
 
-  if (node.type === 'sine' || node.type === 'triangle') {
-    nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
-    nodeCards.appendChild(mkC('vib','vib','Vibrato Hz','Vibrato rate','LFO speed',0,20,.1,node.typeParams.vibratoRate,v=>`${(+v).toFixed(1)}Hz`,v=>{ node.typeParams.vibratoRate=v; rebuildAudio(node); }));
-    nodeCards.appendChild(mkC('dep','dep','Vib depth','Vibrato depth','Depth in cents',0,400,1,node.typeParams.vibratoDepth,v=>`${v}¢`,v=>{ node.typeParams.vibratoDepth=v; rebuildAudio(node); }));
-  } else if (node.type === 'square' || node.type === 'sawtooth') {
-    nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
-    nodeCards.appendChild(mkC('vcs','vcs','Voices','Voices','Detuned copies',1,5,1,node.typeParams.voices,v=>`×${v}`,v=>{ node.typeParams.voices=v; rebuildAudio(node); }));
-    nodeCards.appendChild(mkC('spr','spr','Spread','Spread','Cents between voices',0,100,1,node.typeParams.spread,v=>`${v}¢`,v=>{ node.typeParams.spread=v; rebuildAudio(node); }));
-  } else if (node.type === 'noise') {
-    nodeCards.appendChild(makeNoiseColorCard(node));
-    nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
-  }
+  } else if (activeNodeTab === 'fx') {
+    nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
+      0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); }));
+    nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
+      0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); }));
+    nodeCards.appendChild(mkC('ndly','ndly','Dly Time','Node delay time','Local echo delay in ms',
+      10,1000,10,node.nodeDelayTime??250,v=>`${v}ms`,v=>{ node.nodeDelayTime=v; if(node.audio) node.audio.nodeDelay.delayTime.rampTo(v/1000,.1); }));
+    nodeCards.appendChild(mkC('nfdb','nfdb','Dly Fbk','Node delay feedback','Echo repeat amount',
+      0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); }));
+    nodeCards.appendChild(mkC('nwet','nwet','Dly Wet','Node delay wet','Local echo mix',
+      0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
 
-  nodeCards.appendChild(mkC('fcut','fcut','Filter','Filter cutoff','Lowpass cutoff frequency',
-    0,100,1,Math.round((node.filterNorm??0.5)*100),v=>`${Math.round(filterFromNorm(v/100))}Hz`,v=>{ node.filterNorm=v/100; updateAudio(node); }));
-  nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
-    0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); }));
-  nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
-    0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); }));
-  nodeCards.appendChild(mkC('ndly','ndly','Dly Time','Node delay time','Local echo delay in ms',
-    10,1000,10,node.nodeDelayTime??250,v=>`${v}ms`,v=>{ node.nodeDelayTime=v; if(node.audio) node.audio.nodeDelay.delayTime.rampTo(v/1000,.1); }));
-  nodeCards.appendChild(mkC('nfdb','nfdb','Dly Fbk','Node delay feedback','Echo repeat amount',
-    0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); }));
-  nodeCards.appendChild(mkC('nwet','nwet','Dly Wet','Node delay wet','Local echo mix',
-    0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
-
+  } else if (activeNodeTab === 'orbits') {
   // ── Orbit section ─────────────────────────────────────────
   const orbitSection = document.createElement('div');
   orbitSection.className = 'orbit-section';
@@ -270,6 +289,7 @@ export function buildNodeCards(node) {
 
   renderOrbitCards();
   nodeCards.appendChild(orbitSection);
+  } // end activeNodeTab === 'orbits'
 
   nodeCards.querySelectorAll('.param-card').forEach(c => {
     c.style.setProperty('--card-accent',     color);
@@ -395,11 +415,17 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '2.0': {
+    title: 'Orbits + tabbed node panel',
+    items: [
+      { section: 'Orbit modulation', changes: ['Each node supports up to 3 independent LFO orbits', 'Targets: Filter cutoff, Pan, Volume, Delay wet', 'Rate 0.02–2 Hz · Depth 0–100%', 'Visualised as dashed rings with a moving dot on the canvas'] },
+      { section: 'Node panel', changes: ['Parameters split into 4 tabs: Sound · Envelope · FX · Orbits', 'No more endless horizontal scrolling — each tab shows only what matters'] },
+    ],
+  },
   '1.9': {
     title: 'UI polish + modular codebase',
     items: [
       { section: 'Typography', changes: ['All text now scales with the large/small text toggle — modals, overlays, wizard, presets, node panel'] },
-      { section: 'Mobile panel', changes: ['Node parameter cards can be collapsed with a chevron button — panel shrinks to header + info strip'] },
       { section: 'Under the hood', changes: ['Codebase split into ES modules: store, audio, canvas, ui, main', 'Vite build pipeline — source/ → dist/ via Docker'] },
     ],
   },

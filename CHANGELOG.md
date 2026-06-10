@@ -2,6 +2,21 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 23 (v2.0)
+
+#### Orbit modulation (LFO per node)
+- Each node supports up to 3 independent orbits — each is a `Tone.LFO` modulating one parameter
+- Targets: Filter cutoff, Pan, Volume, Delay wet
+- Rate 0.02–2 Hz, Depth 0–100%; orbits start/stop with playback
+- Visualised on canvas as dashed rings + moving dot + depth arc
+
+#### Node panel — tabbed layout
+- Parameters split into 4 tabs: Sound · Envelope · FX · Orbits
+- Replaces horizontal scroll card row — each tab shows only relevant controls
+- Tabs are consistent across desktop and mobile; no more endless scrolling
+
+---
+
 ### 2026-06-10 — Concept iteration 22
 
 #### Project restructure — Vite build pipeline

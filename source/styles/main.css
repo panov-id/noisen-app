@@ -242,6 +242,23 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 .ni-value { font-size:var(--stat-val-fs,13px); color:var(--text); font-variant-numeric:tabular-nums; }
 
 /* node cards row */
+/* ── Node tabs ────────────────────────────────────────────────── */
+#node-tabs {
+  display:flex; gap:0; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  padding:0 12px;
+}
+.node-tab {
+  padding:6px 14px; border:none; background:none;
+  font-size:var(--fs-xs); font-family:inherit;
+  color:var(--text-dim); cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+  letter-spacing:.06em; text-transform:uppercase;
+  transition:color .12s, border-color .12s;
+}
+.node-tab:hover { color:var(--text); }
+.node-tab.active { color:var(--text); border-bottom-color:var(--accent); }
+
 #node-cards {
   display:flex; gap:7px; padding:8px 14px 10px;
   overflow-x:auto; flex:1; align-items:stretch;
@@ -637,13 +654,11 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #node-info-strip .an-sep:nth-child(6),
   #node-info-strip .an-sep:nth-child(6) + .ni-item { display: none; }
 
-  /* node-cards collapse toggle */
-  #node-cards-toggle { display: flex; }
+  /* node tabs: smaller padding on mobile */
+  .node-tab { padding: 5px 10px; font-size: var(--fs-xs); }
 
-  /* node cards: compact */
+  /* node cards: compact, 2-col wrap instead of horizontal scroll */
   #node-cards { padding: 7px 10px 8px; gap: 5px; }
-
-  /* collapsed panel height handled by JS via updatePanelH() */
 
   /* param card: adjust */
   .param-card { min-width: 68px; padding: 7px 8px 6px; }
@@ -685,21 +700,6 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   .card-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
   .card-slider::-moz-range-thumb    { width: 22px; height: 22px; }
 }
-
-/* ── node-cards collapse toggle (mobile only) ─────────────── */
-#node-cards-toggle {
-  display:none;
-  width:100%; padding:4px 0; border:none; background:transparent;
-  color:var(--text-faint); cursor:pointer; flex-shrink:0;
-  align-items:center; justify-content:center;
-  border-top:1px solid var(--border);
-  transition:color .14s;
-}
-#node-cards-toggle:hover { color:var(--text); }
-#node-cards-toggle svg { width:18px; height:18px; transition:transform .2s; }
-#node-cards-toggle.collapsed svg { transform:rotate(180deg); }
-#node-view.cards-collapsed #node-cards { display:none; }
-#node-view.cards-collapsed { --panel-cards-h: 0px; }
 
 /* noise color buttons inside card */
 .nc-group { display:flex; gap:3px; flex:1; align-items:center; margin:2px 0; }

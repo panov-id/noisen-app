@@ -276,15 +276,6 @@ mirrorBtn('fx-btn-m',             'fx-btn');
 mirrorBtn('version-btn-m',        null, () => showWhatsNew(APP_VERSION));
 mirrorBtn('help-btn-m',           'help-btn');
 
-// node-cards collapse toggle (mobile)
-const nodeCardsToggle = document.getElementById('node-cards-toggle');
-const nodeViewEl      = document.getElementById('node-view');
-nodeCardsToggle.addEventListener('click', () => {
-  const collapsed = nodeViewEl.classList.toggle('cards-collapsed');
-  nodeCardsToggle.classList.toggle('collapsed', collapsed);
-  updatePanelH();
-});
-
 // ── Tooltip ───────────────────────────────────────────────────
 document.addEventListener('pointerover',  e => { const el = e.target.closest('[data-tip]'); if (el) showTooltip(el); else hideTooltip(); });
 document.addEventListener('pointerleave', hideTooltip);
