@@ -1,7 +1,7 @@
 // ── Entry point — wires all modules together ──────────────────
 
 import {
-  state, APP_VERSION, TYPES, TYPE_DEFAULTS, WORLD_WIDTH, TOP_H,
+  state, APP_VERSION, TYPES, TYPE_DEFAULTS, DRUM_TYPES, WORLD_WIDTH, TOP_H,
   saveSettings, loadSettings,
 } from './store.js';
 
@@ -9,7 +9,7 @@ import {
   freqFromX, filterFromNorm, nodeFreq, nodeRadius, effectivePan,
   toneHz, locutHz, hicutHz,
   createAudio, destroyAudio, updateAudio, rebuildAudio,
-  startAll, stopAll,
+  startAll, stopAll, startBeat, stopBeat, triggerDrumNode,
   syncOrbitLFO, createOrbitLFOs,
   masterGain, masterFilter, masterReverb, masterDelay, locut, hiCut,
   masterRecorder,
@@ -39,6 +39,53 @@ import {
   openPresetsOverlay, closePresetsOverlay, initPresetsOverlay,
 } from './ui.js';
 
+import { toggle as toggleDebug, patchConsole as patchDebugConsole } from './debug.js';
+import { resolveShortCode, showShareModal } from './links.js';
+// expose showShareModal globally so ui.js can call it without circular import
+window.__showShareModal = showShareModal;
+import { trackPresetGenerated, trackPlayToggled, trackNodeCreated } from './analytics.js';
+
+// ── Short link resolution on load ─────────────────────────────
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const shortCode = params.get('s');
+  if (!shortCode) return;
+  try {
+    const longUrl = await resolveShortCode(shortCode);
+    if (!longUrl) return;
+    // replace URL in browser without reload
+    const resolved = new URL(longUrl, location.origin);
+    const preset = resolved.searchParams.get('preset');
+    if (preset) {
+      history.replaceState(null, '', `?preset=${encodeURIComponent(preset)}`);
+    }
+  } catch {}
+})();
+
+// ── Debug panel ───────────────────────────────────────────────
+patchDebugConsole();
+document.addEventListener('keydown', e => {
+  if (e.shiftKey && e.key === 'D') toggleDebug();
+});
+document.getElementById('debug-btn').addEventListener('click', toggleDebug);
+
+// ── Fullscreen ────────────────────────────────────────────────
+const fullscreenBtn  = document.getElementById('fullscreen-btn');
+const fsExpandIcon   = document.getElementById('fs-expand');
+const fsCompressIcon = document.getElementById('fs-compress');
+
+function updateFullscreenIcon() {
+  const active = !!document.fullscreenElement;
+  fsExpandIcon.style.display   = active ? 'none'  : '';
+  fsCompressIcon.style.display = active ? ''      : 'none';
+}
+
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
 // ── Canvas resize ─────────────────────────────────────────────
 function resize() {
   const viewportWidth  = window.visualViewport?.width  ?? innerWidth;
@@ -63,13 +110,29 @@ function syncCount() {
 }
 
 function addNode(worldX, worldY, filterNorm = 0.5) {
+  if (state.beatMode) {
+    const drumType = selectedDrumType;
+    const node = {
+      id: ++state.nodeSeq, x: worldX, y: worldY, filterNorm,
+      type: drumType, muted: false, volume: .7, panOverride: null,
+      typeParams: { ...TYPE_DEFAULTS[drumType] },
+      steps: Array(16).fill(false),
+      orbits: [],
+      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
+    };
+    state.nodes.push(node);
+    syncCount();
+    selectNode(node);
+    return;
+  }
   const node = {
     id: ++state.nodeSeq, x: worldX, y: worldY, filterNorm,
     type: 'sine', muted: false, volume: .55, panOverride: null,
     attack: 0.3, decay: 0.1, sustain: 100, release: 0.8,
     reverbSend: 0, delaySend: 0, nodeDelayTime: 250, nodeDelayFeedback: 0, nodeDelayWet: 0,
     typeParams: { ...TYPE_DEFAULTS.sine },
-    pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null,
+    orbits: [],
+    pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
   };
   state.nodes.push(node);
   createAudio(node);
@@ -93,15 +156,17 @@ function applyPreset(preset) {
       id: ++state.nodeSeq, x: nd.x, y: nd.y,
       filterNorm: nd.filterNorm ?? 0.5,
       type: nd.type, muted: nd.muted, volume: nd.volume,
-      panOverride: nd.panOverride,
+      panOverride: nd.panOverride ?? null,
       attack: nd.attack ?? 0.3, decay: nd.decay ?? 0.1, sustain: nd.sustain ?? 100, release: nd.release ?? 0.8,
       reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
       nodeDelayTime: nd.nodeDelayTime ?? 250, nodeDelayFeedback: nd.nodeDelayFeedback ?? 0, nodeDelayWet: nd.nodeDelayWet ?? 0,
       typeParams: { ...nd.typeParams },
-      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null,
+      steps: nd.steps ? [...nd.steps] : undefined,
+      orbits: nd.orbits ? [...nd.orbits] : [],
+      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
     };
     state.nodes.push(node);
-    createAudio(node);
+    if (!DRUM_TYPES.has(node.type)) createAudio(node);
   }
   syncCount();
   state.viewX = 0; state.viewY = 0; state.velX = 0; state.velY = 0; state.zoom = 1;
@@ -273,6 +338,8 @@ mirrorBtn('nodes-overview-btn-m', 'nodes-overview-btn');
 mirrorBtn('reset-view-m',         'reset-view');
 mirrorBtn('large-toggle-m',       'large-toggle');
 mirrorBtn('fx-btn-m',             'fx-btn');
+mirrorBtn('fullscreen-btn-m',     'fullscreen-btn');
+mirrorBtn('debug-btn-m',          'debug-btn');
 mirrorBtn('version-btn-m',        null, () => showWhatsNew(APP_VERSION));
 mirrorBtn('help-btn-m',           'help-btn');
 
@@ -336,12 +403,47 @@ playBtn.addEventListener('click', async () => {
   if (state.isPlaying) {
     keepAlive.play().catch(() => {});
     startAll();
+    if (state.beatMode) startBeat(state.bpm);
   } else {
     keepAlive.pause();
     stopAll();
+    if (state.beatMode) stopBeat();
   }
   setupMediaSession(state.isPlaying);
 });
+
+// ── Beat mode ─────────────────────────────────────────────────
+const beatModeBtn  = document.getElementById('beat-mode-btn');
+const bpmControl   = document.getElementById('bpm-control');
+const bpmDisplay   = document.getElementById('bpm-display');
+
+function updateBpmDisplay() {
+  bpmDisplay.textContent = `${state.bpm} BPM`;
+  if (state.isPlaying && state.beatMode) Tone.Transport.bpm.value = state.bpm;
+}
+
+beatModeBtn.addEventListener('click', () => {
+  state.beatMode = !state.beatMode;
+  beatModeBtn.classList.toggle('on', state.beatMode);
+  bpmControl.style.display = state.beatMode ? 'flex' : 'none';
+  if (state.isPlaying) {
+    if (state.beatMode) startBeat(state.bpm);
+    else stopBeat();
+  }
+});
+
+document.getElementById('bpm-dec').addEventListener('click', () => {
+  state.bpm = Math.max(40, state.bpm - 1);
+  updateBpmDisplay();
+});
+document.getElementById('bpm-inc').addEventListener('click', () => {
+  state.bpm = Math.min(300, state.bpm + 1);
+  updateBpmDisplay();
+});
+
+// last-placed drum type — updated when user selects a drum type in node panel
+let selectedDrumType = 'kick';
+window.__setSelectedDrumType = t => { selectedDrumType = t; };
 
 // ── Recording ─────────────────────────────────────────────────
 let isRecording   = false;
@@ -394,83 +496,702 @@ document.getElementById('pwa-btn').addEventListener('click', () => {
   if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; }
 });
 
-// ── Random harmonic preset ────────────────────────────────────
+// ── Preset archetypes ─────────────────────────────────────────
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function semitoneToFreq(semitone) { return 440 * Math.pow(2, (semitone - 57) / 12); }
+function freqToWorldX(freq)       { return Math.log2(Math.max(8, freq) / 8) / 12.3 * WORLD_WIDTH; }
+function freqToFilterNorm(freq) {
+  // inverse of filterFromNorm: norm such that filterFromNorm(norm) ≈ freq
+  return 1 - (Math.log10(Math.max(20, freq)) - 1.5) / 3.8;
+}
+function rnd(min, max) { return min + Math.random() * (max - min); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function makeNode(freq, { type = 'sine', volume = 0.5, filterFreq = null, pan = null, orbits = [], reverb = 0, delayWet = 0 } = {}) {
+  const canvasArea = canvas.height - state.panelHeight - TOP_H;
+  const filterNorm = filterFreq != null
+    ? Math.max(0.02, Math.min(0.98, freqToFilterNorm(filterFreq)))
+    : Math.max(0.02, Math.min(0.98, rnd(0.12, 0.55)));
+  const worldX = freqToWorldX(freq);
+  const worldY = TOP_H + canvasArea * filterNorm;
+  const typeParams = { ...TYPE_DEFAULTS[type] };
+  if ('detune' in typeParams) typeParams.detune = rnd(-8, 8);
+  return {
+    id: ++state.nodeSeq, x: worldX, y: worldY, filterNorm,
+    type, muted: false, volume,
+    panOverride: pan,
+    typeParams,
+    attack: 0.5, decay: 0.1, sustain: 100, release: 1.2,
+    reverbSend: reverb, delaySend: 0,
+    nodeDelayTime: 250, nodeDelayFeedback: 0, nodeDelayWet: delayWet,
+    orbits,
+    pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
+  };
+}
+
+// ── Archetype: binaural beats ─────────────────────────────────
+// Two carriers offset by a beat frequency → brain entrainment effect.
+// Beat ranges: delta 0.5-4Hz, theta 4-8Hz, alpha 8-14Hz, beta 14-30Hz.
+const BINAURAL_BANDS = [
+  { name: 'Delta', range: [0.5, 4],  carrier: [80, 140],  desc: 'deep sleep' },
+  { name: 'Theta', range: [4,   8],  carrier: [140, 220], desc: 'meditation' },
+  { name: 'Alpha', range: [8,   14], carrier: [200, 320], desc: 'relaxation' },
+  { name: 'Beta',  range: [14,  30], carrier: [300, 500], desc: 'focus' },
+];
+
+function generateBinaural() {
+  const band     = pick(BINAURAL_BANDS);
+  const carrier  = rnd(...band.carrier);
+  const beat     = rnd(...band.range);
+  const nodes    = [];
+
+  // left ear carrier — pure sine, no orbit (preserves beat accuracy)
+  nodes.push(makeNode(carrier, {
+    type: 'sine', volume: rnd(0.45, 0.60),
+    filterFreq: carrier * 6,
+    pan: -0.8,
+  }));
+
+  // right ear carrier offset by beat frequency
+  nodes.push(makeNode(carrier + beat, {
+    type: 'sine', volume: rnd(0.45, 0.60),
+    filterFreq: carrier * 6,
+    pan: 0.8,
+  }));
+
+  // optional sub-bass ground tone (root × 0.5)
+  if (Math.random() > 0.4) {
+    nodes.push(makeNode(carrier * 0.5, {
+      type: 'triangle', volume: rnd(0.20, 0.35),
+      filterFreq: carrier * 2,
+      orbits: [{ target: 'volume', rate: rnd(0.05, 0.15), depth: 35, enabled: true }],
+    }));
+  }
+
+  // pink noise bed for masking
+  nodes.push(makeNode(rnd(300, 800), {
+    type: 'noise', volume: rnd(0.12, 0.22),
+    filterFreq: rnd(400, 1200),
+    orbits: [{ target: 'filter', rate: rnd(0.03, 0.08), depth: 30, enabled: true }],
+  }));
+
+  return { nodes, label: `${band.name} binaural · ${beat.toFixed(1)}Hz beat · ${band.desc}`, name: `${band.name} ${beat.toFixed(1)}Hz` };
+}
+
+// ── Archetype: solfeggio frequencies ─────────────────────────
+// Sacred frequencies used in sound healing practices.
+const SOLFEGGIO = [174, 285, 396, 417, 528, 639, 741, 852, 963];
+
+function generateSolfeggio() {
+  const shuffle = [...SOLFEGGIO].sort(() => Math.random() - 0.5);
+  const count   = 3 + Math.floor(Math.random() * 3);
+  const freqs   = shuffle.slice(0, count);
+  const types   = ['sine', 'sine', 'sine', 'triangle'];
+
+  const nodes = freqs.map((freq, i) => {
+    const isBase = i === 0;
+    return makeNode(freq, {
+      type: pick(types),
+      volume: isBase ? rnd(0.50, 0.65) : rnd(0.28, 0.45),
+      filterFreq: freq * rnd(4, 10),
+      reverb: rnd(0.1, 0.3),
+      orbits: [
+        { target: 'filter', rate: rnd(0.04, 0.12), depth: isBase ? 25 : 40, enabled: true },
+        ...(i > 0 ? [{ target: 'volume', rate: rnd(0.06, 0.18), depth: 30, enabled: true }] : []),
+      ],
+    });
+  });
+
+  const label = `Solfeggio · ${freqs.map(f => f + 'Hz').join(' · ')}`;
+  return { nodes, label, name: `Solfeggio ${freqs[0]}Hz` };
+}
+
+// ── Archetype: harmonic series ────────────────────────────────
+// Natural overtone series built on a fundamental — physically consonant.
+const HARMONIC_FUNDAMENTALS = [40, 55, 65, 80, 110];
+
+function generateHarmonicSeries() {
+  const fundamental = pick(HARMONIC_FUNDAMENTALS);
+  const partials    = [1, 2, 3, 4, 5, 6, 8];
+  const count       = 4 + Math.floor(Math.random() * 3);
+  const chosen      = partials.slice(0, count);
+
+  const nodes = chosen.map((partial, i) => {
+    const freq   = fundamental * partial;
+    const volume = Math.max(0.12, rnd(0.55, 0.70) / (1 + i * 0.6));
+    const orbs   = [];
+
+    if (i === 0) {
+      // fundamental: slow volume breath
+      orbs.push({ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, enabled: true });
+    } else if (i < 3) {
+      // lower harmonics: slow filter sweep
+      orbs.push({ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, enabled: true });
+    } else {
+      // upper harmonics: pan movement + optional filter
+      orbs.push({ target: 'pan', rate: rnd(0.08, 0.25), depth: Math.floor(rnd(30, 60)), enabled: true });
+      if (i >= 4) orbs.push({ target: 'volume', rate: rnd(0.12, 0.30), depth: 45, enabled: true });
+    }
+
+    return makeNode(freq, {
+      type: i === 0 ? 'sine' : pick(['sine', 'sine', 'triangle']),
+      volume,
+      filterFreq: freq * rnd(3, 8),
+      reverb: i === 0 ? 0 : rnd(0.05, 0.20),
+      orbits: orbs,
+    });
+  });
+
+  const label = `Harmonic series · ${fundamental}Hz × ${chosen.join('/')}`;
+  return { nodes, label, name: `${fundamental}Hz harmonics` };
+}
+
+// ── Archetype: full-spectrum ambient ─────────────────────────
+// Covers sub/bass/mid/presence/air bands simultaneously — rich texture.
+function generateFullSpectrum() {
+  const nodes = [];
+
+  // deep sub: infrasonic grounding
+  nodes.push(makeNode(rnd(18, 45), {
+    type: 'sine', volume: rnd(0.50, 0.65),
+    filterFreq: rnd(50, 150),
+    orbits: [{ target: 'volume', rate: rnd(0.02, 0.07), depth: 55, enabled: true }],
+  }));
+
+  // bass: warmth 80–300Hz
+  nodes.push(makeNode(rnd(80, 300), {
+    type: pick(['sine', 'triangle']), volume: rnd(0.30, 0.45),
+    filterFreq: rnd(200, 700),
+    orbits: [{ target: 'filter', rate: rnd(0.04, 0.12), depth: 40, enabled: true }],
+  }));
+
+  // low-mid: body 300–1200Hz
+  nodes.push(makeNode(rnd(300, 1200), {
+    type: pick(['sine', 'triangle', 'square']), volume: rnd(0.20, 0.35),
+    filterFreq: rnd(800, 3000),
+    reverb: rnd(0.10, 0.25),
+    orbits: [
+      { target: 'filter', rate: rnd(0.07, 0.18), depth: 40, enabled: true },
+      { target: 'pan',    rate: rnd(0.04, 0.12), depth: Math.floor(rnd(20, 50)), enabled: true },
+    ],
+  }));
+
+  // presence: 2–6kHz
+  nodes.push(makeNode(rnd(2000, 6000), {
+    type: pick(['sine', 'triangle']), volume: rnd(0.12, 0.25),
+    filterFreq: rnd(3000, 9000),
+    reverb: rnd(0.20, 0.40),
+    orbits: [
+      { target: 'filter', rate: rnd(0.09, 0.22), depth: 50, enabled: true },
+      { target: 'pan',    rate: rnd(0.05, 0.14), depth: Math.floor(rnd(30, 65)), enabled: true },
+    ],
+  }));
+
+  // air: high shimmer 8–18kHz
+  nodes.push(makeNode(rnd(8000, 18000), {
+    type: 'noise', volume: rnd(0.05, 0.12),
+    filterFreq: rnd(10000, 20000),
+    reverb: rnd(0.30, 0.55),
+    orbits: [
+      { target: 'filter', rate: rnd(0.05, 0.15), depth: 60, enabled: true },
+      { target: 'pan',    rate: rnd(0.03, 0.09), depth: Math.floor(rnd(45, 75)), enabled: true },
+    ],
+  }));
+
+  return { nodes, label: 'Full spectrum · sub · bass · mid · presence · air', name: 'Full spectrum' };
+}
+
+// ── Archetype: scale-based (original, improved) ──────────────
 const SCALES = {
   'Major':            [0, 2, 4, 5, 7, 9, 11],
   'Minor':            [0, 2, 3, 5, 7, 8, 10],
   'Pentatonic':       [0, 2, 4, 7, 9],
   'Minor pentatonic': [0, 3, 5, 7, 10],
   'Dorian':           [0, 2, 3, 5, 7, 9, 10],
-  'Mixolydian':       [0, 2, 4, 5, 7, 9, 10],
   'Lydian':           [0, 2, 4, 6, 7, 9, 11],
   'Phrygian':         [0, 1, 3, 5, 7, 8, 10],
 };
-const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
-function semitoneToFreq(semitone) { return 440 * Math.pow(2, (semitone - 57) / 12); }
-function freqToWorldX(freq)       { return Math.log2(Math.max(8, freq) / 8) / 12.3 * WORLD_WIDTH; }
+function generateScale() {
+  const scaleName  = pick(Object.keys(SCALES));
+  const scale      = SCALES[scaleName];
+  const rootNote   = Math.floor(Math.random() * 12);
+  // octave 0 = sub, octave 6 = very high
+  const rootOctave = Math.floor(Math.random() * 7);
+  const rootBase   = rootOctave * 12 + rootNote;
+  const count      = 3 + Math.floor(Math.random() * 4);
+
+  const pool = [];
+  for (let oct = 0; oct <= 2; oct++)
+    for (const step of scale) pool.push(rootBase + step + oct * 12);
+  pool.sort(() => Math.random() - 0.5);
+
+  const nodes = pool.slice(0, count).map((semitone, i) => {
+    const freq  = semitoneToFreq(semitone);
+    const orbs  = [];
+    if (i === 0) orbs.push({ target: 'volume', rate: rnd(0.04, 0.12), depth: 35, enabled: true });
+    else if (i % 3 === 1) orbs.push({ target: 'filter', rate: rnd(0.06, 0.18), depth: 40, enabled: true });
+    else orbs.push({ target: 'pan', rate: rnd(0.05, 0.15), depth: Math.floor(rnd(20, 55)), enabled: true });
+
+    return makeNode(freq, {
+      type: pick(['sine', 'sine', 'sine', 'triangle', 'square']),
+      volume: rnd(0.30, 0.55),
+      filterFreq: freq * rnd(3, 8),
+      reverb: rnd(0, 0.20),
+      orbits: orbs,
+    });
+  });
+
+  const rootName = NOTE_NAMES[rootNote] + rootOctave;
+  return { nodes, label: `${rootName} ${scaleName} — ${count} nodes`, name: `${rootName} ${scaleName}` };
+}
+
+// ── Archetype: polyrhythm ─────────────────────────────────────
+// Nodes at musical intervals, each pulsing at a different rate.
+// Integer ratio LFO rates create evolving interference patterns.
+const POLY_RATIO_SETS = [
+  [1, 1.5, 2, 3],
+  [2, 3, 4, 6],
+  [3, 4, 5, 6],
+  [1, 2, 3, 5],
+  [2, 3, 5, 8],
+];
+
+function generatePolyrhythm() {
+  const base    = rnd(0.04, 0.10);
+  const ratios  = pick(POLY_RATIO_SETS);
+  // wider range: from sub (25Hz) to presence (3kHz)
+  const root    = rnd(25, 3000);
+  const intervals = [1, 1.5, 2, 2.5, 3, 4, 6, 8];
+
+  const nodes = ratios.map((ratio, i) => {
+    const freq   = root * pick(intervals.slice(0, i + 2));
+    const rate   = base * ratio;
+    const panned = (i % 2 === 0 ? -1 : 1) * rnd(0.1, 0.6);
+    return makeNode(freq, {
+      type: pick(['sine', 'triangle', 'sine']),
+      volume: rnd(0.30, 0.55),
+      filterFreq: freq * rnd(4, 10),
+      pan: panned,
+      orbits: [
+        { target: 'volume', rate, depth: Math.floor(rnd(50, 80)), enabled: true },
+        ...(i > 1 ? [{ target: 'filter', rate: rate * 0.7, depth: 30, enabled: true }] : []),
+      ],
+    });
+  });
+
+  const ratioStr = ratios.join(':');
+  return { nodes, label: `Polyrhythm · ${root.toFixed(0)}Hz root · ratios ${ratioStr}`, name: `Polyrhythm ${ratioStr}` };
+}
+
+// ── Archetype: gamelan bells ──────────────────────────────────
+// High-freq metallic tones, inharmonic intervals, wide panning.
+// Mimics metallophone / bell resonators.
+const GAMELAN_INTERVALS = [1, 1.08, 1.27, 1.51, 1.68, 2, 2.46, 2.73, 3.12];
+
+function generateGamelan() {
+  const root  = rnd(300, 900);
+  const count = 4 + Math.floor(Math.random() * 4);
+  const chosen = [...GAMELAN_INTERVALS].sort(() => Math.random() - 0.5).slice(0, count);
+
+  const nodes = chosen.map((interval, i) => {
+    const freq = root * interval;
+    const pan  = rnd(-0.85, 0.85) * (Math.random() > 0.5 ? 1 : -1);
+    const panRate = rnd(0.03, 0.10);
+    return makeNode(freq, {
+      type: pick(['sine', 'triangle']),
+      volume: rnd(0.20, 0.45) / (1 + i * 0.15),
+      filterFreq: freq * rnd(1.5, 4),
+      pan,
+      reverb: rnd(0.15, 0.40),
+      orbits: [
+        { target: 'pan',    rate: panRate,          depth: Math.floor(rnd(40, 75)), enabled: true },
+        { target: 'volume', rate: panRate * rnd(1.3, 2.5), depth: Math.floor(rnd(30, 60)), enabled: true },
+      ],
+    });
+  });
+
+  return { nodes, label: `Gamelan bells · ${root.toFixed(0)}Hz root · ${count} bells`, name: `Gamelan ${root.toFixed(0)}Hz` };
+}
+
+// ── Archetype: pentatonic pulse ───────────────────────────────
+// Five pentatonic notes, each breathing at its own rate.
+// Creates slowly evolving melodic texture.
+const PENTATONIC_ROOTS = [130.8, 146.8, 164.8, 196.0, 220.0, 261.6, 293.7];
+const PENTATONIC_STEPS = [1, 1.125, 1.266, 1.5, 1.687, 2, 2.25, 2.531, 3];
+
+function generatePentatonicPulse() {
+  const root   = pick(PENTATONIC_ROOTS);
+  const octave = Math.random() > 0.5 ? 1 : 2;
+  const steps  = [...PENTATONIC_STEPS].sort(() => Math.random() - 0.5).slice(0, 5);
+  const baseRate = rnd(0.04, 0.09);
+
+  const nodes = steps.map((step, i) => {
+    const freq = root * step * octave;
+    const rate = baseRate * (1 + i * rnd(0.3, 0.8));
+    return makeNode(freq, {
+      type: i === 0 ? 'sine' : pick(['sine', 'sine', 'triangle']),
+      volume: rnd(0.28, 0.50),
+      filterFreq: freq * rnd(3, 7),
+      pan: rnd(-0.6, 0.6),
+      reverb: rnd(0.1, 0.3),
+      orbits: [
+        { target: 'volume', rate, depth: Math.floor(rnd(45, 75)), enabled: true },
+        ...(i % 2 === 1 ? [{ target: 'pan', rate: rate * 0.6, depth: Math.floor(rnd(20, 50)), enabled: true }] : []),
+      ],
+    });
+  });
+
+  return { nodes, label: `Pentatonic pulse · ${root.toFixed(1)}Hz · 5 voices`, name: `Pentatonic ${root.toFixed(0)}Hz` };
+}
+
+// ── Archetype: Fibonacci / golden ratio ──────────────────────
+// Frequencies and rates derived from Fibonacci sequence.
+// φ = 1.618 creates naturally consonant intervals.
+const PHI = 1.6180339887;
+const FIBONACCI = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+
+function generateFibonacci() {
+  const baseFreq = rnd(55, 130);
+  const count    = 4 + Math.floor(Math.random() * 3);
+  const baseRate = rnd(0.03, 0.07);
+
+  const nodes = Array.from({ length: count }, (_, i) => {
+    const fibRatio = FIBONACCI[i + 2] / FIBONACCI[i + 1];
+    const freq     = baseFreq * Math.pow(PHI, i * 0.75);
+    const rate     = baseRate * (FIBONACCI[i + 1] / FIBONACCI[i + 2]);
+    const pan      = i % 2 === 0 ? -rnd(0.1, 0.55) : rnd(0.1, 0.55);
+    return makeNode(freq, {
+      type: pick(['sine', 'sine', 'triangle']),
+      volume: rnd(0.35, 0.55) / (1 + i * 0.25),
+      filterFreq: freq * fibRatio * rnd(2, 5),
+      pan,
+      reverb: rnd(0.05, 0.25),
+      orbits: [
+        { target: 'volume', rate, depth: Math.floor(rnd(35, 65)), enabled: true },
+        { target: 'filter', rate: rate * PHI, depth: Math.floor(rnd(25, 50)), enabled: true },
+      ],
+    });
+  });
+
+  return { nodes, label: `Fibonacci · φ=${PHI.toFixed(3)} · ${baseFreq.toFixed(1)}Hz base`, name: `Fibonacci ${baseFreq.toFixed(0)}Hz` };
+}
+
+// ── Archetype: drone swarm ────────────────────────────────────
+// Cluster of slightly detuned unisons — thick beating texture.
+// Like bowed strings or choir unison — micro-interference.
+function generateDroneSwarm() {
+  // wider range: can be sub bass or mid
+  const root  = rnd(30, 600);
+  const count = 5 + Math.floor(Math.random() * 4);
+  const spread = rnd(2, 12);
+
+  const nodes = Array.from({ length: count }, (_, i) => {
+    const detune  = (i - count / 2) * spread;
+    const freq    = root * Math.pow(2, detune / 1200);
+    const panPos  = (i / (count - 1)) * 2 - 1;
+    const panRate = rnd(0.02, 0.06) * (1 + i * 0.1);
+    return makeNode(freq, {
+      type: 'sine',
+      volume: rnd(0.18, 0.30),
+      filterFreq: freq * rnd(4, 9),
+      pan: panPos * 0.7,
+      reverb: rnd(0.2, 0.45),
+      orbits: [
+        { target: 'volume', rate: panRate, depth: Math.floor(rnd(30, 55)), enabled: true },
+        { target: 'pan',    rate: panRate * rnd(0.4, 0.8), depth: Math.floor(rnd(20, 45)), enabled: true },
+      ],
+    });
+  });
+
+  return { nodes, label: `Drone swarm · ${root.toFixed(1)}Hz · ${count} voices · ±${spread.toFixed(1)}¢`, name: `Drone swarm ${root.toFixed(0)}Hz` };
+}
+
+// ── Archetype: deep sub ───────────────────────────────────────
+// Sub-bass and infrasonic territory — felt more than heard.
+function generateDeepSub() {
+  const nodes = [];
+  const root = rnd(14, 55);
+
+  // fundamental — pure sub sine
+  nodes.push(makeNode(root, {
+    type: 'sine', volume: rnd(0.55, 0.72),
+    filterFreq: rnd(60, 200),
+    orbits: [{ target: 'volume', rate: rnd(0.02, 0.06), depth: 60, enabled: true }],
+  }));
+
+  // octave harmonic
+  nodes.push(makeNode(root * 2, {
+    type: pick(['sine', 'triangle']), volume: rnd(0.28, 0.45),
+    filterFreq: root * rnd(3, 6),
+    orbits: [{ target: 'filter', rate: rnd(0.03, 0.09), depth: 50, enabled: true }],
+  }));
+
+  // noise bed — adds warmth/texture to pure sub
+  nodes.push(makeNode(root * rnd(3, 5), {
+    type: 'noise', volume: rnd(0.08, 0.18),
+    filterFreq: rnd(80, 300),
+    reverb: rnd(0.2, 0.4),
+    orbits: [{ target: 'filter', rate: rnd(0.05, 0.12), depth: 45, enabled: true }],
+  }));
+
+  // optional: a fifth or third above root
+  if (Math.random() > 0.4) {
+    nodes.push(makeNode(root * pick([1.5, 1.25, 2.5]), {
+      type: pick(['sine', 'sawtooth']), volume: rnd(0.14, 0.28),
+      filterFreq: root * rnd(4, 8),
+      pan: rnd(-0.5, 0.5),
+      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 40, enabled: true }],
+    }));
+  }
+
+  return { nodes, label: `Deep sub · ${root.toFixed(1)}Hz root`, name: `Deep sub ${root.toFixed(0)}Hz` };
+}
+
+// ── Archetype: crystalline highs ─────────────────────────────
+// High-frequency bell-like and shimmer textures (2kHz–20kHz).
+function generateCrystalline() {
+  const root  = rnd(1200, 5000);
+  const count = 3 + Math.floor(Math.random() * 4);
+  const INTERVALS = [1, 1.19, 1.41, 1.587, 1.782, 2, 2.38, 2.828];
+
+  const nodes = Array.from({ length: count }, (_, i) => {
+    const freq = root * pick(INTERVALS.slice(0, Math.min(i + 2, INTERVALS.length)));
+    const pan  = (i % 2 === 0 ? -1 : 1) * rnd(0.2, 0.85);
+    return makeNode(Math.min(freq, 18000), {
+      type: pick(['sine', 'triangle', 'sine']),
+      volume: rnd(0.15, 0.35) / (1 + i * 0.2),
+      filterFreq: Math.min(freq * rnd(2, 5), 20000),
+      pan,
+      reverb: rnd(0.25, 0.55),
+      orbits: [
+        { target: 'pan',    rate: rnd(0.04, 0.14), depth: Math.floor(rnd(30, 65)), enabled: true },
+        { target: 'volume', rate: rnd(0.07, 0.20), depth: Math.floor(rnd(35, 60)), enabled: true },
+      ],
+    });
+  });
+
+  // sub-octave grounding tone below the shimmer
+  if (Math.random() > 0.5) {
+    nodes.push(makeNode(root * 0.25, {
+      type: 'sine', volume: rnd(0.22, 0.38),
+      filterFreq: root * 0.6,
+      orbits: [{ target: 'volume', rate: rnd(0.03, 0.08), depth: 45, enabled: true }],
+    }));
+  }
+
+  return { nodes, label: `Crystalline · ${root.toFixed(0)}Hz · ${count} voices`, name: `Crystalline ${root.toFixed(0)}Hz` };
+}
+
+// ── Archetype: noise texture ──────────────────────────────────
+// Layered noise bands — granular, textural, atmospheric.
+function generateNoiseTexture() {
+  const nodes = [];
+  const NOISE_BANDS = [
+    { freq: rnd(25, 80),    filterFreq: rnd(60, 200),   label: 'rumble' },
+    { freq: rnd(150, 400),  filterFreq: rnd(300, 900),  label: 'body'   },
+    { freq: rnd(800, 2500), filterFreq: rnd(1500, 5000),label: 'hiss'   },
+    { freq: rnd(4000,12000),filterFreq: rnd(8000,20000),label: 'air'    },
+  ];
+  const count = 2 + Math.floor(Math.random() * 3);
+  const chosen = NOISE_BANDS.sort(() => Math.random() - 0.5).slice(0, count);
+
+  for (const band of chosen) {
+    nodes.push(makeNode(band.freq, {
+      type: 'noise', volume: rnd(0.15, 0.38),
+      filterFreq: band.filterFreq,
+      pan: rnd(-0.7, 0.7),
+      reverb: rnd(0.15, 0.45),
+      orbits: [
+        { target: 'filter', rate: rnd(0.03, 0.10), depth: Math.floor(rnd(40, 70)), enabled: true },
+        ...(Math.random() > 0.5 ? [{ target: 'pan', rate: rnd(0.02, 0.08), depth: Math.floor(rnd(20, 50)), enabled: true }] : []),
+      ],
+    }));
+  }
+
+  // optional pitched tone woven into the noise
+  if (Math.random() > 0.45) {
+    const freq = rnd(80, 800);
+    nodes.push(makeNode(freq, {
+      type: pick(['sine', 'triangle']), volume: rnd(0.20, 0.38),
+      filterFreq: freq * rnd(3, 8),
+      reverb: rnd(0.10, 0.30),
+      orbits: [{ target: 'volume', rate: rnd(0.04, 0.10), depth: 50, enabled: true }],
+    }));
+  }
+
+  const labels = chosen.map(b => b.label).join(' · ');
+  return { nodes, label: `Noise texture · ${labels}`, name: `Noise texture` };
+}
+
+// ── Archetype: stochastic spread ─────────────────────────────
+// Fully random notes across all 10 octaves — no harmonic logic.
+// High entropy: sawtooth / square used more freely.
+function generateStochastic() {
+  const count = 3 + Math.floor(Math.random() * 5);
+  const ALL_TYPES = ['sine', 'sine', 'triangle', 'square', 'sawtooth', 'noise'];
+
+  const nodes = Array.from({ length: count }, (_, i) => {
+    // spread uniformly across log-frequency (feels even across octaves)
+    const octave = rnd(1, 10);
+    const freq   = 16.35 * Math.pow(2, octave + Math.random());
+    const type   = pick(ALL_TYPES);
+    const pan    = (i % 2 === 0 ? -1 : 1) * rnd(0, 0.8);
+    const orbs   = [];
+    if (Math.random() > 0.3) orbs.push({ target: pick(['volume','filter','pan']), rate: rnd(0.03, 0.25), depth: Math.floor(rnd(30, 70)), enabled: true });
+    if (Math.random() > 0.6) orbs.push({ target: pick(['volume','filter']),        rate: rnd(0.05, 0.35), depth: Math.floor(rnd(25, 55)), enabled: true });
+    return makeNode(Math.min(freq, 18000), {
+      type, volume: rnd(0.18, 0.48), pan,
+      filterFreq: Math.min(freq * rnd(2, 12), 20000),
+      reverb: rnd(0, 0.35),
+      orbits: orbs,
+    });
+  });
+
+  return { nodes, label: `Stochastic · ${count} random voices`, name: `Stochastic` };
+}
+
+// ── Drum preset archetypes ────────────────────────────────────
+function makeDrumNode(type, steps, { volume = 0.7, tune = null, decay = null } = {}) {
+  const defaults = { ...TYPE_DEFAULTS[type] };
+  if (tune  !== null) defaults.tune  = tune;
+  if (decay !== null) defaults.decay = decay;
+  return {
+    id: ++state.nodeSeq,
+    x: freqToWorldX(defaults.tune ?? 100),
+    y: canvas.height * 0.5,
+    filterNorm: 0.5,
+    type, muted: false, volume,
+    panOverride: null,
+    typeParams: defaults,
+    steps: [...steps],
+    orbits: [],
+    pulsePhase: Math.random() * Math.PI * 2,
+    rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
+  };
+}
+
+// euclidean rhythm distribution
+function euclidean(steps, hits) {
+  const pattern = Array(steps).fill(false);
+  if (hits <= 0) return pattern;
+  let bucket = 0;
+  for (let i = 0; i < steps; i++) {
+    bucket += hits;
+    if (bucket >= steps) { bucket -= steps; pattern[i] = true; }
+  }
+  return pattern;
+}
+
+function generateDrumKit() {
+  state.nodes = [];
+  state.nodeSeq = 0;
+  const style = pick(['four-on-floor', 'breakbeat', 'half-time', 'euclidean']);
+
+  let kick, snare, hihat, clap;
+  if (style === 'four-on-floor') {
+    kick  = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0].map(Boolean);
+    snare = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean);
+    hihat = euclidean(16, 8 + Math.floor(Math.random() * 4));
+    clap  = [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,Math.random()>.5?1:0].map(Boolean);
+  } else if (style === 'breakbeat') {
+    kick  = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,1,0,0].map(Boolean);
+    snare = [0,0,0,0, 1,0,0,0, 0,0,1,0, 1,0,0,0].map(Boolean);
+    hihat = euclidean(16, 12);
+    clap  = Array(16).fill(false).map((_, i) => Math.random() > 0.7);
+  } else if (style === 'half-time') {
+    kick  = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean);
+    snare = [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean);
+    hihat = euclidean(16, 6);
+    clap  = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1].map(Boolean);
+  } else {
+    kick  = euclidean(16, 4 + Math.floor(Math.random() * 3));
+    snare = euclidean(16, 3 + Math.floor(Math.random() * 3));
+    hihat = euclidean(16, 8 + Math.floor(Math.random() * 5));
+    clap  = euclidean(16, 2 + Math.floor(Math.random() * 3));
+  }
+
+  return {
+    nodes: [
+      makeDrumNode('kick',  kick,  { volume: 0.80, tune: rnd(50, 80),   decay: rnd(0.25, 0.5) }),
+      makeDrumNode('snare', snare, { volume: 0.70, decay: rnd(0.12, 0.25) }),
+      makeDrumNode('hihat', hihat, { volume: 0.50, tune: rnd(300, 600), decay: rnd(0.04, 0.1) }),
+      makeDrumNode('clap',  clap,  { volume: 0.60, decay: rnd(0.08, 0.18) }),
+    ],
+    label: `Drum kit · ${style}`,
+    name:  `Drum kit`,
+  };
+}
+
+function generateDrumWithBass() {
+  const { nodes, label } = generateDrumKit();
+  const bassFreq = pick([40, 50, 55, 65, 80]);
+  const bassNode = makeNode(bassFreq, {
+    type: 'sine', volume: rnd(0.4, 0.6),
+    filterFreq: bassFreq * 3,
+    orbits: [{ target: 'filter', rate: rnd(0.05, 0.15), depth: 35, enabled: true }],
+  });
+  return { nodes: [...nodes, bassNode], label: label + ' + bass', name: 'Drum + bass' };
+}
+
+// ── Dispatcher ────────────────────────────────────────────────
+const ARCHETYPES = [
+  { weight: 2, fn: generateBinaural        },
+  { weight: 2, fn: generateSolfeggio       },
+  { weight: 2, fn: generateHarmonicSeries  },
+  { weight: 2, fn: generateFullSpectrum    },
+  { weight: 2, fn: generateScale           },
+  { weight: 2, fn: generatePolyrhythm      },
+  { weight: 2, fn: generateGamelan         },
+  { weight: 2, fn: generatePentatonicPulse },
+  { weight: 2, fn: generateFibonacci       },
+  { weight: 2, fn: generateDroneSwarm      },
+  { weight: 2, fn: generateDeepSub         },
+  { weight: 2, fn: generateCrystalline     },
+  { weight: 2, fn: generateNoiseTexture    },
+  { weight: 1, fn: generateStochastic      },
+];
+
+const BEAT_ARCHETYPES = [
+  { weight: 3, fn: generateDrumKit      },
+  { weight: 2, fn: generateDrumWithBass },
+];
+
+let lastArchetypeFn = null;
 
 function generateHarmonicPreset() {
   for (const node of [...state.nodes]) removeNode(node);
   state.nodeSeq = 0;
 
-  const scaleNames = Object.keys(SCALES);
-  const scaleName  = scaleNames[Math.floor(Math.random() * scaleNames.length)];
-  const scale      = SCALES[scaleName];
-  const rootNote   = Math.floor(Math.random() * 12);
-  const rootOctave = 3 + Math.floor(Math.random() * 2);
-  const rootBase   = rootOctave * 12 + rootNote;
+  // in beat mode pick drum archetype, otherwise pick ambient
+  const pool = state.beatMode ? BEAT_ARCHETYPES : ARCHETYPES;
+  // exclude the last-used archetype to avoid immediate repeats
+  const eligible = pool.length > 1 ? pool.filter(a => a.fn !== lastArchetypeFn) : pool;
+  const total    = eligible.reduce((s, a) => s + a.weight, 0);
+  let r          = Math.random() * total;
+  const archetype = eligible.find(a => (r -= a.weight) < 0) ?? eligible[0];
+  lastArchetypeFn = archetype.fn;
+  const { nodes, label, name } = archetype.fn();
 
-  const count = 3 + Math.floor(Math.random() * 4);
-  const pool  = [];
-  for (let oct = 0; oct <= 1; oct++)
-    for (const step of scale) pool.push(rootBase + step + oct * 12);
-
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  const chosen = pool.slice(0, count);
-
-  const canvasArea = canvas.height - state.panelHeight - TOP_H;
-  const typePool   = ['sine','sine','sine','triangle','triangle','square'];
-
-  for (const semitone of chosen) {
-    const freq       = semitoneToFreq(semitone);
-    const worldX     = freqToWorldX(freq);
-    const filterNorm = 0.10 + Math.random() * 0.50;
-    const worldY     = TOP_H + canvasArea * filterNorm;
-    const type       = typePool[Math.floor(Math.random() * typePool.length)];
-    const volume     = 0.35 + Math.random() * 0.30;
-    const typeParams = { ...TYPE_DEFAULTS[type], detune: (Math.random() - 0.5) * 16 };
-
-    const node = {
-      id: ++state.nodeSeq, x: worldX, y: worldY, filterNorm,
-      type, muted: false, volume, panOverride: null,
-      typeParams,
-      attack: 0.3, decay: 0.1, sustain: 100, release: 0.8,
-      reverbSend: 0, delaySend: 0, nodeDelayTime: 250, nodeDelayFeedback: 0, nodeDelayWet: 0,
-      pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null,
-    };
+  for (const node of nodes) {
     state.nodes.push(node);
-    createAudio(node);
+    if (!DRUM_TYPES.has(node.type)) createAudio(node);
   }
   syncCount();
 
   applyGlobal({
-    vol:    65 + Math.floor(Math.random() * 15),
-    grav:   20 + Math.floor(Math.random() * 20),
-    tone:   60 + Math.floor(Math.random() * 25),
-    spread: 30 + Math.floor(Math.random() * 30),
+    vol:    60 + Math.floor(Math.random() * 15),
+    grav:   15 + Math.floor(Math.random() * 25),
+    tone:   55 + Math.floor(Math.random() * 30),
+    spread: 25 + Math.floor(Math.random() * 35),
   });
 
   state.viewX = 0; state.viewY = 0; state.velX = 0; state.velY = 0; state.zoom = 1;
-
-  const rootName  = NOTE_NAMES[rootNote] + rootOctave;
-  showToast(`${rootName} ${scaleName} — ${count} nodes`);
+  showToast(label);
 
   const nameInput = document.getElementById('preset-name-input');
-  if (nameInput) nameInput.value = `${rootName} ${scaleName}`;
+  if (nameInput) nameInput.value = name;
 }
 
 document.getElementById('random-btn').addEventListener('click', generateHarmonicPreset);
@@ -518,6 +1239,7 @@ canvas.addEventListener('pointerdown', e => {
   pDown = Date.now(); didDrag = false; state.velX = 0; state.velY = 0;
   if (hit) {
     dragNode = hit; pNode = hit;
+    state.draggingNodeId = hit.id;
     dragStartClientX = e.clientX; dragStartClientY = e.clientY;
     dragStartNodeX   = hit.x;    dragStartNodeY    = hit.y;
   } else {
@@ -544,7 +1266,19 @@ canvas.addEventListener('pointermove', e => {
     dragNode.x          = dragStartNodeX + dx / state.zoom;
     dragNode.y          = dragStartNodeY + dy / state.zoom;
     dragNode.filterNorm = computeFilterNorm(e.clientY);
-    updateAudio(dragNode);
+    if (DRUM_TYPES.has(dragNode.type)) {
+      const params = dragNode.typeParams ?? {};
+      // X → tune (log scale: left=low, right=high)
+      const xNorm = Math.max(0, Math.min(1, dragNode.x / WORLD_WIDTH));
+      if (dragNode.type === 'kick')  params.tune = Math.round(20 + xNorm * 180);
+      if (dragNode.type === 'hihat') params.tune = Math.round(100 + xNorm * 5900);
+      if (dragNode.type === 'perc')  params.tune = Math.round(60 + xNorm * 1940);
+      // Y → decay (top=long, bottom=short)
+      const yNorm = 1 - dragNode.filterNorm;
+      params.decay = parseFloat((0.02 + yNorm * 1.3).toFixed(3));
+    } else {
+      updateAudio(dragNode);
+    }
   } else if (isPanning) {
     const dx = e.clientX - panStartClientX, dy = e.clientY - panStartClientY;
     if (Math.hypot(dx, dy) > 4) didDrag = true;
@@ -571,6 +1305,7 @@ canvas.addEventListener('pointerup', e => {
   }
   if (pNode && !didDrag && dt < 400) selectNode(pNode);
   dragNode = null; pNode = null; didDrag = false; isPanning = false;
+  state.draggingNodeId = null;
   canvas.style.cursor = 'crosshair';
 });
 
@@ -585,8 +1320,9 @@ resizeSpectrumCanvas();
 addEventListener('resize', resizeSpectrumCanvas);
 
 // ── Main animation loop ───────────────────────────────────────
-let lastSlow  = 0;
-let lastFrame = 0;
+let lastSlow    = 0;
+let lastFrame   = 0;
+let gravityFrame = 0;
 let frameBudgetMs = 33;
 const FRAME_TARGET_MS = 33; // ~30fps
 
@@ -607,6 +1343,33 @@ function loop(time = 0) {
     state.velY  *= 0.88;
   }
 
+  // physical gravity drift — runs every 3rd frame to reduce main-thread load
+  gravityFrame = (gravityFrame + 1) % 3;
+  if (gravityFrame === 0 && state.gravityStrength > 0.01 && state.nodes.length > 1) {
+    // cluster radius scales with gravity: low gravity = tight local groups, high = wider pull
+    const clusterR = Math.hypot(canvas.width, canvas.height) * (0.08 + state.gravityStrength * 0.18);
+    for (const node of state.nodes) {
+      if (node === dragNode || node.muted) continue;
+      let fx = 0, fy = 0;
+      for (const other of state.nodes) {
+        if (other === node) continue;
+        const dx = other.x - node.x;
+        const dy = other.y - node.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 3 || dist > clusterR) continue;
+        // gaussian falloff: full strength at 0, zero at clusterR
+        const t     = dist / clusterR;
+        const force = state.gravityStrength * 0.018 * Math.exp(-t * t * 4);
+        fx += (dx / dist) * force;
+        fy += (dy / dist) * force;
+      }
+      node.x += fx;
+      node.y += fy;
+      const canvasArea = canvas.height - state.panelHeight - TOP_H;
+      node.filterNorm  = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / canvasArea));
+    }
+  }
+
   context.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
@@ -624,9 +1387,18 @@ function loop(time = 0) {
 
   if (state.isPlaying) {
     for (const node of state.nodes) {
-      if (node.muted) continue;
+      if (node._beatFlash) {
+        node._beatFlash = false;
+        spawnRipple(node);
+      }
+    }
+    for (const node of state.nodes) {
+      if (node.muted || DRUM_TYPES.has(node.type)) continue;
       node.rippleTimer++;
-      if (node.rippleTimer >= rippleInterval(node)) {
+      if (node.rippleTimer >= node._rippleNext) {
+        const base = rippleInterval(node);
+        // interval driven by node's own slow oscillation (unique phase per node)
+        node._rippleNext = base * (0.6 + Math.abs(Math.sin(time * 0.00031 + node.pulsePhase)) * 0.85);
         node.rippleTimer = 0;
         spawnRipple(node);
       }

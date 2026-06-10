@@ -98,12 +98,38 @@
         </svg>
       </button>
       <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+      <button id="fullscreen-btn" class="icon-btn" data-tip="Fullscreen" data-tip-desc="Toggle fullscreen">
+        <svg id="fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+        <svg id="fs-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 0 2 2v3M16 21v-3a2 2 0 0 0 2-2h3"/>
+        </svg>
+      </button>
+      <button id="debug-btn" class="icon-btn" data-tip="Debug" data-tip-desc="Show debug panel (Shift+D)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+          <path d="M12 8v4M12 16h.01"/>
+        </svg>
+      </button>
     </div>
     <button id="hamburger-btn" class="icon-btn" aria-label="Menu" data-tip="Menu" data-tip-desc="Open controls">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
     </button>
+    <div class="topbar-sep"></div>
+    <button id="beat-mode-btn" class="icon-btn" data-tip="Beat mode" data-tip-desc="Switch between Ambient and Beat mode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="8" width="4" height="8" rx="1"/><rect x="8" y="5" width="4" height="14" rx="1"/>
+        <rect x="14" y="10" width="4" height="6" rx="1"/><rect x="20" y="7" width="2" height="10" rx="1"/>
+      </svg>
+    </button>
+    <div id="bpm-control" style="display:none">
+      <button id="bpm-dec" class="bpm-step-btn">−</button>
+      <span id="bpm-display">120 BPM</span>
+      <button id="bpm-inc" class="bpm-step-btn">+</button>
+    </div>
     <div class="topbar-sep"></div>
     <button id="rec-btn" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
       <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
@@ -166,6 +192,17 @@
       <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
       <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
       <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+  <button id="fullscreen-btn-m" class="icon-btn" data-tip="Fullscreen" data-tip-desc="Toggle fullscreen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+    </svg>
+  </button>
+  <button id="debug-btn-m" class="icon-btn" data-tip="Debug" data-tip-desc="Show debug panel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+      <path d="M12 8v4M12 16h.01"/>
     </svg>
   </button>
   <button id="version-btn-m" class="icon-btn" data-tip="Version" data-tip-desc="Show changelog">
@@ -315,12 +352,13 @@
 <!-- onboarding wizard -->
 <div id="wizard">
   <div id="wizard-card">
+    <button class="wiz-close" id="wiz-close" title="Close">✕</button>
     <div class="wiz-step-bar" id="wiz-bar"></div>
     <span class="wiz-icon" id="wiz-icon"></span>
     <div class="wiz-title" id="wiz-title"></div>
     <div class="wiz-body"  id="wiz-body"></div>
     <div class="wiz-footer">
-      <button class="wiz-skip" id="wiz-skip">Skip</button>
+      <button class="wiz-changelog-btn" id="wiz-changelog-btn">Changelog ↗</button>
       <div class="wiz-nav">
         <button class="wiz-prev" id="wiz-prev">← Back</button>
         <button class="wiz-next" id="wiz-next">Next →</button>

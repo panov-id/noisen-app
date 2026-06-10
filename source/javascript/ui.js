@@ -1,7 +1,7 @@
 // ── UI: panels, overlays, tooltips, toasts, wizard, presets ──
 
 import {
-  state, APP_VERSION, TYPES, TYPE_DEFAULTS, WAVE_ICONS, PARAM_ICONS,
+  state, APP_VERSION, TYPES, TYPE_DEFAULTS, DRUM_TYPES, DRUM_ICONS, WAVE_ICONS, PARAM_ICONS,
   ORBIT_TARGETS, ORBIT_DEFAULTS,
   saveSettings, loadSettings,
 } from './store.js';
@@ -10,7 +10,7 @@ import {
   createAudio, destroyAudio, updateAudio, rebuildAudio,
   masterGain, masterFilter, masterReverb, masterDelay, locut, hiCut,
   locutHz, hicutHz, decaySeconds, delayMilliseconds, toneHz,
-  syncOrbitLFO,
+  syncOrbitLFO, syncDrumOrbitLFO,
 } from './audio.js';
 
 // ── Format helpers ────────────────────────────────────────────
@@ -140,6 +140,152 @@ document.querySelectorAll('.node-tab').forEach(btn => {
   btn.addEventListener('click', () => switchNodeTab(btn.dataset.tab));
 });
 
+function buildOrbitSection(node, container, syncFn) {
+  const orbitSection = document.createElement('div');
+  orbitSection.className = 'orbit-section';
+  orbitSection.innerHTML = `<div class="orbit-section-header">
+    <span class="orbit-section-title">Orbits</span>
+    <button class="orbit-add-btn" ${(node.orbits?.length ?? 0) >= 3 ? 'disabled' : ''}>+ Add</button>
+  </div>`;
+  if (!node.orbits) node.orbits = [];
+
+  const renderOrbitCards = () => {
+    const existing = orbitSection.querySelector('.orbit-cards');
+    if (existing) existing.remove();
+    const cards = document.createElement('div');
+    cards.className = 'orbit-cards';
+    node.orbits.forEach((orbit, index) => {
+      const colors = ['#78c8ff', '#ffb450', '#8cffa0'];
+      const card = document.createElement('div');
+      card.className = 'orbit-card';
+      card.style.setProperty('--orbit-color', colors[index % colors.length]);
+      card.innerHTML = `
+        <div class="orbit-card-header">
+          <span class="orbit-dot" style="background:${colors[index % colors.length]}"></span>
+          <div class="orbit-target-btns">
+            ${ORBIT_TARGETS.map(t => `<button class="orbit-target-btn ${orbit.target === t.id ? 'active' : ''}" data-target="${t.id}">${t.label}</button>`).join('')}
+          </div>
+          <button class="orbit-dir-btn" title="Direction">${(orbit.direction ?? 1) === 1 ? '↻' : '↺'}</button>
+          <button class="orbit-toggle ${orbit.enabled ? 'on' : ''}" title="Enable/disable">${orbit.enabled ? '●' : '○'}</button>
+          <button class="orbit-remove-btn" title="Remove">✕</button>
+        </div>
+        <div class="orbit-sliders">
+          <div class="orbit-slider-row">
+            <span class="orbit-slider-label">Rate</span>
+            <input type="range" class="card-slider orbit-rate" min="0.02" max="2" step="0.01" value="${orbit.rate}" style="--pct:${((orbit.rate - 0.02) / 1.98 * 100).toFixed(1)}%">
+            <span class="orbit-slider-val orbit-rate-val">${orbit.rate.toFixed(2)}Hz</span>
+          </div>
+          <div class="orbit-slider-row">
+            <span class="orbit-slider-label">Depth</span>
+            <input type="range" class="card-slider orbit-depth" min="0" max="100" step="1" value="${orbit.depth}" style="--pct:${orbit.depth}%">
+            <span class="orbit-slider-val orbit-depth-val">${orbit.depth}%</span>
+          </div>
+        </div>`;
+      card.querySelector('.orbit-dir-btn').addEventListener('click', e => {
+        orbit.direction = (orbit.direction ?? 1) === 1 ? -1 : 1;
+        e.target.textContent = orbit.direction === 1 ? '↻' : '↺';
+        syncFn(index);
+      });
+      card.querySelector('.orbit-toggle').addEventListener('click', () => {
+        orbit.enabled = !orbit.enabled;
+        syncFn(index);
+        renderOrbitCards();
+      });
+      card.querySelector('.orbit-remove-btn').addEventListener('click', () => {
+        node.orbits.splice(index, 1);
+        syncFn(index);
+        orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+        renderOrbitCards();
+      });
+      card.querySelectorAll('.orbit-target-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          orbit.target = btn.dataset.target;
+          syncFn(index);
+          card.querySelectorAll('.orbit-target-btn').forEach(b => b.classList.toggle('active', b.dataset.target === orbit.target));
+        });
+      });
+      card.querySelector('.orbit-rate').addEventListener('input', e => {
+        orbit.rate = parseFloat(e.target.value);
+        card.querySelector('.orbit-rate-val').textContent = `${orbit.rate.toFixed(2)}Hz`;
+        setSliderPct(e.target, orbit.rate, 0.02, 2);
+        syncFn(index);
+      });
+      card.querySelector('.orbit-depth').addEventListener('input', e => {
+        orbit.depth = parseInt(e.target.value);
+        card.querySelector('.orbit-depth-val').textContent = `${orbit.depth}%`;
+        setSliderPct(e.target, orbit.depth, 0, 100);
+        syncFn(index);
+      });
+      cards.appendChild(card);
+    });
+    orbitSection.appendChild(cards);
+  };
+
+  orbitSection.querySelector('.orbit-add-btn').addEventListener('click', () => {
+    if (node.orbits.length >= 3) return;
+    const usedTargets = node.orbits.map(o => o.target);
+    const available = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
+    const newOrbit = ORBIT_DEFAULTS();
+    if (available) newOrbit.target = available.id;
+    node.orbits.push(newOrbit);
+    syncFn(node.orbits.length - 1);
+    orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+    renderOrbitCards();
+  });
+
+  renderOrbitCards();
+  container.appendChild(orbitSection);
+}
+
+function buildDrumSequencer(node, container, color) {
+  const steps = (node.steps = node.steps ?? Array(16).fill(false));
+  const isLandscape = window.innerWidth > window.innerHeight;
+
+  const sequencer = document.createElement('div');
+  sequencer.className = 'drum-sequencer';
+  sequencer.style.setProperty('--drum-color', color);
+
+  const makeRow = (from, count) => {
+    const row = document.createElement('div');
+    row.className = 'drum-step-row';
+    row.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+    for (let i = from; i < from + count; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'drum-step' + (steps[i] ? ' on' : '') + (i % 4 === 0 ? ' downbeat' : '');
+      btn.dataset.step = i;
+      btn.addEventListener('click', () => {
+        steps[i] = !steps[i];
+        btn.classList.toggle('on', steps[i]);
+      });
+      row.appendChild(btn);
+    }
+    return row;
+  };
+
+  if (isLandscape) {
+    // two rows of 8
+    sequencer.appendChild(makeRow(0, 8));
+    sequencer.appendChild(makeRow(8, 8));
+  } else {
+    // one row of 16
+    sequencer.appendChild(makeRow(0, 16));
+  }
+
+  container.appendChild(sequencer);
+
+  let lastHighlighted = -1;
+  function tickHighlight() {
+    if (!container.isConnected) return;
+    const step = state.beatStep;
+    if (step !== lastHighlighted) {
+      container.querySelectorAll('.drum-step').forEach((b, i) => b.classList.toggle('playing', i === step));
+      lastHighlighted = step;
+    }
+    requestAnimationFrame(tickHighlight);
+  }
+  requestAnimationFrame(tickHighlight);
+}
+
 export function buildNodeCards(node) {
   nodeCards.innerHTML = '';
   const color    = TYPES[node.type].color;
@@ -153,6 +299,73 @@ export function buildNodeCards(node) {
     makeCard({ id, icon: PARAM_ICONS[iconKey] || iconKey, label, tip, tipDesc, min, max, step, value: val, fmt, onChange });
 
   const fmtSec = v => v >= 1 ? `${(+v).toFixed(1)}s` : `${Math.round(v * 1000)}ms`;
+  const fmtMs  = v => `${Math.round(v * 1000)}ms`;
+  const fmtPct = v => `${Math.round(v * 100)}%`;
+
+  // ── Relabel Envelope tab for drum nodes ──────────────────────
+  const envTabBtn = document.querySelector('.node-tab[data-tab="envelope"]');
+  if (envTabBtn) envTabBtn.textContent = DRUM_TYPES.has(node.type) ? 'Steps' : 'Envelope';
+
+  // ── Drum node: full tabbed panel ─────────────────────────────
+  if (DRUM_TYPES.has(node.type)) {
+    const params = node.typeParams ?? {};
+    if (activeNodeTab === 'sound') {
+      nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
+        5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; }));
+      nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right position in stereo field',
+        -100,100,1,Math.round((node.panOverride??0)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; }));
+      if (node.type === 'kick') {
+        nodeCards.appendChild(mkC('tune','tune','Tune','Pitch','Fundamental frequency of the kick',
+          20,200,1,params.tune??60,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+        nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
+          0.02,1.5,0.01,params.decay??0.35,fmtMs,v=>{ params.decay=v; }));
+        nodeCards.appendChild(mkC('dep','dep','Pitch↓','Pitch fall speed','How fast pitch drops after hit',
+          0.01,0.4,0.01,params.pitchDecay??0.07,fmtMs,v=>{ params.pitchDecay=v; }));
+      } else if (node.type === 'snare') {
+        nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
+          0.02,0.8,0.01,params.decay??0.18,fmtMs,v=>{ params.decay=v; }));
+        nodeCards.appendChild(mkC('res','res','Tone','Tone color','Dark (brown) → bright (white) noise',
+          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; }));
+      } else if (node.type === 'hihat') {
+        nodeCards.appendChild(mkC('tune','tune','Tune','Frequency','Metal resonance frequency',
+          100,6000,50,params.tune??400,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+        nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Closed hat length',
+          0.01,0.5,0.01,params.decay??0.06,fmtMs,v=>{ params.decay=v; }));
+        const isOpen = (params.open??0) > 0.5;
+        const openCard = mkC('open','vol','Open','Open/closed','Open hat plays full decay',
+          0,1,1,isOpen?1:0,v=>v>0.5?'open':'closed',v=>{ params.open=v; });
+        nodeCards.appendChild(openCard);
+      } else if (node.type === 'clap') {
+        nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
+          0.02,0.6,0.01,params.decay??0.12,fmtMs,v=>{ params.decay=v; }));
+        nodeCards.appendChild(mkC('res','res','Tone','Tone color','Dark → bright noise character',
+          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; }));
+      } else if (node.type === 'perc') {
+        nodeCards.appendChild(mkC('tune','tune','Tune','Pitch','Metal resonance frequency',
+          60,2000,10,params.tune??200,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+        nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
+          0.02,1.0,0.01,params.decay??0.25,fmtMs,v=>{ params.decay=v; }));
+      }
+
+    } else if (activeNodeTab === 'envelope') {
+      buildDrumSequencer(node, nodeCards, color);
+
+    } else if (activeNodeTab === 'fx') {
+      nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
+        0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; }));
+      nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
+        0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; }));
+
+    } else if (activeNodeTab === 'orbits') {
+      buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx));
+    }
+
+    nodeCards.querySelectorAll('.param-card').forEach(c => {
+      c.style.setProperty('--card-accent',     color);
+      c.style.setProperty('--card-accent-dim', colorDim);
+    });
+    return;
+  }
 
   if (activeNodeTab === 'sound') {
     nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
@@ -197,99 +410,8 @@ export function buildNodeCards(node) {
       0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
 
   } else if (activeNodeTab === 'orbits') {
-  // ── Orbit section ─────────────────────────────────────────
-  const orbitSection = document.createElement('div');
-  orbitSection.className = 'orbit-section';
-  orbitSection.innerHTML = `<div class="orbit-section-header">
-    <span class="orbit-section-title">Orbits</span>
-    <button class="orbit-add-btn" ${(node.orbits?.length ?? 0) >= 3 ? 'disabled' : ''}>+ Add</button>
-  </div>`;
-
-  if (!node.orbits) node.orbits = [];
-
-  const renderOrbitCards = () => {
-    const existing = orbitSection.querySelector('.orbit-cards');
-    if (existing) existing.remove();
-    const container = document.createElement('div');
-    container.className = 'orbit-cards';
-    node.orbits.forEach((orbit, index) => {
-      const colors = ['#78c8ff', '#ffb450', '#8cffa0'];
-      const card = document.createElement('div');
-      card.className = 'orbit-card';
-      card.style.setProperty('--orbit-color', colors[index % colors.length]);
-      card.innerHTML = `
-        <div class="orbit-card-header">
-          <span class="orbit-dot" style="background:${colors[index % colors.length]}"></span>
-          <div class="orbit-target-btns">
-            ${ORBIT_TARGETS.map(t => `<button class="orbit-target-btn ${orbit.target === t.id ? 'active' : ''}" data-target="${t.id}">${t.label}</button>`).join('')}
-          </div>
-          <button class="orbit-toggle ${orbit.enabled ? 'on' : ''}" title="Enable/disable">${orbit.enabled ? '●' : '○'}</button>
-          <button class="orbit-remove-btn" title="Remove">✕</button>
-        </div>
-        <div class="orbit-sliders">
-          <div class="orbit-slider-row">
-            <span class="orbit-slider-label">Rate</span>
-            <input type="range" class="card-slider orbit-rate" min="0.02" max="2" step="0.01" value="${orbit.rate}" style="--pct:${((orbit.rate - 0.02) / 1.98 * 100).toFixed(1)}%">
-            <span class="orbit-slider-val orbit-rate-val">${orbit.rate.toFixed(2)}Hz</span>
-          </div>
-          <div class="orbit-slider-row">
-            <span class="orbit-slider-label">Depth</span>
-            <input type="range" class="card-slider orbit-depth" min="0" max="100" step="1" value="${orbit.depth}" style="--pct:${orbit.depth}%">
-            <span class="orbit-slider-val orbit-depth-val">${orbit.depth}%</span>
-          </div>
-        </div>`;
-
-      card.querySelector('.orbit-toggle').addEventListener('click', () => {
-        orbit.enabled = !orbit.enabled;
-        syncOrbitLFO(node, index);
-        renderOrbitCards();
-      });
-      card.querySelector('.orbit-remove-btn').addEventListener('click', () => {
-        node.orbits.splice(index, 1);
-        syncOrbitLFO(node, index);
-        orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
-        renderOrbitCards();
-      });
-      card.querySelectorAll('.orbit-target-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          orbit.target = btn.dataset.target;
-          syncOrbitLFO(node, index);
-          card.querySelectorAll('.orbit-target-btn').forEach(b => b.classList.toggle('active', b.dataset.target === orbit.target));
-        });
-      });
-      card.querySelector('.orbit-rate').addEventListener('input', e => {
-        orbit.rate = parseFloat(e.target.value);
-        card.querySelector('.orbit-rate-val').textContent = `${orbit.rate.toFixed(2)}Hz`;
-        setSliderPct(e.target, orbit.rate, 0.02, 2);
-        syncOrbitLFO(node, index);
-      });
-      card.querySelector('.orbit-depth').addEventListener('input', e => {
-        orbit.depth = parseInt(e.target.value);
-        card.querySelector('.orbit-depth-val').textContent = `${orbit.depth}%`;
-        setSliderPct(e.target, orbit.depth, 0, 100);
-        syncOrbitLFO(node, index);
-      });
-      container.appendChild(card);
-    });
-    orbitSection.appendChild(container);
-  };
-
-  orbitSection.querySelector('.orbit-add-btn').addEventListener('click', () => {
-    if (node.orbits.length >= 3) return;
-    // each new orbit defaults to a different target
-    const usedTargets = node.orbits.map(o => o.target);
-    const available = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
-    const newOrbit = ORBIT_DEFAULTS();
-    if (available) newOrbit.target = available.id;
-    node.orbits.push(newOrbit);
-    syncOrbitLFO(node, node.orbits.length - 1);
-    orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
-    renderOrbitCards();
-  });
-
-  renderOrbitCards();
-  nodeCards.appendChild(orbitSection);
-  } // end activeNodeTab === 'orbits'
+    buildOrbitSection(node, nodeCards, (idx) => syncOrbitLFO(node, idx));
+  }
 
   nodeCards.querySelectorAll('.param-card').forEach(c => {
     c.style.setProperty('--card-accent',     color);
@@ -300,19 +422,39 @@ export function buildNodeCards(node) {
 export function buildTypeButtons(node) {
   const row = document.getElementById('type-btns');
   row.innerHTML = '';
-  Object.keys(TYPES).forEach(type => {
+
+  const addBtn = (type) => {
     const btn = document.createElement('button');
     btn.className   = 'type-btn' + (node.type === type ? ' active' : '');
     btn.dataset.tip = type.charAt(0).toUpperCase() + type.slice(1);
-    btn.innerHTML   = WAVE_ICONS[type] + `<span>${type}</span>`;
+    const icon = DRUM_TYPES.has(type) ? DRUM_ICONS[type] : WAVE_ICONS[type];
+    btn.innerHTML   = (icon ?? '') + `<span>${type}</span>`;
     btn.addEventListener('click', () => {
       node.type       = type;
       node.typeParams = { ...TYPE_DEFAULTS[type] };
-      rebuildAudio(node);
+      if (!DRUM_TYPES.has(type)) {
+        node.steps = undefined;
+        rebuildAudio(node);
+      } else {
+        node.steps = node.steps ?? Array(16).fill(false);
+        destroyAudio(node);
+        if (typeof window.__setSelectedDrumType === 'function') window.__setSelectedDrumType(type);
+      }
       selectNode(node);
     });
     row.appendChild(btn);
-  });
+  };
+
+  // ambient types always visible
+  ['sine','triangle','square','sawtooth','noise'].forEach(addBtn);
+
+  // drum types shown when beat mode active
+  if (state.beatMode) {
+    const sep = document.createElement('div');
+    sep.className = 'type-sep';
+    row.appendChild(sep);
+    ['kick','snare','hihat','clap','perc'].forEach(addBtn);
+  }
 }
 
 export function updateNodeInfoStrip(node) {
@@ -415,6 +557,72 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '3.0': {
+    title: 'Beat mode — drum sequencer',
+    items: [
+      { section: 'Beat mode', changes: [
+        'New mode activated by the ♩ button in the toolbar — switches the app to rhythmic sequencer mode',
+        'BPM control appears when beat mode is active — tap +/− to adjust tempo (60–200 BPM)',
+        'Beat mode and ambient mode are independent — switching between them keeps your sound nodes intact',
+      ]},
+      { section: 'Drum node types', changes: [
+        'Five new node types: Kick · Snare · Hihat · Clap · Perc',
+        'Drum types appear in the type selector below a divider when beat mode is on',
+        'Each drum type has its own color and dedicated synthesis engine (MembraneSynth, NoiseSynth, MetalSynth)',
+        'Tap the canvas to place a drum node at any position',
+      ]},
+      { section: '16-step sequencer', changes: [
+        'Every drum node has a compact 16-step grid in its panel',
+        'Tap steps to toggle them on/off — active steps light up in the node\'s color',
+        'Currently playing step is highlighted with a white outline in real time',
+        'Steps are saved as part of the node state',
+      ]},
+      { section: 'Gravity clustering', changes: [
+        'Nodes now attract each other with gaussian falloff — stronger gravity → tighter clusters',
+        'Only nearby nodes pull each other; distant nodes are unaffected',
+        'Drag any node to reposition; gravity resumes when released',
+      ]},
+      { section: 'Random presets in beat mode', changes: [
+        'Random preset button generates full drum kits when beat mode is active',
+        'Four kit styles: four-on-floor · breakbeat · half-time · euclidean polyrhythm',
+        'Drum-with-bass variant adds an ambient bass sine layer under the kit',
+        'Euclidean algorithm distributes hits evenly across 16 steps',
+      ]},
+    ],
+  },
+  '2.3': {
+    title: 'Orbit direction + wave physics + changelog',
+    items: [
+      { section: 'Orbit direction', changes: ['↻ / ↺ button on each orbit — switch between clockwise and counter-clockwise LFO sweep', 'Visual dot on canvas ring follows the chosen direction in real time'] },
+      { section: 'Wave rings', changes: ['Ring speed tied to filter openness: bright node → fast ring, dark node → slow ring', 'Expansion decelerates naturally as ring grows — no more mechanical linear spread', 'Emission interval driven by each node\'s own phase oscillation, unique per node'] },
+      { section: 'Interface', changes: ['Full changelog accessible from the ? guide — all versions listed', 'Wizard now has a close button (✕) in the top-right corner'] },
+    ],
+  },
+  '2.2': {
+    title: 'Rhythmic archetypes + wave physics',
+    items: [
+      { section: 'New preset archetypes', changes: [
+        'Polyrhythm — nodes pulse in integer ratios (1:1.5:2:3, 2:3:5:8…) creating interference rhythms',
+        'Gamelan bells — inharmonic high tones with wide panning, like metallophone resonators',
+        'Pentatonic pulse — 5 pentatonic voices breathing at independent rates',
+        'Fibonacci / φ — frequencies and LFO rates derived from the golden ratio (1.618)',
+        'Drone swarm — cluster of micro-detuned unisons beating against each other',
+      ]},
+      { section: 'Wave rings tied to frequency', changes: [
+        'Ripple rings now emit faster for high-frequency nodes, slower for sub-bass',
+        'Ring expansion speed also scaled logarithmically with node frequency',
+        '20Hz node: ~1 ripple per 1.7s · 2kHz: ~1 per 0.13s',
+      ]},
+    ],
+  },
+  '2.1': {
+    title: 'Smart presets + fullscreen',
+    items: [
+      { section: 'Preset archetypes', changes: ['5 intentional archetypes instead of random notes', 'Binaural beats — delta/theta/alpha/beta bands with precise carrier offset', 'Solfeggio — 174, 285, 396, 417, 528, 639, 741, 852, 963 Hz', 'Harmonic series — natural overtone stack over a sub fundamental', 'Full spectrum — sub · bass · mid · air bands simultaneously', 'Scale — musical scale with orbits on each note'] },
+      { section: 'Orbits fixed', changes: ['Orbits now actually work — rewrote LFO engine, no more audio dropouts', 'All presets include orbits matched to each node role'] },
+      { section: 'Interface', changes: ['Fullscreen button in toolbar', 'Debug panel (⊙ button or Shift+D) — live orbit events + memory stats'] },
+    ],
+  },
   '2.0': {
     title: 'Orbits + tabbed node panel',
     items: [
@@ -487,28 +695,55 @@ export function showWhatsNew(version) {
   document.getElementById('whatsnew-overlay').classList.add('open');
 }
 
+export function showChangelog() {
+  document.getElementById('whatsnew-version-badge').textContent = 'All versions';
+  const body = document.getElementById('whatsnew-body');
+  body.innerHTML = Object.entries(WHATSNEW).map(([ver, data]) =>
+    `<div class="changelog-version-block">
+      <div class="changelog-version-heading"><span class="changelog-ver-badge">v${ver}</span>${data.title}</div>
+      ${data.items.map(s => `<h4>${s.section}</h4><ul>${s.changes.map(c => `<li>${c}</li>`).join('')}</ul>`).join('')}
+    </div>`
+  ).join('');
+  document.getElementById('whatsnew-overlay').classList.add('open');
+}
+
 // ── Onboarding wizard ─────────────────────────────────────────
 const WIZARD_STEPS = [
   { icon: '✦', title: 'Welcome to Noisen', highlight: null,
-    body: 'A generative sound canvas. No presets to browse, no menus to dig through — you draw sound by placing nodes directly on screen. Every position is a unique sonic texture. Tap anywhere on the dark canvas to place your first node.' },
-  { icon: '↔', title: 'X axis = frequency', highlight: 'main',
-    body: 'The horizontal position of a node sets its pitch. Far left → deep sub-bass (8 Hz). Far right → ultrasonic highs (40 kHz). The scale is logarithmic, so the middle of the canvas sits around 600 Hz — the heart of the human voice range. Drag a node left or right and hear the pitch sweep continuously.' },
-  { icon: '↕', title: 'Y axis = filter brightness', highlight: 'main',
-    body: 'Vertical position controls a low-pass filter cutoff. Top of canvas → filter fully open, full harmonic content. Bottom → filter almost closed, leaving only a muffled low rumble. Combine a high-pitched node placed low on the canvas for a dark, filtered sine tone — very different from the same note placed high.' },
+    body: 'A generative sound canvas. No accounts, no menus to dig through — you draw sound by placing nodes directly on screen. Every position is a unique sonic texture. Tap anywhere on the dark canvas to place your first node. Use the ? button anytime to reopen this guide.' },
+
+  { icon: '↔', title: 'X axis — frequency', highlight: 'main',
+    body: 'Horizontal position sets pitch. Far left → deep sub-bass (8 Hz). Far right → ultrasonic highs (40 kHz). The scale is logarithmic: center canvas ≈ 600 Hz (human voice range). Drag a node left or right and hear the pitch sweep in real time. Frequency is always world-absolute — zooming in doesn\'t change pitch.' },
+
+  { icon: '↕', title: 'Y axis — filter brightness', highlight: 'main',
+    body: 'Vertical position controls a low-pass filter cutoff. Top → filter wide open, full harmonic content. Bottom → filter almost closed, muffled sub-rumble only. A high-pitched node placed low = dark filtered sine. Same node placed high = bright, open tone. Combine both axes to sculpt timbre spatially.' },
+
   { icon: '◎', title: 'Gravity between nodes', highlight: 'grav',
-    body: 'Nodes pull each other\'s pitch. The closer two nodes are, the stronger the gravitational attraction — their frequencies drift toward each other. With high gravity, a cluster of nodes converges into a single drone. Low gravity preserves independence. Use the Gravity slider in the panel to tune how strongly nodes interact.' },
-  { icon: '◈', title: 'Wave types & node panel', highlight: null,
-    body: 'Tap any node to open its panel. Five wave types: Sine (pure tone), Triangle (soft and hollow), Square (buzzy, hollow), Sawtooth (bright, rich), Noise (textural — white, pink, or brown). Each type has unique parameters: detune in cents, vibrato rate and depth for oscillators, voice stacking and spread for square/sawtooth, resonance Q for noise.' },
-  { icon: '⟳', title: 'Pan & stereo field', highlight: null,
-    body: 'A node\'s horizontal world position also sets its stereo pan automatically — left side of canvas = left speaker, right side = right speaker. You can override this per node in the panel with a manual pan slider. The stereo field is audible even on headphones with a single node by placing it anywhere but center.' },
-  { icon: '▶', title: 'Play button', highlight: 'play-btn',
-    body: 'The ▶ button in the top bar starts audio. On iOS, audio requires this first tap to unlock the Web Audio context — after that it plays silently even with the mute switch on. Press again to stop. Node positions, types, and parameters are preserved — press play again to resume exactly as you left it.' },
-  { icon: '⚄', title: 'Random harmonic generator', highlight: 'random-btn',
-    body: 'The shuffle button generates a full configuration from a random musical scale: Major, Natural Minor, Pentatonic, Minor Pentatonic, Dorian, Mixolydian, Lydian, or Phrygian. Nodes land precisely on note frequencies for that root and scale. Gravity is kept light so intervals stay recognisable. Hit it repeatedly — each result is unique.' },
-  { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;display:block"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>', title: 'Save & share presets', highlight: 'presets-btn',
-    body: 'The floppy icon opens the Presets panel. Name your configuration and save it to this device (localStorage). The share button generates a URL — the entire state is encoded in the link as compressed base64. Anyone who opens the link gets your exact nodes, types, volumes, and global parameters. No server, no account.' },
+    body: 'Nodes pull each other\'s pitch toward each other. The closer two nodes are, the stronger the pull. High gravity + tight cluster = unison drone as all frequencies converge. Low gravity = each node stays on its own pitch. Use the Gravity slider in the global panel to set how strongly nodes interact. Works while playing in real time.' },
+
+  { icon: '◈', title: 'Node types', highlight: null,
+    body: 'Tap a node to open its panel. Five wave types:\n• Sine — pure tone, single frequency\n• Triangle — soft and hollow, weak overtones\n• Square — buzzy and hollow, odd harmonics only\n• Sawtooth — bright and rich, full harmonic series\n• Noise — textural (white/pink/brown), great for beds\nEach type has unique parameters: detune, vibrato, voice stacking, resonance Q.' },
+
+  { icon: '≋', title: 'Orbits — living modulation', highlight: null,
+    body: 'Every node supports up to 3 independent Orbits — slow LFOs that continuously animate a parameter. Targets: Filter cutoff · Pan (stereo position) · Volume (tremolo) · Delay wet. Set Rate (0.02–2 Hz) and Depth (0–100%). Multiple nodes with different orbit rates create evolving interference textures that never repeat exactly.' },
+
+  { icon: '⟳', title: 'Stereo field', highlight: null,
+    body: 'A node\'s horizontal position automatically sets its stereo pan — left side = left speaker, right side = right speaker. You can override this per node in the panel. Add a Pan orbit to a node for a slow auto-pan sweep. Two detuned nodes on opposite sides create a lush, wide stereo effect without any effects chain.' },
+
+  { icon: '⚄', title: 'Intelligent preset generator', highlight: 'random-btn',
+    body: 'The shuffle button picks from 10 scientific archetypes:\n• Binaural beats — delta/theta/alpha/beta brain entrainment\n• Solfeggio — 174, 285, 396, 528 Hz healing frequencies\n• Harmonic series — natural overtone stack\n• Full spectrum — sub · bass · mid · air simultaneously\n• Pentatonic pulse, Polyrhythm, Gamelan bells, Fibonacci, Drone swarm, Scale\nEach archetype bakes in matching orbits. Hit it repeatedly — every result is unique.' },
+
+  { icon: '▶', title: 'Play & audio unlock', highlight: 'play-btn',
+    body: 'Press ▶ to start audio. On iOS, the first tap unlocks the Web Audio context — after that sound plays even with the mute switch on. All node positions and parameters are preserved when stopped. Lock screen controls work via MediaSession API so you can control playback without unlocking your phone.' },
+
+  { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;display:block"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>', title: 'Save & share', highlight: 'presets-btn',
+    body: 'The floppy icon opens Presets. Save configurations to this device (localStorage). The share button generates a URL — the entire state is encoded as compressed base64. Anyone who opens the link gets your exact nodes, types, volumes, and FX. No server, no account, works offline. QR code is generated automatically for mobile sharing.' },
+
+  { icon: '⌂', title: 'FX chain', highlight: 'fx-btn',
+    body: 'The ⚌ button opens the master FX panel:\n• Lo Cut / Hi Cut — shape the overall frequency range\n• Reverb — room size and wet mix\n• Delay — echo with time, feedback, wet\n• Tone, Spread — global timbre and stereo width\nPer-node: each node has its own Reverb Send, Delay Send, and local delay unit — route selectively for depth without affecting other nodes.' },
+
   { icon: '∞', title: 'Infinite canvas', highlight: 'reset-view',
-    body: 'The workspace is infinite — drag the background to pan. Momentum carries the view after you release. Use the crosshair button in the toolbar to snap back to the origin. The frequency scale is fixed regardless of screen size or zoom — a node at world X = 960 is always 220 Hz (A3), on any device.' },
+    body: 'The workspace is infinite — drag the background to pan, scroll to zoom. Momentum carries the view after release. Use the crosshair button to snap back to origin. Zoom range ×0.25 – ×4. The frequency scale is world-absolute regardless of zoom level — a node at the A3 position is always 220 Hz on any device.' },
 ];
 
 let wizardStep   = 0;
@@ -544,6 +779,8 @@ export function wizardOpen() {
   requestAnimationFrame(() => el.classList.remove('hide'));
   wizardStep = 0;
   wizardRender();
+  const checkbox = document.getElementById('wiz-always-show');
+  if (checkbox) checkbox.checked = localStorage.getItem('noisen-wizard-always') === '1';
 }
 
 export function wizardClose() {
@@ -551,7 +788,14 @@ export function wizardClose() {
   el.classList.add('hide');
   wizardSetRing(null);
   setTimeout(() => { el.style.display = 'none'; }, 260);
-  localStorage.setItem('noisen-wizard-done', '1');
+  const alwaysShow = document.getElementById('wiz-always-show')?.checked;
+  if (alwaysShow) {
+    localStorage.setItem('noisen-wizard-always', '1');
+    localStorage.removeItem('noisen-wizard-done');
+  } else {
+    localStorage.setItem('noisen-wizard-always', '0');
+    localStorage.setItem('noisen-wizard-done', '1');
+  }
 }
 
 export function initWizard() {
@@ -562,11 +806,17 @@ export function initWizard() {
   document.getElementById('wiz-prev').addEventListener('click', () => {
     if (wizardStep > 0) { wizardStep--; wizardRender(); }
   });
-  document.getElementById('wiz-skip').addEventListener('click', wizardClose);
+  document.getElementById('wiz-close').addEventListener('click', wizardClose);
+  document.getElementById('wiz-changelog-btn').addEventListener('click', () => {
+    wizardClose();
+    showChangelog();
+  });
   document.getElementById('help-btn').addEventListener('click', wizardOpen);
   document.getElementById('help-btn-m')?.addEventListener('click', wizardOpen);
 
-  if (!localStorage.getItem('noisen-wizard-done')) {
+  const alwaysShow = localStorage.getItem('noisen-wizard-always') === '1';
+  const done       = localStorage.getItem('noisen-wizard-done') === '1';
+  if (!done || alwaysShow) {
     wizardRender();
   } else {
     document.getElementById('wizard').style.display = 'none';
@@ -717,12 +967,17 @@ function setSavedPresets(list) {
 }
 
 function sharePreset(preset) {
-  const url = location.origin + location.pathname + '?p=' + encodePreset(preset);
-  navigator.clipboard.writeText(url).catch(() => {});
-  const confirm = document.getElementById('share-confirm');
-  confirm.style.display = 'block';
-  clearTimeout(confirm._timer);
-  confirm._timer = setTimeout(() => { confirm.style.display = 'none'; }, 2200);
+  const longUrl = location.origin + location.pathname + '?p=' + encodePreset(preset);
+  // showShareModal is injected from main.js to avoid circular imports
+  if (typeof window.__showShareModal === 'function') {
+    window.__showShareModal(longUrl);
+  } else {
+    navigator.clipboard.writeText(longUrl).catch(() => {});
+    const confirm = document.getElementById('share-confirm');
+    confirm.style.display = 'block';
+    clearTimeout(confirm._timer);
+    confirm._timer = setTimeout(() => { confirm.style.display = 'none'; }, 2200);
+  }
 }
 
 function buildPresetsList() {

@@ -1,38 +1,98 @@
 // ── Audio engine (Tone.js) ────────────────────────────────────
 // Tone.js is loaded via CDN script tag — available as global `Tone`
 
-import { state, TYPES, TYPE_DEFAULTS, WORLD_WIDTH, NODE_MIN_R, NODE_MAX_R } from './store.js';
+import { state, TYPES, TYPE_DEFAULTS, DRUM_TYPES, WORLD_WIDTH, NODE_MIN_R, NODE_MAX_R } from './store.js';
 
 // ── Orbit LFO helpers ─────────────────────────────────────────
 // Each orbit modulates one audio parameter via a sine LFO.
 // LFO output range is computed relative to the current param value.
 
+// Interval-based LFO — avoids Tone.js AudioParam range validation issues.
+// Updates every 50ms (20Hz), sufficient for LFO rates up to 2Hz.
+// Uses rampTo() so transitions are smooth even at low update rate.
+const LFO_INTERVAL_MS = 50;
+
 function createOrbitLFO(orbit, node) {
-  const audio = node.audio;
-  if (!audio) return null;
-  const { target, rate, depth } = orbit;
-  const d = depth / 100;
-  let lfo;
+  try {
+    const audio = node.audio;
+    if (!audio) { console.warn('[orbit] no audio on node', node.id); return null; }
+    const { target, rate, depth } = orbit;
+    const d = depth / 100;
+    let phase = 0;
+    let intervalId = null;
 
-  if (target === 'filter') {
-    const base = filterFromNorm(node.filterNorm ?? 0.5);
-    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: base * Math.pow(2, -d * 2), max: base * Math.pow(2, d * 2) });
-    lfo.connect(audio.filter.frequency);
-  } else if (target === 'pan') {
-    const base = effectivePan(node);
-    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: Math.max(-1, base - d), max: Math.min(1, base + d) });
-    lfo.connect(audio.panner.pan);
-  } else if (target === 'volume') {
-    const base = node.volume * 0.28;
-    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: base * (1 - d * 0.9), max: base });
-    lfo.connect(audio.gain.gain);
-  } else if (target === 'delay') {
-    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: 0, max: d });
-    lfo.connect(audio.nodeDelay.wet);
+    console.log(`[orbit] create target=${target} rate=${rate} depth=${depth} node=${node.id}`);
+
+    function computeTargetRange() {
+      if (target === 'filter') {
+        const base = filterFromNorm(node.filterNorm ?? 0.5);
+        return { min: base * Math.pow(2, -d * 2), max: base * Math.pow(2, d * 2) };
+      } else if (target === 'pan') {
+        const base = effectivePan(node);
+        return { min: Math.max(-1, base - d), max: Math.min(1, base + d) };
+      } else if (target === 'volume') {
+        const base = node.volume * 0.28;
+        return { min: base * (1 - d * 0.9), max: base };
+      } else if (target === 'delay') {
+        return { min: 0, max: d };
+      }
+      return null;
+    }
+
+    function applyValue(value) {
+      try {
+        if (target === 'filter')  audio.filter.frequency.rampTo(value, 0.05);
+        else if (target === 'pan')    audio.panner.pan.rampTo(value, 0.05);
+        else if (target === 'volume') audio.gain.gain.rampTo(value, 0.05);
+        else if (target === 'delay')  audio.nodeDelay.wet.rampTo(value, 0.05);
+      } catch (error) {
+        console.error('[orbit] applyValue failed:', error);
+      }
+    }
+
+    function tick() {
+      if (!node.audio) { stop(); return; }
+      const range = computeTargetRange();
+      if (!range) return;
+      const sine = Math.sin(phase * Math.PI * 2);
+      const value = (range.min + range.max) / 2 + sine * (range.max - range.min) / 2;
+      applyValue(value);
+      const direction = orbit.direction === -1 ? -1 : 1;
+      phase += direction * orbit.rate * (LFO_INTERVAL_MS / 1000);
+      if (phase >= 1) phase -= 1;
+      if (phase < 0)  phase += 1;
+    }
+
+    function start() {
+      if (intervalId != null) return;
+      const range = computeTargetRange();
+      if (!range) { console.warn('[orbit] unknown target', target); return; }
+      console.log(`[orbit] starting interval LFO target=${target} range=[${range.min.toFixed(3)}, ${range.max.toFixed(3)}]`);
+      intervalId = setInterval(tick, LFO_INTERVAL_MS);
+    }
+
+    function stop() {
+      if (intervalId != null) { clearInterval(intervalId); intervalId = null; }
+    }
+
+    function disconnect() {
+      stop();
+      // restore param to static node value so audio continues normally
+      try {
+        if (target === 'filter')  audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), 0.1);
+        else if (target === 'pan')    audio.panner.pan.rampTo(effectivePan(node), 0.1);
+        else if (target === 'volume') audio.gain.gain.rampTo(node.volume * 0.28, 0.1);
+        else if (target === 'delay')  audio.nodeDelay.wet.rampTo((node.nodeDelayWet ?? 0) / 100, 0.1);
+      } catch {}
+    }
+
+    if (state.isPlaying && orbit.enabled) start();
+    console.log(`[orbit] created OK target=${target}`);
+    return { start, stop, disconnect, _intervalId: () => intervalId };
+  } catch (error) {
+    console.error('[orbit] createOrbitLFO failed:', error);
+    return null;
   }
-
-  if (lfo && state.isPlaying && orbit.enabled) lfo.start();
-  return lfo;
 }
 
 export function createOrbitLFOs(node) {
@@ -51,11 +111,12 @@ export function destroyOrbitLFOs(node) {
 }
 
 export function syncOrbitLFO(node, index) {
-  if (!node.audio) return;
+  if (!node.audio) { console.warn('[orbit] syncOrbitLFO: no audio', node.id); return; }
   if (!node.audio.orbitLFOs) node.audio.orbitLFOs = [];
   const old = node.audio.orbitLFOs[index];
-  try { old?.stop(); old?.disconnect(); } catch {}
+  try { old?.stop(); old?.disconnect(); } catch (error) { console.warn('[orbit] destroy old LFO:', error); }
   const orbit = node.orbits?.[index];
+  console.log(`[orbit] syncOrbitLFO node=${node.id} index=${index} orbit=`, orbit);
   node.audio.orbitLFOs[index] = (orbit?.enabled) ? createOrbitLFO(orbit, node) : null;
 }
 
@@ -256,6 +317,7 @@ export function rebuildAudio(node) {
 
 export function startAll() {
   for (const node of state.nodes) {
+    if (DRUM_TYPES.has(node.type)) continue;
     if (node.audio) {
       node.audio.source.start?.();
       if (!node.muted) node.audio.envelope.triggerAttack();
@@ -268,11 +330,180 @@ export function startAll() {
 
 export function stopAll() {
   for (const node of state.nodes) {
+    if (DRUM_TYPES.has(node.type)) continue;
     if (node.audio) {
       node.audio.envelope.triggerRelease();
       stopOrbitLFOs(node);
     }
   }
+}
+
+// ── Beat mode: shared drum synths ────────────────────────────
+let drumSynths   = null;
+let drumPanners  = null;
+let beatScheduleId = null;
+
+function initDrumSynths() {
+  if (drumSynths) return;
+
+  // each drum type gets its own panner so pan can be set per-hit
+  drumPanners = {
+    kick:  new Tone.Panner(0).connect(masterGain),
+    snare: new Tone.Panner(0).connect(masterGain),
+    hihat: new Tone.Panner(0).connect(masterGain),
+    clap:  new Tone.Panner(0).connect(masterGain),
+    perc:  new Tone.Panner(0).connect(masterGain),
+  };
+
+  const kickSynth = new Tone.MembraneSynth({
+    pitchDecay: 0.07, octaves: 7,
+    envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.1 },
+  }).connect(drumPanners.kick);
+
+  const snareSynth = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.05 },
+  }).connect(drumPanners.snare);
+
+  const hihatSynth = new Tone.MetalSynth({
+    frequency: 400, envelope: { attack: 0.001, decay: 0.06, release: 0.01 },
+    harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5,
+  }).connect(drumPanners.hihat);
+
+  const clapSynth = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
+  }).connect(drumPanners.clap);
+
+  const percSynth = new Tone.MetalSynth({
+    frequency: 200, envelope: { attack: 0.001, decay: 0.25, release: 0.01 },
+    harmonicity: 5.1, modulationIndex: 16, resonance: 2000, octaves: 1.5,
+  }).connect(drumPanners.perc);
+
+  drumSynths = { kick: kickSynth, snare: snareSynth, hihat: hihatSynth, clap: clapSynth, perc: percSynth };
+}
+
+// Orbit LFO for drum nodes — only volume and pan targets make sense.
+// Stores intervals on node.drumOrbitLFOs array (parallel to node.orbits).
+function createDrumOrbitLFO(orbit, node) {
+  const { target, rate, depth } = orbit;
+  const d = depth / 100;
+  let phase = 0;
+
+  const intervalId = setInterval(() => {
+    const direction = orbit.direction === -1 ? -1 : 1;
+    phase += direction * rate * (LFO_INTERVAL_MS / 1000);
+    if (phase >= 1) phase -= 1;
+    if (phase < 0)  phase += 1;
+    const sine = Math.sin(phase * Math.PI * 2);
+
+    if (target === 'volume') {
+      const base = orbit._baseVolume ?? node.volume;
+      orbit._baseVolume = base;
+      node.volume = Math.max(0.02, Math.min(1, base + sine * d * 0.5));
+    } else if (target === 'pan') {
+      const base = orbit._basePan ?? (node.panOverride ?? 0);
+      orbit._basePan = base;
+      const newPan = Math.max(-1, Math.min(1, base + sine * d));
+      node.panOverride = newPan;
+      if (drumPanners?.[node.type]) drumPanners[node.type].pan.rampTo(newPan, 0.05);
+    }
+  }, LFO_INTERVAL_MS);
+
+  return { stop: () => clearInterval(intervalId) };
+}
+
+export function syncDrumOrbitLFO(node, index) {
+  if (!node.drumOrbitLFOs) node.drumOrbitLFOs = [];
+  node.drumOrbitLFOs[index]?.stop();
+  const orbit = node.orbits?.[index];
+  if (orbit) orbit._baseVolume = orbit._basePan = undefined;
+  node.drumOrbitLFOs[index] = orbit?.enabled ? createDrumOrbitLFO(orbit, node) : null;
+}
+
+export function destroyDrumOrbitLFOs(node) {
+  for (const lfo of node.drumOrbitLFOs ?? []) lfo?.stop();
+  node.drumOrbitLFOs = [];
+}
+
+export function triggerDrumNode(node, time) {
+  if (node.muted) return;
+  initDrumSynths();
+  const synth  = drumSynths[node.type];
+  if (!synth) return;
+  const params = node.typeParams ?? {};
+  const volume = node.volume * 0.28;
+
+  // apply per-node pan with a short ramp to avoid discontinuity clicks
+  if (drumPanners?.[node.type]) {
+    drumPanners[node.type].pan.rampTo(effectivePan(node), 0.005);
+  }
+
+  if (node.type === 'kick') {
+    const freq       = params.tune       ?? 60;
+    const decay      = params.decay      ?? 0.35;
+    const pitchDecay = params.pitchDecay ?? 0.07;
+    synth.set({ pitchDecay, octaves: 7, envelope: { decay } });
+    synth.volume.value = Tone.gainToDb(volume * 2.5);
+    synth.triggerAttackRelease(freq, '8n', time);
+  } else if (node.type === 'snare') {
+    const decay = params.decay ?? 0.18;
+    const tone  = params.tone  ?? 0.5;
+    const noiseType = tone < 0.33 ? 'brown' : tone < 0.67 ? 'pink' : 'white';
+    synth.set({ noise: { type: noiseType }, envelope: { decay } });
+    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.triggerAttackRelease('8n', time);
+  } else if (node.type === 'hihat') {
+    const open  = params.open  ?? 0;
+    const decay = open > 0.5 ? 0.28 : (params.decay ?? 0.06);
+    synth.set({ frequency: params.tune ?? 400, envelope: { decay } });
+    synth.volume.value = Tone.gainToDb(volume * 1.5);
+    synth.triggerAttackRelease('16n', time);
+  } else if (node.type === 'clap') {
+    const decay = params.decay ?? 0.12;
+    const tone  = params.tone  ?? 0.5;
+    const noiseType = tone < 0.33 ? 'brown' : tone < 0.67 ? 'pink' : 'white';
+    synth.set({ noise: { type: noiseType }, envelope: { decay } });
+    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.triggerAttackRelease('8n', time);
+  } else if (node.type === 'perc') {
+    const freq  = params.tune  ?? 200;
+    const decay = params.decay ?? 0.25;
+    synth.set({ frequency: freq, envelope: { decay } });
+    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.triggerAttackRelease('16n', time);
+  }
+
+  // visual flash — spawn ripple via postMessage (avoid direct canvas import)
+  node._beatFlash = true;
+}
+
+export function startBeat(bpm) {
+  initDrumSynths();
+  Tone.Transport.bpm.value = bpm;
+  state.beatStep = -1;
+  beatScheduleId = Tone.Transport.scheduleRepeat(time => {
+    state.beatStep = (state.beatStep + 1) % 16;
+    // offset same-type nodes by 2ms each to avoid shared synth collision clicks
+    const typeOffset = {};
+    for (const node of state.nodes) {
+      if (!DRUM_TYPES.has(node.type) || node.muted) continue;
+      if (!node.steps?.[state.beatStep]) continue;
+      const offset = typeOffset[node.type] ?? 0;
+      typeOffset[node.type] = offset + 0.002;
+      triggerDrumNode(node, time + offset);
+    }
+  }, '16n');
+  Tone.Transport.start();
+}
+
+export function stopBeat() {
+  if (beatScheduleId !== null) {
+    Tone.Transport.clear(beatScheduleId);
+    beatScheduleId = null;
+  }
+  Tone.Transport.stop();
+  state.beatStep = -1;
 }
 
 // ── FX parameter converters ───────────────────────────────────

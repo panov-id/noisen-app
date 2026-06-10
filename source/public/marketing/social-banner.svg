@@ -1,50 +1,142 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
-  <!-- GitHub social banner / Twitter card -->
   <defs>
-    <radialGradient id="bg" cx="30%" cy="60%" r="80%">
-      <stop offset="0%" stop-color="#0e0e1c"/>
-      <stop offset="100%" stop-color="#06060a"/>
+    <radialGradient id="bg" cx="40%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#0d0d1a"/>
+      <stop offset="100%" stop-color="#05050c"/>
     </radialGradient>
-    <radialGradient id="accent-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.20"/>
-      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
-    </radialGradient>
+    <radialGradient id="g-sine"  cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.28"/><stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g-tri"   cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1fa0aa" stop-opacity="0.22"/><stop offset="100%" stop-color="#1fa0aa" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g-kick"  cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e05530" stop-opacity="0.30"/><stop offset="100%" stop-color="#e05530" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g-snare" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#d4a020" stop-opacity="0.24"/><stop offset="100%" stop-color="#d4a020" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g-hihat" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#30c8a0" stop-opacity="0.22"/><stop offset="100%" stop-color="#30c8a0" stop-opacity="0"/></radialGradient>
   </defs>
 
   <rect width="1280" height="640" fill="url(#bg)"/>
-  <pattern id="dots" width="48" height="48" patternUnits="userSpaceOnUse">
-    <circle cx="24" cy="24" r="0.7" fill="rgba(255,255,255,0.06)"/>
+  <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+    <circle cx="28" cy="28" r="0.7" fill="rgba(255,255,255,0.055)"/>
   </pattern>
-  <rect width="1280" height="640" fill="url(#dots)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
 
-  <!-- left: icon / visual -->
-  <g transform="translate(160, 320)">
-    <ellipse cx="0" cy="0" rx="200" ry="200" fill="url(#accent-glow)"/>
-    <circle cx="0" cy="0" r="170" fill="none" stroke="#3a7bd5" stroke-width="1.5" opacity="0.13"/>
-    <circle cx="0" cy="0" r="130" fill="none" stroke="#3a7bd5" stroke-width="2"   opacity="0.22"/>
-    <circle cx="0" cy="0" r="92"  fill="none" stroke="#3a7bd5" stroke-width="3"   opacity="0.36"/>
-    <circle cx="0" cy="0" r="56"  fill="none" stroke="#3a7bd5" stroke-width="4.5" opacity="0.55"/>
-    <circle cx="0" cy="0" r="28"  fill="none" stroke="#3a7bd5" stroke-width="6"   opacity="0.75"/>
-    <circle cx="0" cy="0" r="12"  fill="#3a7bd5"/>
-    <circle cx="0" cy="0" r="5"   fill="#7ab3f0"/>
+  <line x1="640" y1="40" x2="640" y2="600" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,8"/>
+
+  <!-- LEFT: ambient nodes -->
+  <ellipse cx="200" cy="340" rx="195" ry="195" fill="url(#g-sine)"/>
+  <circle cx="200" cy="340" r="150" fill="none" stroke="#3a7bd5" stroke-width="1" opacity="0.12"/>
+  <circle cx="200" cy="340" r="106" fill="none" stroke="#3a7bd5" stroke-width="1.5" opacity="0.20"/>
+  <circle cx="200" cy="340" r="67"  fill="none" stroke="#3a7bd5" stroke-width="2.2" opacity="0.33"/>
+  <circle cx="200" cy="340" r="36"  fill="none" stroke="#3a7bd5" stroke-width="3.2" opacity="0.55"/>
+  <circle cx="200" cy="340" r="18"  fill="#3a7bd5" opacity="0.88"/>
+  <circle cx="200" cy="340" r="7"   fill="#7ab3f0"/>
+  <circle cx="200" cy="340" r="56" fill="none" stroke="#3a7bd5" stroke-width="1.2" stroke-dasharray="3,6" opacity="0.28"/>
+  <circle cx="200" cy="284" r="4"  fill="#3a7bd5" opacity="0.55"/>
+
+  <ellipse cx="450" cy="195" rx="165" ry="165" fill="url(#g-tri)"/>
+  <circle cx="450" cy="195" r="125" fill="none" stroke="#1fa0aa" stroke-width="1" opacity="0.13"/>
+  <circle cx="450" cy="195" r="88"  fill="none" stroke="#1fa0aa" stroke-width="1.8" opacity="0.22"/>
+  <circle cx="450" cy="195" r="54"  fill="none" stroke="#1fa0aa" stroke-width="2.5" opacity="0.38"/>
+  <circle cx="450" cy="195" r="28"  fill="none" stroke="#1fa0aa" stroke-width="3.5" opacity="0.58"/>
+  <circle cx="450" cy="195" r="14"  fill="#1fa0aa" opacity="0.90"/>
+  <circle cx="450" cy="195" r="5"   fill="#6ed4dc"/>
+
+  <ellipse cx="555" cy="450" rx="120" ry="120" fill="url(#g-tri)"/>
+  <circle cx="555" cy="450" r="88"  fill="none" stroke="#1d9e5a" stroke-width="1" opacity="0.12"/>
+  <circle cx="555" cy="450" r="58"  fill="none" stroke="#1d9e5a" stroke-width="1.8" opacity="0.22"/>
+  <circle cx="555" cy="450" r="36"  fill="none" stroke="#1d9e5a" stroke-width="2.5" opacity="0.36"/>
+  <circle cx="555" cy="450" r="19"  fill="#1d9e5a" opacity="0.85"/>
+  <circle cx="555" cy="450" r="7"   fill="#5cd68a"/>
+
+  <line x1="218" y1="326" x2="436" y2="206" stroke="rgba(80,150,255,0.12)" stroke-width="1.4"/>
+  <line x1="462" y1="208" x2="545" y2="438" stroke="rgba(80,150,255,0.09)" stroke-width="1.2"/>
+
+  <text x="50" y="588" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="11" letter-spacing="4" fill="rgba(255,255,255,0.20)">AMBIENT</text>
+
+  <!-- RIGHT: beat mode nodes -->
+  <ellipse cx="780" cy="220" rx="150" ry="150" fill="url(#g-kick)"/>
+  <circle cx="780" cy="220" r="112" fill="none" stroke="#e05530" stroke-width="1" opacity="0.14"/>
+  <circle cx="780" cy="220" r="76"  fill="none" stroke="#e05530" stroke-width="1.8" opacity="0.24"/>
+  <circle cx="780" cy="220" r="47"  fill="none" stroke="#e05530" stroke-width="2.5" opacity="0.40"/>
+  <circle cx="780" cy="220" r="24"  fill="none" stroke="#e05530" stroke-width="3.5" opacity="0.60"/>
+  <circle cx="780" cy="220" r="13"  fill="#e05530" opacity="0.92"/>
+  <circle cx="780" cy="220" r="5"   fill="#f58060"/>
+
+  <ellipse cx="980" cy="315" rx="130" ry="130" fill="url(#g-snare)"/>
+  <circle cx="980" cy="315" r="96"  fill="none" stroke="#d4a020" stroke-width="1" opacity="0.13"/>
+  <circle cx="980" cy="315" r="64"  fill="none" stroke="#d4a020" stroke-width="1.8" opacity="0.23"/>
+  <circle cx="980" cy="315" r="40"  fill="none" stroke="#d4a020" stroke-width="2.5" opacity="0.38"/>
+  <circle cx="980" cy="315" r="21"  fill="#d4a020" opacity="0.90"/>
+  <circle cx="980" cy="315" r="7"   fill="#f5c840"/>
+
+  <ellipse cx="870" cy="440" rx="108" ry="108" fill="url(#g-hihat)"/>
+  <circle cx="870" cy="440" r="80"  fill="none" stroke="#30c8a0" stroke-width="1" opacity="0.13"/>
+  <circle cx="870" cy="440" r="53"  fill="none" stroke="#30c8a0" stroke-width="1.8" opacity="0.24"/>
+  <circle cx="870" cy="440" r="33"  fill="none" stroke="#30c8a0" stroke-width="2.5" opacity="0.40"/>
+  <circle cx="870" cy="440" r="17"  fill="#30c8a0" opacity="0.90"/>
+  <circle cx="870" cy="440" r="6"   fill="#70e8c0"/>
+
+  <!-- sequencer grid -->
+  <g transform="translate(672,530)" opacity="0.88">
+    <rect x="0"   y="0" width="22" height="14" rx="2" fill="#e05530" opacity="0.90"/>
+    <rect x="25"  y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="50"  y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="75"  y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="103" y="0" width="22" height="14" rx="2" fill="#e05530" opacity="0.90"/>
+    <rect x="128" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="153" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="178" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="206" y="0" width="22" height="14" rx="2" fill="#e05530" opacity="0.90"/>
+    <rect x="231" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="256" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="281" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="309" y="0" width="22" height="14" rx="2" fill="#e05530" opacity="0.90"/>
+    <rect x="334" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="359" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="384" y="0" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="0"   y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="25"  y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="50"  y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="75"  y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="103" y="19" width="22" height="14" rx="2" fill="#d4a020" opacity="0.90"/>
+    <rect x="128" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="153" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="178" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="206" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="231" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="256" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="281" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="309" y="19" width="22" height="14" rx="2" fill="#d4a020" opacity="0.90"/>
+    <rect x="334" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="359" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="384" y="19" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="0"   y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="25"  y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="50"  y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="75"  y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="103" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="128" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="153" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="178" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="206" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="231" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="256" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="281" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="309" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="334" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
+    <rect x="359" y="38" width="22" height="14" rx="2" fill="#30c8a0" opacity="0.85"/>
+    <rect x="384" y="38" width="22" height="14" rx="2" fill="none" stroke="rgba(255,255,255,0.17)" stroke-width="1"/>
   </g>
 
-  <!-- right: text content -->
-  <text x="440" y="258" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
-        font-size="72" font-weight="700" fill="rgba(255,255,255,0.92)" letter-spacing="-1">Noisen</text>
+  <text x="672" y="588" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="11" letter-spacing="4" fill="rgba(255,255,255,0.20)">BEAT MODE</text>
 
-  <text x="442" y="310" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
-        font-size="22" fill="rgba(255,255,255,0.38)" letter-spacing="1">quiet your mind with noise</text>
-
-  <!-- feature bullets -->
-  <g font-family="ui-monospace,'SF Mono','Fira Code',monospace" font-size="17" fill="rgba(255,255,255,0.50)" letter-spacing="0.5">
-    <text x="442" y="378">Place nodes → each synthesizes sound by position</text>
-    <text x="442" y="408">Nodes pull each other's pitch through gravity</text>
-    <text x="442" y="438">Works offline · installable · no accounts · no tracking</text>
-  </g>
-
-  <!-- bottom: domain -->
-  <text x="640" y="588" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
-        font-size="16" letter-spacing="4" fill="rgba(255,255,255,0.22)"
-        text-anchor="middle">noisen.space</text>
+  <text x="640" y="72" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="38" letter-spacing="14" fill="rgba(255,255,255,0.88)"
+        text-anchor="middle" font-weight="700">NOISEN</text>
+  <text x="640" y="97" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="12" letter-spacing="4" fill="rgba(255,255,255,0.28)"
+        text-anchor="middle">quiet your mind with noise · v3.0</text>
+  <rect x="588" y="106" width="104" height="20" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <text x="640" y="120" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="10" letter-spacing="2" fill="rgba(255,255,255,0.38)"
+        text-anchor="middle">ambient + beat</text>
 </svg>

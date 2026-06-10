@@ -1,7 +1,7 @@
 // ── Canvas drawing, hit testing, zoom/pan ─────────────────────
 
 import {
-  state, TYPES, WORLD_WIDTH, TOP_H, NODE_MIN_R, NODE_MAX_R, ZOOM_MIN, ZOOM_MAX,
+  state, TYPES, DRUM_TYPES, WORLD_WIDTH, TOP_H, NODE_MIN_R, NODE_MAX_R, ZOOM_MIN, ZOOM_MAX,
 } from './store.js';
 import {
   nodeFreq, nodeRadius, effectivePan, gravityFactor, filterFromNorm,
@@ -48,18 +48,24 @@ export function hitTest(clientX, clientY) {
 
 // ── Ripples ───────────────────────────────────────────────────
 export function spawnRipple(node) {
-  const freq    = nodeFreq(node);
-  const filterNorm = 1 - (node.filterNorm ?? 0.5);
-  const maxRadius = Math.hypot(canvas.width, canvas.height) * (.05 + filterNorm * .38 + state.waveSpread * .2);
-  const speed   = .4 + Math.log2(Math.max(1, freq / 10)) * .45;
+  const freq        = nodeFreq(node);
+  const filterNorm  = 1 - (node.filterNorm ?? 0.5);
+  const maxRadius   = Math.hypot(canvas.width, canvas.height) * (.05 + filterNorm * .38 + state.waveSpread * .2);
+  const baseSpeed   = .3 + Math.log2(Math.max(1, freq / 20)) * .65;
+  // speed modulated by filter openness: bright node → faster ring, dark node → slower
+  const speed       = baseSpeed * (0.65 + filterNorm * 0.7);
+  // alpha driven by volume
+  const alpha       = .08 + node.volume * .35;
   state.ripples.push({
     x: node.x, y: node.y, rgb: TYPES[node.type].rgb,
-    radius: nodeRadius(node), maxRadius, alpha: .12 + node.volume * .25, speed,
+    radius: nodeRadius(node), maxRadius,
+    alpha, speed, initSpeed: speed,
   });
 }
 
 export function rippleInterval(node) {
-  return Math.max(14, 115 - Math.log2(Math.max(1, nodeFreq(node) / 10)) * 8.5);
+  // maps 20Hz→100 frames (slow), 20kHz→6 frames (fast) at 60fps
+  return Math.max(6, Math.round(105 - Math.log2(Math.max(1, nodeFreq(node) / 20)) * 14));
 }
 
 // ── Wave rings around node ────────────────────────────────────
@@ -67,10 +73,11 @@ let frameBudgetMs = 33;
 export function setFrameBudget(ms) { frameBudgetMs = ms; }
 
 export function drawNodeWaves(node, time) {
+  if (DRUM_TYPES.has(node.type)) return;
   const [r, g, b] = TYPES[node.type].rgb;
   const freq      = nodeFreq(node);
   const filterNorm = Math.max(0, 1 - (node.y - TOP_H) / (canvas.height - state.panelHeight - TOP_H));
-  const angSpeed  = .0005 + Math.log2(Math.max(1, freq / 10)) * .00055;
+  const angSpeed  = .0004 + Math.log2(Math.max(1, freq / 20)) * .00080;
   const maxRadius = Math.hypot(canvas.width, canvas.height) * (.06 + filterNorm * .36 + state.waveSpread * .17);
   const stressed  = frameBudgetMs > 50 || state.nodes.length > 5;
   const rings     = stressed ? 2 : node.type === 'noise' ? 6 : (node.type === 'sine' || node.type === 'triangle') ? 3 : 4;
@@ -117,8 +124,10 @@ export function drawLinks() {
 export function drawRipples() {
   for (let i = state.ripples.length - 1; i >= 0; i--) {
     const rip = state.ripples[i];
-    rip.radius += rip.speed;
-    rip.alpha  *= .965;
+    // decelerate: speed tapers as ripple expands
+    rip.speed   = rip.initSpeed * Math.pow(1 - rip.radius / rip.maxRadius, 0.45);
+    rip.radius += Math.max(0.2, rip.speed);
+    rip.alpha  *= .962;
     if (rip.radius > rip.maxRadius || rip.alpha < .004) {
       state.ripples.splice(i, 1);
       continue;
@@ -138,9 +147,14 @@ export function drawNode(node, time) {
   const { color, rgb } = TYPES[node.type];
   const [r, g, b] = rgb;
   const R     = nodeRadius(node);
-  const pulse = state.isPlaying && !node.muted
-    ? Math.sin(time * .003 + node.pulsePhase) * .28 + .72
-    : .28;
+  const isDrum       = DRUM_TYPES.has(node.type);
+  const isDragging   = state.draggingNodeId === node.id;
+  const isActiveStep = isDrum && state.isPlaying && node.steps?.[state.beatStep] && !node.muted;
+  const pulse = isDrum
+    ? (isDragging
+        ? Math.sin(time * .004 + node.pulsePhase) * .35 + .65
+        : isActiveStep ? 1.1 : 0.35)
+    : (state.isPlaying && !node.muted ? Math.sin(time * .003 + node.pulsePhase) * .28 + .72 : .28);
   const isSelected = node === state.selectedNode;
 
   if (isSelected) {
@@ -246,8 +260,9 @@ export function drawOrbits(node, time) {
     context.stroke();
     context.setLineDash([]);
 
-    // moving dot — angle from wall clock * rate (Hz) * 2π
-    const angle = (time * 0.001 * orbit.rate * Math.PI * 2) % (Math.PI * 2);
+    // moving dot — direction flips sign so ↺ goes counter-clockwise
+    const dir   = (orbit.direction ?? 1);
+    const angle = dir * (time * 0.001 * orbit.rate * Math.PI * 2) % (Math.PI * 2);
     const dotX  = node.x + Math.cos(angle) * orbitR;
     const dotY  = node.y + Math.sin(angle) * orbitR;
     const dotAlpha = node.muted ? 0.18 : 0.75;
