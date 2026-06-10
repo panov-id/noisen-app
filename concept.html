@@ -90,6 +90,9 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 #topbar-buttons { display:flex; align-items:center; gap:6px; }
 #donate-btn { color:var(--text-dim); }
 #donate-btn:hover { color:#e0476a; border-color:#e0476a; background:rgba(224,71,106,.1); }
+#rec-btn svg { width:14px; height:14px; }
+#rec-btn.recording { border-color:#e0476a; color:#e0476a; background:rgba(224,71,106,.12); animation:rec-pulse 1.2s ease-in-out infinite; }
+@keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
 .topbar-sep { width:1px; height:30px; background:var(--border); margin:0 4px; flex-shrink:0; }
 .icon-btn {
   width:48px; height:48px; border-radius:10px;
@@ -793,6 +796,11 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
     </button>
+    <div class="topbar-sep"></div>
+    <button id="rec-btn" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+    </button>
+    <span id="rec-timer" style="display:none;font-size:11px;letter-spacing:.05em;color:#e0476a;min-width:36px;text-align:center;font-variant-numeric:tabular-nums;"></span>
     <div class="topbar-sep"></div>
     <button id="play-btn" data-tip="Play / Stop" data-tip-desc="Start or stop sound">
       <svg id="pi-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -2438,6 +2446,47 @@ playBtn.addEventListener('click', async () => {
     stopAll();
   }
   setupMediaSession(isPlaying);
+});
+
+// ── Recording ────────────────────────────────────────────────
+let recorder = null, recInterval = null, recStartTime = 0;
+const recBtn   = document.getElementById('rec-btn');
+const recTimer = document.getElementById('rec-timer');
+
+function fmtRecTime(ms) {
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
+  return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+}
+
+recBtn.addEventListener('click', async () => {
+  if (recorder && recorder.state === 'started') {
+    // stop recording
+    const blob = await recorder.stop();
+    recorder.disconnect(); recorder = null;
+    clearInterval(recInterval);
+    recBtn.classList.remove('recording');
+    recTimer.style.display = 'none';
+    // download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `noisen-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } else {
+    // start recording — must be playing
+    if (!isPlaying) { showToast('Start playback first'); return; }
+    recorder = new Tone.Recorder();
+    limiter.connect(recorder);
+    await recorder.start();
+    recStartTime = Date.now();
+    recBtn.classList.add('recording');
+    recTimer.style.display = '';
+    recTimer.textContent = '00:00';
+    recInterval = setInterval(() => {
+      recTimer.textContent = fmtRecTime(Date.now() - recStartTime);
+    }, 500);
+  }
 });
 
 // ── Pointer ───────────────────────────────────────────────────
