@@ -1397,6 +1397,12 @@ const TYPE_DEFAULTS = {
 // ── Audio globals ─────────────────────────────────────────────
 let masterVolume = 0.7, gravityStrength = 0.5, masterTone = 0.6, waveSpread = 0.4;
 let isPlaying = false;
+// Larger scheduling lookahead — reduces audio glitches under CPU load.
+// 300ms is imperceptible latency for ambient sound but prevents dropout.
+Tone.context.lookAhead = 0.3;
+// Widen the clock update interval slightly — less CPU from Tone scheduler
+Tone.context.updateInterval = 0.05;
+
 const masterGain   = new Tone.Gain(masterVolume);
 const masterFilter = new Tone.Filter(toneHz(masterTone), 'lowpass');
 const limiter      = new Tone.Limiter(-3).toDestination();
@@ -1458,8 +1464,7 @@ function filterFromY(wy) {
   const t = 1 - (wy - TOP_H) / (canvas.height - PANEL_H - TOP_H);
   return Math.pow(10, Math.max(0, Math.min(1, t)) * 3.8 + 1.5);
 }
-function autoPan(wx) { return Math.max(-1, Math.min(1, (wx / WORLD_WIDTH) * 2 - 1)); }
-function effectivePan(n) { return n.panOverride !== null ? n.panOverride : autoPan(n.x); }
+function effectivePan(n) { return n.panOverride ?? 0; }
 function nodeRadius(n) { return NODE_MIN_R + (NODE_MAX_R - NODE_MIN_R) * n.volume; }
 
 function gravityFactor(a, b) {
@@ -1995,7 +2000,9 @@ function drawNodeWaves(node, time) {
   const filterN  = Math.max(0, 1 - (node.y - TOP_H) / (canvas.height - PANEL_H - TOP_H));
   const angSpeed = .0005 + Math.log2(Math.max(1, freq/10)) * .00055;
   const maxR     = Math.hypot(canvas.width, canvas.height) * (.06 + filterN * .36 + waveSpread * .17);
-  const rings    = node.type==='noise' ? 6 : (node.type==='sine'||node.type==='triangle') ? 3 : 4;
+  // Adaptive ring count: reduce when frame budget is tight or many nodes present
+  const stressed = frameBudgetMs > 50 || nodes.length > 5;
+  const rings    = stressed ? 2 : node.type==='noise' ? 6 : (node.type==='sine'||node.type==='triangle') ? 3 : 4;
   const R        = nodeRadius(node);
   for (let k = 0; k < rings; k++) {
     const phase = (time * angSpeed + k/rings) % 1;
@@ -2115,9 +2122,20 @@ function drawViewIndicator() {
 
 // ── Main loop ─────────────────────────────────────────────────
 let lastSlow = 0;
+let lastFrame = 0;
+// Frame budget tracking for adaptive wave quality
+let frameBudgetMs = 33;
+const FRAME_TARGET_MS = 33; // ~30fps target
 
 function loop(time = 0) {
   requestAnimationFrame(loop);
+
+  // Cap to ~30fps — halves main-thread load; audio runs independently
+  const elapsed = time - lastFrame;
+  if (elapsed < FRAME_TARGET_MS) return;
+  // Smooth frame budget estimate (exponential moving average)
+  frameBudgetMs = frameBudgetMs * 0.9 + elapsed * 0.1;
+  lastFrame = time;
 
   // momentum pan when not actively panning
   if (!isPanning && !dragNode && (Math.abs(velX) > 0.3 || Math.abs(velY) > 0.3)) {
@@ -2130,7 +2148,6 @@ function loop(time = 0) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
-  // apply world transform: all world-coordinate drawing happens inside save/restore
   ctx.save();
   ctx.translate(-viewX, -viewY);
   for (const node of nodes) if (!node.muted) drawNodeWaves(node, time);

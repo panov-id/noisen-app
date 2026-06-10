@@ -2,6 +2,23 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-09 — Concept iteration 17
+
+#### Pan — removed auto-pan from X position
+- `effectivePan(n)` now returns `n.panOverride ?? 0` (center) instead of mapping X world coordinate to stereo pan
+- `autoPan` function removed entirely
+- Pan is now exclusively controlled via the Pan slider in the node panel
+- Nodes start centered (pan = 0) and only move in the stereo field when the user explicitly adjusts the slider
+
+#### Audio performance — reduce glitches under CPU load
+- `Tone.context.lookAhead = 0.3` — larger scheduling buffer (300ms) prevents audio dropout when CPU is busy
+- `Tone.context.updateInterval = 0.05` — reduces Tone.js clock polling overhead
+- Canvas render loop capped at 30fps: frames are skipped when less than 33ms elapsed since last frame
+- Exponential moving average `frameBudgetMs` tracks actual frame duration to detect CPU stress
+- Adaptive wave ring count in `drawNodeWaves`: reduces to 2 rings when `frameBudgetMs > 50` or more than 5 nodes active (otherwise: noise=6, sine/triangle=3, other=4)
+
+---
+
 ### 2026-06-09 — Concept iteration 16
 
 #### Onboarding wizard — rework
