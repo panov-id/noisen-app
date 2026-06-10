@@ -2,6 +2,31 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 22
+
+#### Project restructure — Vite build pipeline
+- Codebase split from single `concept.html` into modular source files under `source/`
+- `source/javascript/`: `store.js` (state), `audio.js` (Tone.js engine), `canvas.js` (rendering), `ui.js` (panels/overlays), `main.js` (entry point)
+- `source/styles/main.css` — all CSS extracted
+- `source/public/` — `sw.js`, `manifest.json`, icons, marketing assets
+- `vite.config.js` + `package.json` added at project root
+- `infrastructure/docker/Dockerfile.build` — Node 20-alpine + Vite build container
+- `infrastructure/scripts/build.sh` — Docker-based build script (`source/` → `dist/`)
+- `deploy-cdn.sh` updated: runs build first, then uploads from `dist/`
+- `.dockerignore` added to exclude volumes, secrets, and test fixtures
+
+#### UI — font size consistency in large mode
+- All hardcoded `font-size` values replaced with CSS custom properties
+- Affected: `.type-btn`, `#help-btn`, `#version-btn`, `.node-row-*`, `#toast`, `.nc-btn`, `#rec-timer`
+- Now all text scales correctly when large text mode is enabled
+
+#### Mobile node panel — collapsible parameter cards
+- Added chevron toggle button below node info strip (mobile only)
+- Tap to collapse/expand the sliders section; panel shrinks to header + info strip
+- Panel height updates automatically via `updatePanelH()`
+
+---
+
 ### 2026-06-10 — Concept iteration 21
 
 #### Master FX chain

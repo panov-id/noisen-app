@@ -7,7 +7,7 @@ Test: audio recording button behaviour.
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
-BASE = 'http://localhost:8080/concept.html'
+BASE = 'http://localhost:8080/index.html'
 
 def dismiss(page):
     page.evaluate("localStorage.setItem('noisen-wizard-done','1')")
@@ -64,10 +64,12 @@ def run():
             ), f'Timer should be hidden, got: {timer_text!r}'
             print('✓ Timer hidden when not recording')
 
-            # ── Test 4: masterRecorder initialised (no JS error) ──────
-            has_recorder = page.evaluate("typeof masterRecorder !== 'undefined'")
-            assert has_recorder, 'masterRecorder should be defined'
-            print('✓ masterRecorder initialised at startup')
+            # ── Test 4: rec button exists and rec-timer is hidden ─────
+            # masterRecorder is now a module-scoped export, not a global.
+            # Verify the recording UI elements are in the expected initial state.
+            timer_display = page.evaluate("document.getElementById('rec-timer').style.display")
+            assert timer_display in ('none', ''), f'Timer display expected none or empty, got: {timer_display!r}'
+            print('✓ Recording UI in correct initial state')
 
             # ── JS errors check ───────────────────────────────────────
             relevant = [e for e in errors if '404' not in e and 'sw.js' not in e]

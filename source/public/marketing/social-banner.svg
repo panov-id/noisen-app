@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <!-- GitHub social banner / Twitter card -->
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="60%" r="80%">
+      <stop offset="0%" stop-color="#0e0e1c"/>
+      <stop offset="100%" stop-color="#06060a"/>
+    </radialGradient>
+    <radialGradient id="accent-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <pattern id="dots" width="48" height="48" patternUnits="userSpaceOnUse">
+    <circle cx="24" cy="24" r="0.7" fill="rgba(255,255,255,0.06)"/>
+  </pattern>
+  <rect width="1280" height="640" fill="url(#dots)"/>
+
+  <!-- left: icon / visual -->
+  <g transform="translate(160, 320)">
+    <ellipse cx="0" cy="0" rx="200" ry="200" fill="url(#accent-glow)"/>
+    <circle cx="0" cy="0" r="170" fill="none" stroke="#3a7bd5" stroke-width="1.5" opacity="0.13"/>
+    <circle cx="0" cy="0" r="130" fill="none" stroke="#3a7bd5" stroke-width="2"   opacity="0.22"/>
+    <circle cx="0" cy="0" r="92"  fill="none" stroke="#3a7bd5" stroke-width="3"   opacity="0.36"/>
+    <circle cx="0" cy="0" r="56"  fill="none" stroke="#3a7bd5" stroke-width="4.5" opacity="0.55"/>
+    <circle cx="0" cy="0" r="28"  fill="none" stroke="#3a7bd5" stroke-width="6"   opacity="0.75"/>
+    <circle cx="0" cy="0" r="12"  fill="#3a7bd5"/>
+    <circle cx="0" cy="0" r="5"   fill="#7ab3f0"/>
+  </g>
+
+  <!-- right: text content -->
+  <text x="440" y="258" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="72" font-weight="700" fill="rgba(255,255,255,0.92)" letter-spacing="-1">Noisen</text>
+
+  <text x="442" y="310" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="22" fill="rgba(255,255,255,0.38)" letter-spacing="1">quiet your mind with noise</text>
+
+  <!-- feature bullets -->
+  <g font-family="ui-monospace,'SF Mono','Fira Code',monospace" font-size="17" fill="rgba(255,255,255,0.50)" letter-spacing="0.5">
+    <text x="442" y="378">Place nodes → each synthesizes sound by position</text>
+    <text x="442" y="408">Nodes pull each other's pitch through gravity</text>
+    <text x="442" y="438">Works offline · installable · no accounts · no tracking</text>
+  </g>
+
+  <!-- bottom: domain -->
+  <text x="640" y="588" font-family="ui-monospace,'SF Mono','Fira Code',monospace"
+        font-size="16" letter-spacing="4" fill="rgba(255,255,255,0.22)"
+        text-anchor="middle">noisen.space</text>
+</svg>

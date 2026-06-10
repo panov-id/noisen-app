@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-large="1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Noisen</title>
+<meta name="description" content="Minimal PWA for meditative sound generation. Place nodes, shape sound.">
+<meta name="theme-color" content="#08080e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta property="og:title" content="Noisen">
+<meta property="og:description" content="Minimal PWA for meditative sound generation.">
+<meta property="og:image" content="https://noisen.space/marketing/og.png">
+<meta property="og:url" content="https://noisen.space">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="./styles/main.css">
+<!-- Tone.js audio engine loaded from CDN — must precede module scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+
+<canvas id="main"></canvas>
+
+<!-- top bar -->
+<div id="topbar">
+  <div id="topbar-left">
+    <div id="app-name">NOISEN</div>
+    <button id="version-btn" data-tip="Version" data-tip-desc="Show changelog"></button>
+  </div>
+  <div class="topbar-right">
+    <div id="topbar-buttons">
+      <a id="donate-btn" href="https://www.paypal.com/donate?business=ev.panov%40gmail.com&currency_code=USD"
+         target="_blank" rel="noopener" class="icon-btn" data-tip="Donate" data-tip-desc="Support Noisen via PayPal">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </a>
+      <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
+         class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      </a>
+      <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16 L12 4 M8 12 L12 16 L16 12"/><rect x="3" y="18" width="18" height="3" rx="1"/>
+        </svg>
+      </button>
+      <button id="theme-toggle" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
+        <svg id="ti-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        </svg>
+        <svg id="ti-dark" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <button id="random-btn" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          <line x1="4" y1="4" x2="9" y2="9"/>
+        </svg>
+      </button>
+      <button id="presets-btn" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+      </button>
+      <button id="nodes-overview-btn" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
+          <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
+          <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+        </svg>
+      </button>
+      <button id="reset-view" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        </svg>
+      </button>
+      <button id="large-toggle" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
+        <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
+          <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
+          <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="fx-btn" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="4" y1="12" x2="20" y2="12"/>
+          <line x1="4" y1="18" x2="20" y2="18"/>
+          <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
+          <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
+          <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+    </div>
+    <button id="hamburger-btn" class="icon-btn" aria-label="Menu" data-tip="Menu" data-tip-desc="Open controls">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <div class="topbar-sep"></div>
+    <button id="rec-btn" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+    </button>
+    <span id="rec-timer" style="display:none;letter-spacing:.05em;color:#e0476a;min-width:36px;text-align:center;font-variant-numeric:tabular-nums;"></span>
+    <div class="topbar-sep"></div>
+    <button id="play-btn" data-tip="Play / Stop" data-tip-desc="Start or stop sound">
+      <svg id="pi-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="pi-stop" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- hamburger dropdown (mobile) -->
+<div id="topbar-dropdown">
+  <a href="https://www.paypal.com/donate?business=ev.panov%40gmail.com&currency_code=USD"
+     target="_blank" rel="noopener" class="icon-btn" data-tip="Donate" data-tip-desc="Support Noisen via PayPal">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+  </a>
+  <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
+     class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+  </a>
+  <button id="theme-toggle-m" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button id="random-btn-m" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+      <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
+    </svg>
+  </button>
+  <button id="presets-btn-m" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+    </svg>
+  </button>
+  <button id="nodes-overview-btn-m" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
+      <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
+      <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+    </svg>
+  </button>
+  <button id="reset-view-m" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+    </svg>
+  </button>
+  <button id="large-toggle-m" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
+    <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
+      <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
+      <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <button id="fx-btn-m" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
+      <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
+      <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+  <button id="version-btn-m" class="icon-btn" data-tip="Version" data-tip-desc="Show changelog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  </button>
+  <button id="help-btn-m" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+</div>
+
+<!-- unified bottom panel -->
+<div id="bottom">
+  <div id="param-area">
+
+    <!-- global view -->
+    <div id="global-view" class="param-view active">
+      <div id="analytics-strip">
+        <div class="an-item">
+          <span class="an-label">Nodes</span>
+          <span class="an-value" id="an-nodes">0</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Freq range</span>
+          <span class="an-value" id="an-range">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Connections</span>
+          <span class="an-value" id="an-conn">0</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Pan spread</span>
+          <span class="an-value" id="an-pan">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="an-item">
+          <span class="an-label">Gravity</span>
+          <span class="an-value" id="an-grav">50%</span>
+        </div>
+      </div>
+
+      <div id="spectrum-wrap">
+        <canvas id="spectrum-canvas" height="32"></canvas>
+      </div>
+
+      <div id="global-cards">
+        <div class="param-card" style="--card-accent:var(--accent);--card-accent-dim:var(--accent-dim)"
+          data-tip="Master volume" data-tip-desc="Overall output level">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span>
+            <span class="card-val" id="gv-vol-val">70%</span>
+          </div>
+          <input type="range" class="card-slider" id="vol" min="0" max="100" value="70" style="--pct:70%">
+          <span class="card-label">Volume</span>
+        </div>
+        <div class="param-card" data-tip="Gravity" data-tip-desc="Pitch pull between nearby nodes">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><path d="M5.64 5.64l2.12 2.12M15.54 15.54l2.12 2.12M5.64 18.36l2.12-2.12M15.54 8.46l2.12-2.12" stroke-width="1.3"/></svg></span>
+            <span class="card-val" id="gv-grav-val">50%</span>
+          </div>
+          <input type="range" class="card-slider" id="grav" min="0" max="100" value="50" style="--pct:50%">
+          <span class="card-label">Gravity</span>
+        </div>
+        <div class="param-card" data-tip="Tone" data-tip-desc="Master low-pass filter">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 18 Q6 18 8 12 Q10 6 14 6 Q18 6 22 6"/></svg></span>
+            <span class="card-val" id="gv-tone-val">60%</span>
+          </div>
+          <input type="range" class="card-slider" id="tone" min="0" max="100" value="60" style="--pct:60%">
+          <span class="card-label">Tone</span>
+        </div>
+        <div class="param-card" data-tip="Wave spread" data-tip-desc="Wave radiation radius">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" stroke-opacity=".5"/><circle cx="12" cy="12" r="10" stroke-opacity=".25"/></svg></span>
+            <span class="card-val" id="gv-spread-val">40%</span>
+          </div>
+          <input type="range" class="card-slider" id="spread" min="0" max="100" value="40" style="--pct:40%">
+          <span class="card-label">Spread</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- node view -->
+    <div id="node-view" class="param-view">
+      <div id="node-header">
+        <div class="node-color-dot" id="node-dot"></div>
+        <span id="node-label">Node</span>
+        <div class="type-sep"></div>
+        <div id="type-btns"></div>
+        <div class="type-sep"></div>
+        <div id="node-actions">
+          <button class="action-btn" id="act-mute" data-tip="Mute" data-tip-desc="Silence this node with a fade">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          </button>
+          <button class="action-btn danger" id="act-delete" data-tip="Delete" data-tip-desc="Remove this node permanently">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+          <button class="action-btn" id="node-close" data-tip="Close" data-tip-desc="Return to global controls">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="node-info-strip">
+        <div class="ni-item" data-tip="Frequency" data-tip-desc="Current pitch, including gravity pull">
+          <span class="ni-label">Freq</span>
+          <span class="ni-value" id="ni-freq">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Filter cutoff" data-tip-desc="Y position controls brightness">
+          <span class="ni-label">Filter</span>
+          <span class="ni-value" id="ni-filter">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Stereo pan" data-tip-desc="Left/right position">
+          <span class="ni-label">Pan</span>
+          <span class="ni-value" id="ni-pan">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Gravity pull" data-tip-desc="Total pitch pull from connected nodes">
+          <span class="ni-label">Grav pull</span>
+          <span class="ni-value" id="ni-grav">—</span>
+        </div>
+        <div class="an-sep"></div>
+        <div class="ni-item" data-tip="Volume" data-tip-desc="Node output level">
+          <span class="ni-label">Vol</span>
+          <span class="ni-value" id="ni-vol">—</span>
+        </div>
+      </div>
+
+      <button id="node-cards-toggle" aria-label="Toggle parameters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="node-cards"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- onboarding wizard -->
+<div id="wizard">
+  <div id="wizard-card">
+    <div class="wiz-step-bar" id="wiz-bar"></div>
+    <span class="wiz-icon" id="wiz-icon"></span>
+    <div class="wiz-title" id="wiz-title"></div>
+    <div class="wiz-body"  id="wiz-body"></div>
+    <div class="wiz-footer">
+      <button class="wiz-skip" id="wiz-skip">Skip</button>
+      <div class="wiz-nav">
+        <button class="wiz-prev" id="wiz-prev">← Back</button>
+        <button class="wiz-next" id="wiz-next">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- presets overlay -->
+<div id="presets-overlay">
+  <div id="presets-sheet">
+    <div class="presets-header">
+      <span class="presets-header-title">PRESETS</span>
+      <button class="action-btn" id="presets-overlay-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="presets-save-row">
+      <input id="preset-name-input" type="text" placeholder="Preset name…" maxlength="48" autocomplete="off" spellcheck="false">
+      <button class="preset-action-btn primary" id="preset-save-btn">Save</button>
+      <button class="preset-action-btn share" id="preset-share-current-btn" data-tip="Share current" data-tip-desc="Copy shareable link for current state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+    </div>
+    <div id="share-confirm">Link copied to clipboard ✓</div>
+    <div id="presets-list"></div>
+  </div>
+</div>
+
+<!-- nodes overview overlay -->
+<div id="nodes-overlay">
+  <div id="nodes-sheet">
+    <div class="nodes-sheet-header">
+      <span class="nodes-sheet-title">ALL NODES</span>
+      <button class="action-btn" id="nodes-overlay-close" data-tip="Close" data-tip-desc="">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="nodes-list"></div>
+  </div>
+</div>
+
+<!-- master FX overlay -->
+<div id="fx-overlay">
+  <div id="fx-sheet">
+    <div class="presets-header">
+      <span class="presets-header-title">MASTER FX</span>
+      <button class="action-btn" id="fx-overlay-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="fx-cards">
+      <div class="param-card" data-tip="Lo Cut" data-tip-desc="Highpass filter — removes low rumble">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,20 8,20 8,12 14,4 20,4"/></svg></span>
+          <span class="card-val" id="fx-locut-val">20Hz</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-locut" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Lo Cut</span>
+      </div>
+      <div class="param-card" data-tip="Hi Cut" data-tip-desc="Lowpass filter — removes harsh highs">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,4 10,4 16,12 21,20"/></svg></span>
+          <span class="card-val" id="fx-hicut-val">20kHz</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-hicut" min="0" max="100" value="100" style="--pct:100%">
+        <span class="card-label">Hi Cut</span>
+      </div>
+      <div class="param-card" data-tip="Reverb" data-tip-desc="Room/space effect — use node Reverb send to route signals">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg></span>
+          <span class="card-val" id="fx-reverb-val">0%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-reverb" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Reverb</span>
+      </div>
+      <div class="param-card" data-tip="Reverb Decay" data-tip-desc="Reverb tail length">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6 Q8 4 12 8 Q16 12 21 18"/></svg></span>
+          <span class="card-val" id="fx-decay-val">2.5s</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-decay" min="0" max="100" value="30" style="--pct:30%">
+        <span class="card-label">Decay</span>
+      </div>
+      <div class="param-card" data-tip="Delay" data-tip-desc="Echo effect — use node Delay send to route signals">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg></span>
+          <span class="card-val" id="fx-delay-val">0%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-delay" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Delay</span>
+      </div>
+      <div class="param-card" data-tip="Delay Time" data-tip-desc="Echo repeat interval">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span>
+          <span class="card-val" id="fx-delaytime-val">250ms</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-delaytime" min="0" max="100" value="25" style="--pct:25%">
+        <span class="card-label">Time</span>
+      </div>
+      <div class="param-card" data-tip="Delay Feedback" data-tip-desc="Number of echo repeats">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15 A9 9 0 1 0 7.17 5.7 L1 10"/></svg></span>
+          <span class="card-val" id="fx-feedback-val">35%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-feedback" min="0" max="90" value="35" style="--pct:39%">
+        <span class="card-label">Feedback</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- what's new overlay -->
+<div id="whatsnew-overlay">
+  <div id="whatsnew-sheet">
+    <div id="whatsnew-header">
+      <span id="whatsnew-title">WHAT'S NEW</span>
+      <span id="whatsnew-version-badge"></span>
+    </div>
+    <div id="whatsnew-body"></div>
+    <div id="whatsnew-footer">
+      <button class="preset-action-btn primary" id="whatsnew-close-btn">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"><div class="tip-title" id="tip-title"></div><div class="tip-desc" id="tip-desc"></div></div>
+
+<script type="module" src="./javascript/main.js"></script>
+</body>
+</html>

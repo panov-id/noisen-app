@@ -91,6 +91,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 #donate-btn { color:var(--text-dim); }
 #donate-btn:hover { color:#e0476a; border-color:#e0476a; background:rgba(224,71,106,.1); }
 #rec-btn svg { width:14px; height:14px; }
+#rec-timer { font-size:var(--fs-xs); }
 #rec-btn.recording { border-color:#e0476a; color:#e0476a; background:rgba(224,71,106,.12); animation:rec-pulse 1.2s ease-in-out infinite; }
 @keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
 .topbar-sep { width:1px; height:30px; background:var(--border); margin:0 4px; flex-shrink:0; }
@@ -222,7 +223,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   display:flex; align-items:center; gap:4px;
   padding:4px 8px; border-radius:7px; border:1px solid var(--border);
   background:transparent; color:var(--text-dim);
-  cursor:pointer; font-size:9px; letter-spacing:.06em; text-transform:uppercase;
+  cursor:pointer; font-size:var(--fs-xs); letter-spacing:.06em; text-transform:uppercase;
   font-family:inherit; transition:all .12s; white-space:nowrap;
 }
 .type-btn svg { width:13px; height:13px; flex-shrink:0; }
@@ -369,11 +370,11 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 
 /* ? help button in topbar */
-#help-btn { font-size:13px; font-weight:700; }
+#help-btn { font-size:var(--fs-sm); font-weight:700; }
 
 /* version badge button */
 #version-btn {
-  font-size:11px; letter-spacing:.06em; font-family:inherit;
+  font-size:var(--fs-xs); letter-spacing:.06em; font-family:inherit;
   padding:0 10px; height:30px; border-radius:8px;
   border:1px solid var(--border); background:transparent; color:var(--text-faint);
   cursor:pointer; white-space:nowrap; transition:all .13s; flex-shrink:0;
@@ -418,12 +419,12 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 .node-row-id { font-size:9px; color:var(--text-faint); min-width:18px; }
 .node-row-icon { width:15px; height:15px; flex-shrink:0; color:var(--text-dim); }
 .node-row-icon svg { width:15px; height:15px; }
-.node-row-type { font-size:8px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-dim); min-width:54px; }
-.node-row-freq { font-size:11px; font-variant-numeric:tabular-nums; color:var(--text); flex:1; }
-.node-row-filter { font-size:9px; color:var(--text-faint); min-width:46px; }
-.node-row-vol { font-size:9px; color:var(--text-faint); min-width:30px; text-align:right; }
+.node-row-type { font-size:var(--card-label-fs); text-transform:uppercase; letter-spacing:.1em; color:var(--text-dim); min-width:54px; }
+.node-row-freq { font-size:var(--card-val-fs); font-variant-numeric:tabular-nums; color:var(--text); flex:1; }
+.node-row-filter { font-size:var(--card-label-fs); color:var(--text-faint); min-width:46px; }
+.node-row-vol { font-size:var(--card-label-fs); color:var(--text-faint); min-width:30px; text-align:right; }
 .node-row-muted-tag {
-  font-size:8px; text-transform:uppercase; letter-spacing:.1em;
+  font-size:var(--card-label-fs); text-transform:uppercase; letter-spacing:.1em;
   color:var(--text-faint); border:1px solid var(--border);
   border-radius:4px; padding:1px 5px;
 }
@@ -595,7 +596,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 #toast {
   position:fixed; bottom:calc(var(--panel-h, 240px) + 12px); left:50%; transform:translateX(-50%);
   background:var(--bg2); border:1px solid var(--border);
-  border-radius:20px; padding:7px 16px; font-size:11px; letter-spacing:.06em;
+  border-radius:20px; padding:7px 16px; font-size:var(--fs-xs); letter-spacing:.06em;
   color:var(--text); box-shadow:0 4px 20px var(--shadow);
   pointer-events:none; z-index:80;
   opacity:0; transition:opacity .3s ease;
@@ -654,8 +655,13 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #node-info-strip .an-sep:nth-child(6),
   #node-info-strip .an-sep:nth-child(6) + .ni-item { display: none; }
 
+  /* node-cards collapse toggle */
+  #node-cards-toggle { display: flex; }
+
   /* node cards: compact */
   #node-cards { padding: 7px 10px 8px; gap: 5px; }
+
+  /* collapsed panel height handled by JS via updatePanelH() */
 
   /* param card: adjust */
   .param-card { min-width: 68px; padding: 7px 8px 6px; }
@@ -698,10 +704,25 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   .card-slider::-moz-range-thumb    { width: 22px; height: 22px; }
 }
 
+/* ── node-cards collapse toggle (mobile only) ─────────────── */
+#node-cards-toggle {
+  display:none;
+  width:100%; padding:4px 0; border:none; background:transparent;
+  color:var(--text-faint); cursor:pointer; flex-shrink:0;
+  align-items:center; justify-content:center;
+  border-top:1px solid var(--border);
+  transition:color .14s;
+}
+#node-cards-toggle:hover { color:var(--text); }
+#node-cards-toggle svg { width:18px; height:18px; transition:transform .2s; }
+#node-cards-toggle.collapsed svg { transform:rotate(180deg); }
+#node-view.cards-collapsed #node-cards { display:none; }
+#node-view.cards-collapsed { --panel-cards-h: 0px; }
+
 /* noise color buttons inside card */
 .nc-group { display:flex; gap:3px; flex:1; align-items:center; margin:2px 0; }
 .nc-btn {
-  flex:1; padding:3px 0; border-radius:4px; font-size:8px; letter-spacing:.06em;
+  flex:1; padding:3px 0; border-radius:4px; font-size:var(--card-label-fs); letter-spacing:.06em;
   border:1px solid var(--border); background:transparent; color:var(--text-dim);
   cursor:pointer; font-family:inherit; text-transform:uppercase; transition:all .11s;
 }
@@ -800,7 +821,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
     <button id="rec-btn" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
       <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
     </button>
-    <span id="rec-timer" style="display:none;font-size:11px;letter-spacing:.05em;color:#e0476a;min-width:36px;text-align:center;font-variant-numeric:tabular-nums;"></span>
+    <span id="rec-timer" style="display:none;letter-spacing:.05em;color:#e0476a;min-width:36px;text-align:center;font-variant-numeric:tabular-nums;"></span>
     <div class="topbar-sep"></div>
     <button id="play-btn" data-tip="Play / Stop" data-tip-desc="Start or stop sound">
       <svg id="pi-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -998,6 +1019,9 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
       </div>
 
       <!-- node param cards -->
+      <button id="node-cards-toggle" aria-label="Toggle parameters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
       <div id="node-cards"></div>
     </div>
 
@@ -1808,6 +1832,15 @@ document.addEventListener('pointerdown', e => {
     hamburgerDropdown.classList.remove('open');
     hamburgerBtn.classList.remove('active');
   }
+});
+
+// node-cards collapse toggle (mobile)
+const nodeCardsToggle = document.getElementById('node-cards-toggle');
+const nodeView = document.getElementById('node-view');
+nodeCardsToggle.addEventListener('click', () => {
+  const collapsed = nodeView.classList.toggle('cards-collapsed');
+  nodeCardsToggle.classList.toggle('collapsed', collapsed);
+  updatePanelH();
 });
 
 // mirror buttons in dropdown to their desktop counterparts

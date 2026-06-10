@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Test recording button behaviour inside Docker.
+# Serves source/ directory so tests run without a prior build step.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,6 +13,6 @@ docker build -q \
 
 docker run --rm \
   -v "${ROOT_DIR}/infrastructure/tests:/tests" \
-  -v "${ROOT_DIR}/concept.html:/app/concept.html" \
+  -v "${ROOT_DIR}/source:/app" \
   noisen-test \
   python /tests/test-recording.py

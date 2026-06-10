@@ -17,6 +17,10 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../../" && pwd)"
 : "${BUNNY_STORAGE_API_KEY:?Missing BUNNY_STORAGE_API_KEY}"
 : "${BUNNY_STORAGE_ZONE:?Missing BUNNY_STORAGE_ZONE}"
 
+# Build source/ → dist/ before deploying
+echo "Running build…"
+bash "${SCRIPT_DIR}/build.sh"
+
 BASE_URL="https://storage.bunnycdn.com/${BUNNY_STORAGE_ZONE}"
 PURGE_KEY="${BUNNY_API_KEY:-${BUNNY_STORAGE_API_KEY}}"
 
@@ -56,8 +60,9 @@ echo "Deploying Noisen → https://noisen.space"
 echo
 
 # sw.js — inject build hash so browsers get new cache on every deploy
+DIST_DIR="${ROOT_DIR}/dist"
 TMP_SW=$(mktemp /tmp/sw-XXXXXX.js)
-sed "s/__BUILD__/${BUILD}/g" "${ROOT_DIR}/sw.js" > "${TMP_SW}"
+sed "s/__BUILD__/${BUILD}/g" "${DIST_DIR}/sw.js" > "${TMP_SW}"
 echo "  → /sw.js (cache: noisen-${BUILD})"
 curl -sS -X PUT \
   -H "AccessKey: ${BUNNY_STORAGE_API_KEY}" \
@@ -67,11 +72,17 @@ curl -sS -X PUT \
 echo
 rm "${TMP_SW}"
 
-upload "${ROOT_DIR}/concept.html"   "index.html"
-upload "${ROOT_DIR}/manifest.json"  "manifest.json"
-upload "${ROOT_DIR}/silence.mp3"    "silence.mp3"
+upload "${DIST_DIR}/index.html"    "index.html"
+upload "${DIST_DIR}/manifest.json" "manifest.json"
+upload "${ROOT_DIR}/silence.mp3"   "silence.mp3"
 
-# icons
+# built JS/CSS assets (Vite outputs into dist/assets/)
+for file in "${DIST_DIR}/assets"/*; do
+  [ -f "$file" ] || continue
+  upload "$file" "assets/$(basename "$file")"
+done
+
+# icons (served from source, not transformed by Vite)
 upload "${ROOT_DIR}/icons/icon.svg"          "icons/icon.svg"
 upload "${ROOT_DIR}/icons/icon-maskable.svg" "icons/icon-maskable.svg"
 for size in 192 512; do

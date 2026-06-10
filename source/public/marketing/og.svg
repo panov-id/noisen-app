@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="55%" r="75%">
+      <stop offset="0%" stop-color="#0e0e1c"/>
+      <stop offset="100%" stop-color="#06060a"/>
+    </radialGradient>
+    <!-- node glow gradients -->
+    <radialGradient id="g1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1fa0aa" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#1fa0aa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9a2ab8" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#9a2ab8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- subtle dot grid -->
+  <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+    <circle cx="30" cy="30" r="0.8" fill="rgba(255,255,255,0.07)"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- node 1: sine — left area -->
+  <ellipse cx="290" cy="310" rx="220" ry="220" fill="url(#g1)"/>
+  <circle cx="290" cy="310" r="160" fill="none" stroke="#3a7bd5" stroke-width="1.2" opacity="0.14"/>
+  <circle cx="290" cy="310" r="115" fill="none" stroke="#3a7bd5" stroke-width="1.8" opacity="0.22"/>
+  <circle cx="290" cy="310" r="72"  fill="none" stroke="#3a7bd5" stroke-width="2.5" opacity="0.36"/>
+  <circle cx="290" cy="310" r="38"  fill="none" stroke="#3a7bd5" stroke-width="3.5" opacity="0.55"/>
+  <circle cx="290" cy="310" r="18"  fill="#3a7bd5" opacity="0.85"/>
+  <circle cx="290" cy="310" r="7"   fill="#7ab3f0"/>
+
+  <!-- node 2: triangle — center -->
+  <ellipse cx="600" cy="230" rx="190" ry="190" fill="url(#g2)"/>
+  <circle cx="600" cy="230" r="140" fill="none" stroke="#1fa0aa" stroke-width="1.2" opacity="0.14"/>
+  <circle cx="600" cy="230" r="100" fill="none" stroke="#1fa0aa" stroke-width="2"   opacity="0.24"/>
+  <circle cx="600" cy="230" r="62"  fill="none" stroke="#1fa0aa" stroke-width="3"   opacity="0.40"/>
+  <circle cx="600" cy="230" r="32"  fill="none" stroke="#1fa0aa" stroke-width="4"   opacity="0.58"/>
+  <circle cx="600" cy="230" r="16"  fill="#1fa0aa" opacity="0.88"/>
+  <circle cx="600" cy="230" r="6"   fill="#6ed4dc"/>
+
+  <!-- node 3: sawtooth — right -->
+  <ellipse cx="910" cy="350" rx="200" ry="200" fill="url(#g3)"/>
+  <circle cx="910" cy="350" r="150" fill="none" stroke="#9a2ab8" stroke-width="1.2" opacity="0.13"/>
+  <circle cx="910" cy="350" r="108" fill="none" stroke="#9a2ab8" stroke-width="2"   opacity="0.22"/>
+  <circle cx="910" cy="350" r="68"  fill="none" stroke="#9a2ab8" stroke-width="3"   opacity="0.38"/>
+  <circle cx="910" cy="350" r="35"  fill="none" stroke="#9a2ab8" stroke-width="4"   opacity="0.56"/>
+  <circle cx="910" cy="350" r="17"  fill="#9a2ab8" opacity="0.86"/>
+  <circle cx="910" cy="350" r="6"   fill="#c97fe0"/>
+
+  <!-- gravity links between nodes -->
+  <line x1="308" y1="298" x2="582" y2="242" stroke="rgba(90,162,255,0.14)" stroke-width="1.5"/>
+  <line x1="618" y1="242" x2="892" y2="342" stroke="rgba(90,162,255,0.12)" stroke-width="1.5"/>
+  <line x1="310" y1="322" x2="890" y2="348" stroke="rgba(90,162,255,0.07)" stroke-width="1"/>
+
+  <!-- wordmark -->
+  <text x="600" y="558" font-family="ui-monospace, 'SF Mono', 'Fira Code', monospace"
+        font-size="22" letter-spacing="12" fill="rgba(255,255,255,0.32)"
+        text-anchor="middle" font-weight="400">NOISEN</text>
+
+  <!-- tagline -->
+  <text x="600" y="590" font-family="ui-monospace, 'SF Mono', 'Fira Code', monospace"
+        font-size="13" letter-spacing="3" fill="rgba(255,255,255,0.18)"
+        text-anchor="middle">quiet your mind with noise</text>
+</svg>

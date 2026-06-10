@@ -1,0 +1,9 @@
+node_modules
+dist
+.env.local
+.git
+.idea
+infrastructure/volumes
+infrastructure/tests
+infrastructure/docker
+concept.html
