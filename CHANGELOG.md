@@ -2,6 +2,31 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 21
+
+#### Master FX chain
+- Lo Cut (highpass): 20–800Hz — removes sub-bass rumble
+- Hi Cut (lowpass): 2kHz–20kHz — trims harsh highs
+- Reverb (`Tone.Reverb`): wet 0–100%, decay 0.3–10s
+- Delay (`Tone.FeedbackDelay`): wet 0–100%, time 50–1000ms, feedback 0–90%
+- All accessible via new ⚌ FX button in topbar → FX overlay with 7 parameter cards
+- Master audio chain: `masterGain → locut → hiCut → masterFilter → masterDelay → masterReverb → limiter`
+
+#### Per-node FX sends
+- Reverb Send and Delay Send cards added to every node panel
+- Each node routes its signal to shared reverb/delay buses independently of master wet
+- `node.reverbSend` and `node.delaySend` persisted in presets
+
+#### Frequency response visualization (ЧКХ)
+- Spectrum canvas expanded from 32px → 80px (60px mobile)
+- Real-time FFT curves drawn per node in node colors using `Tone.Analyser` (512 bins)
+- Combined master curve in white using master analyser (2048 bins)
+- dB grid lines at −30/−60/−90 dB; filter cutoff dashes preserved
+- Static node markers (bar + dot) always visible even when not playing
+- Bottom panel height increased: 194→240px desktop, 270→310px mobile
+
+---
+
 ### 2026-06-10 — Concept iteration 20
 
 #### UI buttons — 1.5× bigger

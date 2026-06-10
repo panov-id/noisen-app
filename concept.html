@@ -98,7 +98,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 /* ── bottom panel ─────────────────────────────────────────── */
 #bottom {
   position:fixed; bottom:0; left:0; right:0;
-  height:var(--panel-h, 194px);
+  height:var(--panel-h, 240px);
   display:flex; background:var(--bg2);
   border-top:1px solid var(--border);
   backdrop-filter:blur(32px); z-index:30;
@@ -144,13 +144,19 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 .an-value { font-size:11px; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .an-sep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
 
-/* spectrum canvas */
+/* spectrum / ЧКХ canvas */
 #spectrum-wrap {
   padding:6px 14px 0; flex-shrink:0;
 }
 #spectrum-canvas {
-  width:100%; height:32px; display:block;
+  width:100%; height:80px; display:block;
   border-radius:6px; background:var(--spec-bg);
+}
+
+/* FX view section labels */
+.fx-section-label {
+  font-size:9px; letter-spacing:.14em; color:var(--text-faint);
+  text-transform:uppercase; padding:6px 14px 2px; flex-shrink:0;
 }
 
 /* global cards row */
@@ -384,6 +390,32 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   border-radius:4px; padding:1px 5px;
 }
 
+/* ── fx overlay ───────────────────────────────────────────── */
+#fx-overlay {
+  position:fixed; inset:0; z-index:90;
+  background:rgba(0,0,0,0.42);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .18s ease;
+}
+#fx-overlay.open { opacity:1; pointer-events:auto; }
+#fx-sheet {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:16px; width:min(520px, 94vw);
+  display:flex; flex-direction:column;
+  box-shadow:0 18px 52px rgba(0,0,0,0.36); overflow:hidden;
+}
+#fx-cards {
+  display:flex; flex-wrap:wrap; gap:7px;
+  padding:10px 14px 14px; align-content:flex-start;
+}
+#fx-cards .param-card {
+  flex: 1 1 calc(25% - 7px); min-width:100px;
+}
+@media (max-width:480px) {
+  #fx-cards .param-card { flex: 1 1 calc(50% - 7px); }
+}
+
 /* ── whats-new overlay ────────────────────────────────────── */
 #whatsnew-overlay {
   position:fixed; inset:0; z-index:95;
@@ -523,7 +555,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* ── toast notification ───────────────────────────────────── */
 #toast {
-  position:fixed; bottom:calc(var(--panel-h, 194px) + 12px); left:50%; transform:translateX(-50%);
+  position:fixed; bottom:calc(var(--panel-h, 240px) + 12px); left:50%; transform:translateX(-50%);
   background:var(--bg2); border:1px solid var(--border);
   border-radius:20px; padding:7px 16px; font-size:11px; letter-spacing:.06em;
   color:var(--text); box-shadow:0 4px 20px var(--shadow);
@@ -545,8 +577,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #play-btn { width: 40px; height: 40px; }
   #play-btn svg { width: 18px; height: 18px; }
 
-  /* bottom panel: taller to fit wrapped node cards */
-  :root { --panel-h: 270px; }
+  /* bottom panel: taller for spectrum + wrapped cards */
+  :root { --panel-h: 310px; }
 
   /* analytics strip: horizontal scroll, compact */
   #analytics-strip {
@@ -557,8 +589,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #analytics-strip::-webkit-scrollbar { display: none; }
   .an-value { font-size: 12px; }
 
-  /* spectrum: slightly shorter */
-  #spectrum-canvas { height: 26px; }
+  /* spectrum: compact on mobile */
+  #spectrum-canvas { height: 60px; }
   #spectrum-wrap { padding: 5px 10px 0; }
 
   /* global cards: smaller min-width, more padding room */
@@ -693,6 +725,16 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
       <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
         <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
         <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button id="fx-btn" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"/>
+        <line x1="4" y1="12" x2="20" y2="12"/>
+        <line x1="4" y1="18" x2="20" y2="18"/>
+        <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
+        <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
+        <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
       </svg>
     </button>
     <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
@@ -893,6 +935,82 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   </div>
 </div>
 
+<div id="fx-overlay">
+  <div id="fx-sheet">
+    <div class="presets-header">
+      <span class="presets-header-title">MASTER FX</span>
+      <button class="action-btn" id="fx-overlay-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="fx-cards">
+      <!-- Lo Cut -->
+      <div class="param-card" data-tip="Lo Cut" data-tip-desc="Highpass filter — removes low rumble">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,20 8,20 8,12 14,4 20,4"/></svg></span>
+          <span class="card-val" id="fx-locut-val">20Hz</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-locut" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Lo Cut</span>
+      </div>
+      <!-- Hi Cut -->
+      <div class="param-card" data-tip="Hi Cut" data-tip-desc="Lowpass filter — removes harsh highs">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,4 10,4 16,12 21,20"/></svg></span>
+          <span class="card-val" id="fx-hicut-val">20kHz</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-hicut" min="0" max="100" value="100" style="--pct:100%">
+        <span class="card-label">Hi Cut</span>
+      </div>
+      <!-- Reverb Wet -->
+      <div class="param-card" data-tip="Reverb" data-tip-desc="Room/space effect — use node Reverb send to route signals">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg></span>
+          <span class="card-val" id="fx-reverb-val">0%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-reverb" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Reverb</span>
+      </div>
+      <!-- Reverb Decay -->
+      <div class="param-card" data-tip="Reverb Decay" data-tip-desc="Reverb tail length">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6 Q8 4 12 8 Q16 12 21 18"/></svg></span>
+          <span class="card-val" id="fx-decay-val">2.5s</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-decay" min="0" max="100" value="30" style="--pct:30%">
+        <span class="card-label">Decay</span>
+      </div>
+      <!-- Delay Wet -->
+      <div class="param-card" data-tip="Delay" data-tip-desc="Echo effect — use node Delay send to route signals">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg></span>
+          <span class="card-val" id="fx-delay-val">0%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-delay" min="0" max="100" value="0" style="--pct:0%">
+        <span class="card-label">Delay</span>
+      </div>
+      <!-- Delay Time -->
+      <div class="param-card" data-tip="Delay Time" data-tip-desc="Echo repeat interval">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span>
+          <span class="card-val" id="fx-delaytime-val">250ms</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-delaytime" min="0" max="100" value="25" style="--pct:25%">
+        <span class="card-label">Time</span>
+      </div>
+      <!-- Delay Feedback -->
+      <div class="param-card" data-tip="Delay Feedback" data-tip-desc="Number of echo repeats">
+        <div class="card-top">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15 A9 9 0 1 0 7.17 5.7 L1 10"/></svg></span>
+          <span class="card-val" id="fx-feedback-val">35%</span>
+        </div>
+        <input type="range" class="card-slider" id="fx-feedback" min="0" max="90" value="35" style="--pct:39%">
+        <span class="card-label">Feedback</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="whatsnew-overlay">
   <div id="whatsnew-sheet">
     <div id="whatsnew-header">
@@ -927,11 +1045,21 @@ const PARAM_ICONS = {
   spr:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 12h8M5 8l-3 4 3 4M19 8l3 4-3 4"/></svg>`,
   res:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L5 6 L8 18 L11 8 L14 16 L17 6 L20 18 L22 12"/></svg>`,
   noise:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L3.5 8 L5 15 L6.5 9 L8 13 L9.5 7 L11 14 L12 10 L13 13 L14.5 9 L16 15 L17.5 8 L19 12 L20.5 10 L22 12"/></svg>`,
+  rsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg>`,
+  dsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg>`,
 };
 
 // ── Version & what's new ──────────────────────────────────────
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const WHATSNEW = {
+  '1.5': {
+    title: 'FX chain + frequency response',
+    items: [
+      { section: 'Master FX (⚌ button)', changes: ['Lo Cut — highpass filter removes low rumble', 'Hi Cut — lowpass filter trims harsh highs', 'Reverb — room/space effect with wet + decay controls', 'Delay — echo with time, feedback and wet mix'] },
+      { section: 'Per-node effects', changes: ['Reverb Send — routes this node into the reverb bus', 'Delay Send — routes this node into the delay bus', 'Both appear as cards in the node panel'] },
+      { section: 'Frequency response (ЧКХ)', changes: ['Spectrum canvas shows real-time FFT curves when playing', 'Each node drawn in its own color', 'White curve = combined master output', 'dB grid lines at −30/−60/−90 dB'] },
+    ]
+  },
   '1.4': {
     title: 'Settings persist + dark theme',
     items: [
@@ -982,8 +1110,8 @@ const NODE_MAX_R = 40;
 // Fixed world width — frequency/pan mapping is invariant to screen resize
 const WORLD_WIDTH = 1920;
 // PANEL_H is dynamic — CSS media queries may change panel height on mobile
-let PANEL_H = 194;
-function updatePanelH() { PANEL_H = document.getElementById('bottom').offsetHeight || 194; }
+let PANEL_H = 240;
+function updatePanelH() { PANEL_H = document.getElementById('bottom').offsetHeight || 240; }
 
 // ── Canvas ────────────────────────────────────────────────────
 const canvas = document.getElementById('main');
@@ -1324,6 +1452,7 @@ function captureState(name) {
       x: Math.round(n.x), y: Math.round(n.y),
       type: n.type, volume: n.volume,
       muted: n.muted, panOverride: n.panOverride,
+      reverbSend: n.reverbSend ?? 0, delaySend: n.delaySend ?? 0,
       typeParams: { ...n.typeParams },
     })),
   };
@@ -1360,6 +1489,7 @@ function applyPreset(preset) {
     const node = { id: ++nodeSeq, x: nd.x, y: nd.y,
       type: nd.type, muted: nd.muted, volume: nd.volume,
       panOverride: nd.panOverride,
+      reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
       typeParams: { ...nd.typeParams },
       pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null };
     nodes.push(node); createAudio(node);
@@ -1473,6 +1603,75 @@ document.getElementById('large-toggle').addEventListener('click', () => {
   saveSettings({ largeText });
 });
 
+// ── FX overlay ────────────────────────────────────────────────
+function fmtLocut(v) {
+  const hz = Math.pow(10, v / 100 * 2.6 + 1.3); // 20Hz–800Hz range
+  return hz < 100 ? `${Math.round(hz)}Hz` : `${(hz/1000).toFixed(2)}kHz`;
+}
+function fmtHicut(v) {
+  const hz = Math.pow(10, (1 - v / 100) * 1.0 + 3.301); // 2kHz–20kHz range
+  return `${(hz/1000).toFixed(hz >= 10000 ? 0 : 1)}kHz`;
+}
+function locutHz(v)  { return Math.pow(10, v / 100 * 2.6 + 1.3); }
+function hicutHz(v)  { return Math.pow(10, (1 - v / 100) * 1.0 + 3.301); }
+function decayS(v)   { return 0.3 + (v / 100) * 9.7; }  // 0.3s–10s
+function delayMs(v)  { return 50 + (v / 100) * 950; }    // 50ms–1000ms
+
+document.getElementById('fx-btn').addEventListener('click', () => {
+  document.getElementById('fx-overlay').classList.toggle('open');
+});
+document.getElementById('fx-overlay-close').addEventListener('click', () => {
+  document.getElementById('fx-overlay').classList.remove('open');
+});
+document.getElementById('fx-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('fx-overlay').classList.remove('open');
+});
+
+document.getElementById('fx-locut').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  locut.frequency.rampTo(locutHz(v), .1);
+  document.getElementById('fx-locut-val').textContent = v < 1 ? '20Hz' : fmtLocut(v);
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-hicut').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  hiCut.frequency.rampTo(hicutHz(v), .1);
+  document.getElementById('fx-hicut-val').textContent = v > 99 ? '20kHz' : fmtHicut(v);
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-reverb').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  masterReverb.wet.rampTo(v / 100, .1);
+  document.getElementById('fx-reverb-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-decay').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  const s = decayS(v);
+  masterReverb.decay = s;
+  document.getElementById('fx-decay-val').textContent = `${s.toFixed(1)}s`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-delay').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  masterDelay.wet.rampTo(v / 100, .1);
+  document.getElementById('fx-delay-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-delaytime').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  const ms = delayMs(v);
+  masterDelay.delayTime.rampTo(ms / 1000, .1);
+  document.getElementById('fx-delaytime-val').textContent = `${Math.round(ms)}ms`;
+  setSliderPct(e.target, v, 0, 100);
+});
+document.getElementById('fx-feedback').addEventListener('input', e => {
+  const v = e.target.valueAsNumber;
+  masterDelay.feedback.rampTo(v / 100, .1);
+  document.getElementById('fx-feedback-val').textContent = `${v}%`;
+  setSliderPct(e.target, v, 0, 90);
+});
+
 // ── PWA ──────────────────────────────────────────────────────
 let deferredInstall = null;
 addEventListener('beforeinstallprompt', e => {
@@ -1524,8 +1723,23 @@ Tone.context.updateInterval = 0.05;
 
 const masterGain   = new Tone.Gain(masterVolume);
 const masterFilter = new Tone.Filter(toneHz(masterTone), 'lowpass');
+const locut        = new Tone.Filter(20, 'highpass');
+const hiCut        = new Tone.Filter(20000, 'lowpass');
+const masterReverb = new Tone.Reverb({ decay: 2.5, preDelay: 0.01, wet: 0 });
+const masterDelay  = new Tone.FeedbackDelay({ delayTime: 0.25, feedback: 0.35, wet: 0 });
 const limiter      = new Tone.Limiter(-3).toDestination();
-masterGain.connect(masterFilter); masterFilter.connect(limiter);
+// master chain: gain → locut → hiCut → tone filter → delay → reverb → limiter
+masterGain.connect(locut);
+locut.connect(hiCut);
+hiCut.connect(masterFilter);
+masterFilter.connect(masterDelay);
+masterDelay.connect(masterReverb);
+masterReverb.connect(limiter);
+
+// master analyser tapped before effects (raw mix of all nodes)
+const masterAnalyser = new Tone.Analyser('fft', 2048);
+masterAnalyser.smoothing = 0.85;
+masterGain.connect(masterAnalyser);
 function toneHz(t) { return Math.pow(10, t * 3.5 + 1.3); }
 
 function setSliderPct(el, val, min, max) {
@@ -1646,7 +1860,17 @@ function createAudio(node) {
       source.connect(vibrato); vibrato.connect(gain);
     } else source.connect(gain);
   }
-  node.audio = { source, gain, filter, panner, vibrato };
+  // per-node reverb/delay sends
+  const reverbSend = new Tone.Gain(node.reverbSend ?? 0);
+  const delaySend  = new Tone.Gain(node.delaySend  ?? 0);
+  panner.connect(reverbSend); reverbSend.connect(masterReverb);
+  panner.connect(delaySend);  delaySend.connect(masterDelay);
+  // per-node analyser for ЧКХ display
+  const analyser = new Tone.Analyser('fft', 512);
+  analyser.smoothing = 0.8;
+  panner.connect(analyser);
+
+  node.audio = { source, gain, filter, panner, vibrato, reverbSend, delaySend, analyser };
   if (isPlaying) { source.start?.(); if (!node.muted) gain.gain.rampTo(node.volume * .28, .3); }
 }
 
@@ -1656,7 +1880,7 @@ function destroyAudio(node) {
   const a = node.audio; node.audio = null;
   setTimeout(() => {
     try { a.source.stop?.(); } catch {}
-    [a.vibrato, a.source, a.gain, a.filter, a.panner].forEach(x => { try { x?.disconnect(); } catch {} });
+    [a.vibrato, a.source, a.gain, a.filter, a.panner, a.reverbSend, a.delaySend, a.analyser].forEach(x => { try { x?.disconnect(); } catch {} });
   }, 220);
 }
 
@@ -1680,6 +1904,7 @@ function stopAll()  { for (const n of nodes) if (n.audio) n.audio.gain.gain.ramp
 // x, y are world coordinates
 function addNode(x, y) {
   const node = { id: ++nodeSeq, x, y, type:'sine', muted:false, volume:.55, panOverride:null,
+    reverbSend:0, delaySend:0,
     typeParams:{...TYPE_DEFAULTS.sine}, pulsePhase:Math.random()*Math.PI*2, rippleTimer:0, audio:null };
   nodes.push(node); createAudio(node); syncCount();
 }
@@ -1797,6 +2022,12 @@ function buildNodeCards(node) {
     nodeCards.appendChild(makeNoiseColorCard(node));
     nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
   }
+
+  // reverb/delay sends (always shown)
+  nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to reverb bus',
+    0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); }));
+  nodeCards.appendChild(mkC('dsnd','dsnd','Delay','Delay send','Amount routed to delay bus',
+    0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); }));
 
   // tint each card with node color
   nodeCards.querySelectorAll('.param-card').forEach(c => {
@@ -2013,8 +2244,35 @@ function freqToSpecX(hz, w) {
 const SPEC_TICKS = [20,50,100,200,500,1000,2000,5000,10000,20000];
 const TICK_LABELS = { 20:'20', 100:'100', 1000:'1k', 10000:'10k', 20000:'20k' };
 
+// dB → Y pixel (0dB = top, -90dB = bottom)
+const DB_MIN = -90, DB_MAX = -10;
+function dbToY(db, h) {
+  return Math.max(0, Math.min(h, (1 - (db - DB_MIN) / (DB_MAX - DB_MIN)) * h));
+}
+
+// draw a smooth FFT curve from Float32Array
+function drawFftCurve(data, w, h, color, alpha, lineWidth = 1.5) {
+  const binCount = data.length;
+  const nyquist = Tone.context.sampleRate / 2;
+  specCtx.beginPath();
+  let first = true;
+  for (let i = 1; i < binCount; i++) {
+    const hz = (i / binCount) * nyquist;
+    if (hz < 8 || hz > 40000) continue;
+    const x = freqToSpecX(hz, w);
+    const y = dbToY(data[i], h);
+    if (first) { specCtx.moveTo(x, y); first = false; }
+    else specCtx.lineTo(x, y);
+  }
+  specCtx.strokeStyle = color.replace(')', `,${alpha})`).replace('rgb(', 'rgba(');
+  specCtx.lineWidth = lineWidth;
+  specCtx.stroke();
+}
+
 function drawSpectrum() {
   const w = specCanvas.width, h = specCanvas.height;
+  const labelH = 13; // bottom row for freq labels
+  const curveH = h - labelH;
   specCtx.clearRect(0, 0, w, h);
 
   // background
@@ -2023,61 +2281,84 @@ function drawSpectrum() {
   specCtx.fillRect(0, 0, w, h);
 
   const textColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(40,35,30,0.25)';
-  const tickColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(40,35,30,0.08)';
+  const tickColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(40,35,30,0.07)';
 
-  // tick lines + labels
-  specCtx.font = '8px SF Mono,Fira Code,monospace';
-  specCtx.textBaseline = 'bottom';
-  SPEC_TICKS.forEach(hz => {
-    const x = Math.round(freqToSpecX(hz, w));
-    specCtx.strokeStyle = tickColor;
-    specCtx.lineWidth = 1;
-    specCtx.beginPath(); specCtx.moveTo(x, 0); specCtx.lineTo(x, h); specCtx.stroke();
-    if (TICK_LABELS[hz]) {
-      specCtx.fillStyle = textColor;
-      specCtx.textAlign = hz < 2000 ? 'left' : 'center';
-      specCtx.fillText(TICK_LABELS[hz], x + (hz < 100 ? 2 : 0), h - 1);
-    }
+  // dB grid lines
+  const dbGrid = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(40,35,30,0.05)';
+  [-90,-60,-30].forEach(db => {
+    const y = Math.round(dbToY(db, curveH));
+    specCtx.strokeStyle = dbGrid; specCtx.lineWidth = 1;
+    specCtx.beginPath(); specCtx.moveTo(0,y); specCtx.lineTo(w,y); specCtx.stroke();
   });
 
-  // human hearing boundary (20–20kHz)
-  const xHear1 = freqToSpecX(20, w), xHear2 = freqToSpecX(20000, w);
-  const hearColor = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(40,35,30,0.03)';
-  specCtx.fillStyle = hearColor;
-  specCtx.fillRect(xHear1, 0, xHear2 - xHear1, h);
+  // human hearing region
+  const xHear1 = freqToSpecX(20,w), xHear2 = freqToSpecX(20000,w);
+  specCtx.fillStyle = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(40,35,30,0.02)';
+  specCtx.fillRect(xHear1, 0, xHear2 - xHear1, curveH);
 
-  // active nodes
+  // tick lines
+  SPEC_TICKS.forEach(hz => {
+    const x = Math.round(freqToSpecX(hz, w));
+    specCtx.strokeStyle = tickColor; specCtx.lineWidth = 1;
+    specCtx.beginPath(); specCtx.moveTo(x,0); specCtx.lineTo(x,curveH); specCtx.stroke();
+  });
+
+  // ── per-node FFT curves (real-time when playing) ──────────────
+  if (isPlaying) {
+    for (const node of nodes) {
+      if (node.muted || !node.audio?.analyser) continue;
+      const data = node.audio.analyser.getValue();
+      const [rr,gg,bb] = TYPES[node.type].rgb;
+      // fill under curve
+      const fc = filterFromY(node.y);
+      const fcx = freqToSpecX(fc, w);
+      specCtx.setLineDash([2,3]);
+      specCtx.strokeStyle = `rgba(${rr},${gg},${bb},0.18)`; specCtx.lineWidth=1;
+      specCtx.beginPath(); specCtx.moveTo(fcx,0); specCtx.lineTo(fcx,curveH); specCtx.stroke();
+      specCtx.setLineDash([]);
+      drawFftCurve(data, w, curveH, `rgb(${rr},${gg},${bb})`, 0.55, 1.5);
+    }
+    // master FFT curve (white)
+    if (masterAnalyser) {
+      const masterData = masterAnalyser.getValue();
+      const masterColor = isDark ? 'rgb(255,255,255)' : 'rgb(40,35,30)';
+      drawFftCurve(masterData, w, curveH, masterColor, 0.75, 2);
+    }
+  }
+
+  // ── static node markers (always shown) ────────────────────────
   for (const node of nodes) {
     if (node.muted) continue;
     const [rr,gg,bb] = TYPES[node.type].rgb;
-    const freq  = nodeFreq(node);
-    const x     = freqToSpecX(freq, w);
-    const barH  = Math.round((h - 10) * (0.3 + node.volume * 0.7));
-    const alpha = isPlaying ? 0.7 + node.volume * 0.3 : 0.35;
+    const freq = nodeFreq(node);
+    const x    = freqToSpecX(freq, w);
+    const alpha = isPlaying ? 0.8 : 0.4;
+    const barH = Math.round((curveH * 0.35) * (0.3 + node.volume * 0.7));
 
-    // glow
-    const g = specCtx.createRadialGradient(x, h, 0, x, h, 20);
-    g.addColorStop(0, `rgba(${rr},${gg},${bb},${alpha * 0.35})`);
+    // glow behind bar
+    const g = specCtx.createRadialGradient(x, curveH, 0, x, curveH, 18);
+    g.addColorStop(0, `rgba(${rr},${gg},${bb},${alpha * 0.28})`);
     g.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
     specCtx.fillStyle = g;
-    specCtx.fillRect(x - 20, 0, 40, h);
+    specCtx.fillRect(x - 18, 0, 36, curveH);
 
-    // vertical bar
+    // bar + dot
     specCtx.fillStyle = `rgba(${rr},${gg},${bb},${alpha})`;
-    specCtx.fillRect(x - 1.5, h - barH, 3, barH);
-
-    // dot at top of bar
-    specCtx.beginPath(); specCtx.arc(x, h - barH, 3, 0, Math.PI*2);
+    specCtx.fillRect(x - 1.5, curveH - barH, 3, barH);
+    specCtx.beginPath(); specCtx.arc(x, curveH - barH, 3, 0, Math.PI*2);
     specCtx.fillStyle = `rgba(${rr},${gg},${bb},1)`; specCtx.fill();
-
-    // filter cutoff marker
-    const fc  = filterFromY(node.y);
-    const fcx = freqToSpecX(fc, w);
-    specCtx.strokeStyle = `rgba(${rr},${gg},${bb},0.22)`;
-    specCtx.setLineDash([2,3]); specCtx.lineWidth = 1;
-    specCtx.beginPath(); specCtx.moveTo(fcx, 0); specCtx.lineTo(fcx, h);
-    specCtx.stroke(); specCtx.setLineDash([]);
   }
+
+  // ── freq labels ───────────────────────────────────────────────
+  specCtx.font = '8px SF Mono,Fira Code,monospace';
+  specCtx.textBaseline = 'top';
+  SPEC_TICKS.forEach(hz => {
+    if (!TICK_LABELS[hz]) return;
+    const x = Math.round(freqToSpecX(hz, w));
+    specCtx.fillStyle = textColor;
+    specCtx.textAlign = hz < 2000 ? 'left' : 'center';
+    specCtx.fillText(TICK_LABELS[hz], x + (hz < 100 ? 2 : 0), curveH + 2);
+  });
 }
 
 function resizeSpecCanvas() {
