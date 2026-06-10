@@ -71,31 +71,44 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* ── top bar ──────────────────────────────────────────────── */
 #topbar {
-  position:fixed; top:0; left:0; right:0; height:52px;
+  position:fixed; top:0; left:0; right:0; height:68px;
   display:flex; align-items:center; justify-content:space-between;
-  padding:0 14px; background:var(--bg2); border-bottom:1px solid var(--border);
+  padding:0 16px; background:var(--bg2); border-bottom:1px solid var(--border);
   backdrop-filter:blur(24px); z-index:30;
 }
 #app-name { font-size:12px; letter-spacing:.2em; color:var(--text); opacity:.55; }
-.topbar-right { display:flex; align-items:center; gap:5px; }
-.topbar-sep { width:1px; height:24px; background:var(--border); margin:0 3px; flex-shrink:0; }
+.topbar-right { display:flex; align-items:center; gap:6px; }
+#topbar-buttons { display:flex; align-items:center; gap:6px; }
+.topbar-sep { width:1px; height:30px; background:var(--border); margin:0 4px; flex-shrink:0; }
 .icon-btn {
-  width:36px; height:36px; border-radius:8px;
+  width:48px; height:48px; border-radius:10px;
   border:1px solid var(--border); background:transparent; color:var(--text-dim);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all .13s; flex-shrink:0; text-decoration:none;
 }
-.icon-btn svg { width:18px; height:18px; }
+.icon-btn svg { width:22px; height:22px; }
 .icon-btn:hover, .icon-btn.active {
   background:var(--accent-dim); border-color:var(--accent); color:var(--accent);
 }
 #pwa-btn {
-  display:none; width:36px; height:36px; border-radius:8px;
+  display:none; width:48px; height:48px; border-radius:10px;
   border:1px solid var(--accent); background:var(--accent-dim); color:var(--accent);
   cursor:pointer; font-family:inherit;
   align-items:center; justify-content:center; flex-shrink:0;
 }
-#pwa-btn svg { width:18px; height:18px; }
+#pwa-btn svg { width:22px; height:22px; }
+
+/* hamburger — hidden on desktop, shown on mobile */
+#hamburger-btn { display:none; }
+
+/* hamburger dropdown */
+#topbar-dropdown {
+  display:none; position:fixed; top:68px; left:0; right:0;
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px); z-index:29;
+  padding:10px 12px; flex-wrap:wrap; gap:8px; justify-content:flex-start;
+}
+#topbar-dropdown.open { display:flex; }
 
 /* ── bottom panel ─────────────────────────────────────────── */
 #bottom {
@@ -109,14 +122,14 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* play button (lives in topbar) */
 #play-btn {
-  width:36px; height:36px; border-radius:8px;
+  width:48px; height:48px; border-radius:10px;
   border:1.5px solid var(--border); background:transparent; color:var(--text);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all .18s; flex-shrink:0;
 }
 #play-btn:hover { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
 #play-btn.on { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
-#play-btn svg { width:16px; height:16px; }
+#play-btn svg { width:20px; height:20px; }
 
 /* param area — full width now that play col is gone */
 #param-area { flex:1; min-width:0; position:relative; overflow:hidden; }
@@ -346,8 +359,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* version badge button */
 #version-btn {
-  font-size:10px; letter-spacing:.06em; font-family:inherit;
-  padding:0 8px; height:24px; border-radius:6px;
+  font-size:11px; letter-spacing:.06em; font-family:inherit;
+  padding:0 10px; height:30px; border-radius:8px;
   border:1px solid var(--border); background:transparent; color:var(--text-faint);
   cursor:pointer; white-space:nowrap; transition:all .13s; flex-shrink:0;
 }
@@ -581,13 +594,15 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
   /* topbar: hide github link, tighten gap */
   #topbar { padding: 0 8px; }
-  #topbar a.icon-btn { display: none; }
+  /* on mobile: hide all topbar buttons, show hamburger instead */
+  #topbar { padding: 0 10px; }
   #version-btn { display: none; }
-  .topbar-right { gap: 3px; }
-  .icon-btn { width: 40px; height: 40px; border-radius: 10px; }
-  .icon-btn svg { width: 20px; height: 20px; }
-  #play-btn { width: 40px; height: 40px; }
-  #play-btn svg { width: 18px; height: 18px; }
+  .topbar-right { gap: 6px; }
+  #topbar-buttons { display: none; }
+  #hamburger-btn { display: flex; }
+  #topbar-dropdown { top: 68px; }
+  #topbar-dropdown .icon-btn { width: 52px; height: 52px; }
+  #topbar-dropdown .icon-btn svg { width: 24px; height: 24px; }
 
   /* bottom panel: taller for spectrum + wrapped cards */
   :root { --panel-h: 310px; }
@@ -692,75 +707,137 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   <div id="app-name">NOISEN</div>
   <button id="version-btn" data-tip="Version" data-tip-desc="Show changelog"></button>
   <div class="topbar-right">
-    <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
-       class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-    </a>
-    <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 16 L12 4 M8 12 L12 16 L16 12"/><rect x="3" y="18" width="18" height="3" rx="1"/>
-      </svg>
-    </button>
-    <button id="theme-toggle" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
-      <svg id="ti-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="5"/>
-        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-      </svg>
-      <svg id="ti-dark" viewBox="0 0 24 24" fill="currentColor" style="display:none">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-    </button>
-    <button id="random-btn" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
-        <line x1="4" y1="4" x2="9" y2="9"/>
-      </svg>
-    </button>
-    <button id="presets-btn" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-        <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-      </svg>
-    </button>
-    <button id="nodes-overview-btn" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+    <div id="topbar-buttons">
+      <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
+         class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      </a>
+      <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16 L12 4 M8 12 L12 16 L16 12"/><rect x="3" y="18" width="18" height="3" rx="1"/>
+        </svg>
+      </button>
+      <button id="theme-toggle" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
+        <svg id="ti-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        </svg>
+        <svg id="ti-dark" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <button id="random-btn" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          <line x1="4" y1="4" x2="9" y2="9"/>
+        </svg>
+      </button>
+      <button id="presets-btn" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+      </button>
+      <button id="nodes-overview-btn" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
+          <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
+          <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+        </svg>
+      </button>
+      <button id="reset-view" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        </svg>
+      </button>
+      <button id="large-toggle" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
+        <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
+          <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
+          <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="fx-btn" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="4" y1="12" x2="20" y2="12"/>
+          <line x1="4" y1="18" x2="20" y2="18"/>
+          <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
+          <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
+          <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+    </div>
+    <button id="hamburger-btn" class="icon-btn" aria-label="Menu" data-tip="Menu" data-tip-desc="Open controls">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
-        <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
-        <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
     </button>
-    <button id="reset-view" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-      </svg>
-    </button>
-    <button id="large-toggle" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
-      <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
-        <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
-        <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <button id="fx-btn" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="4" y1="6" x2="20" y2="6"/>
-        <line x1="4" y1="12" x2="20" y2="12"/>
-        <line x1="4" y1="18" x2="20" y2="18"/>
-        <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
-        <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
-        <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
-      </svg>
-    </button>
-    <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
     <div class="topbar-sep"></div>
     <button id="play-btn" data-tip="Play / Stop" data-tip-desc="Start or stop sound">
       <svg id="pi-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       <svg id="pi-stop" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
     </button>
   </div>
+</div>
+
+<!-- hamburger dropdown (mobile) -->
+<div id="topbar-dropdown">
+  <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
+     class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+  </a>
+  <button id="theme-toggle-m" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button id="random-btn-m" class="icon-btn" data-tip="Random harmonic" data-tip-desc="Generate nodes from a random musical scale">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+      <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
+    </svg>
+  </button>
+  <button id="presets-btn-m" class="icon-btn" data-tip="Presets" data-tip-desc="Save, load and share node configurations">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+    </svg>
+  </button>
+  <button id="nodes-overview-btn-m" class="icon-btn" data-tip="All nodes" data-tip-desc="Overview of all nodes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="5" cy="7" r="2"/><line x1="10" y1="7" x2="20" y2="7"/>
+      <circle cx="5" cy="12" r="2"/><line x1="10" y1="12" x2="20" y2="12"/>
+      <circle cx="5" cy="17" r="2"/><line x1="10" y1="17" x2="20" y2="17"/>
+    </svg>
+  </button>
+  <button id="reset-view-m" class="icon-btn" data-tip="Reset view" data-tip-desc="Return to origin (0, 0)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+    </svg>
+  </button>
+  <button id="large-toggle-m" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
+    <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
+      <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
+      <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <button id="fx-btn-m" class="icon-btn" data-tip="Master FX" data-tip-desc="Lo/Hi cut, reverb, delay">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/>
+      <circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/>
+      <circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+  <button id="version-btn-m" class="icon-btn" data-tip="Version" data-tip-desc="Show changelog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  </button>
+  <button id="help-btn-m" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
 </div>
 
 <!-- unified bottom panel -->
@@ -1064,11 +1141,22 @@ const PARAM_ICONS = {
   noise:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L3.5 8 L5 15 L6.5 9 L8 13 L9.5 7 L11 14 L12 10 L13 13 L14.5 9 L16 15 L17.5 8 L19 12 L20.5 10 L22 12"/></svg>`,
   rsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg>`,
   dsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg>`,
+  fcut:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 18 Q6 18 8 12 Q10 6 14 6 Q18 6 22 6"/></svg>`,
+  ndly:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L7 8 M10 8 L14 8 M17 8 L19 8"/><path d="M5 16 L9 16 M12 16 L16 16 M19 16 L21 16"/><circle cx="20" cy="8" r="1.5" fill="currentColor" stroke="none"/></svg>`,
+  nfdb:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 C6 4 10 20 14 12 C16 8 18 10 22 12"/><path d="M18 8 L22 12 L18 16"/></svg>`,
+  nwet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 L12 3 C12 3 5 11 5 15 A7 7 0 0 0 19 15 C19 11 12 3 12 3Z"/></svg>`,
 };
 
 // ── Version & what's new ──────────────────────────────────────
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const WHATSNEW = {
+  '1.7': {
+    title: 'Bigger UI + hamburger + per-node delay',
+    items: [
+      { section: 'Interface', changes: ['Buttons increased 1.5× for easier tapping', 'Mobile: all controls hidden in hamburger menu (☰)', 'Orientation change no longer breaks canvas tap area'] },
+      { section: 'Per-node controls', changes: ['Filter cutoff slider — direct control of the lowpass filter', 'Delay Time — local echo delay per node (10–1000ms)', 'Delay Feedback — echo repeat amount', 'Delay Wet — local echo mix (independent of master delay bus)'] },
+    ]
+  },
   '1.6': {
     title: 'Canvas zoom',
     items: [
@@ -1132,7 +1220,7 @@ document.getElementById('version-btn').addEventListener('click', () => showWhats
 })();
 
 // ── Constants ─────────────────────────────────────────────────
-const TOP_H      = 52;
+const TOP_H      = 68;
 const NODE_MIN_R = 13;
 const NODE_MAX_R = 40;
 // Fixed world width — frequency/pan mapping is invariant to screen resize
@@ -1145,12 +1233,18 @@ function updatePanelH() { PANEL_H = document.getElementById('bottom').offsetHeig
 const canvas = document.getElementById('main');
 const ctx    = canvas.getContext('2d');
 function resize() {
-  canvas.width  = innerWidth;
-  canvas.height = innerHeight;
+  // use visualViewport when available (handles iOS keyboard + orientation correctly)
+  const vw = window.visualViewport?.width  ?? innerWidth;
+  const vh = window.visualViewport?.height ?? innerHeight;
+  canvas.width  = vw;
+  canvas.height = vh;
   updatePanelH();
 }
 resize();
 addEventListener('resize', resize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+// iOS: orientationchange fires before dimensions update — wait one frame
+addEventListener('orientationchange', () => setTimeout(resize, 150));
 
 // ── Settings persistence ──────────────────────────────────────
 function loadSettings() {
@@ -1483,6 +1577,7 @@ function captureState(name) {
       type: n.type, volume: n.volume,
       muted: n.muted, panOverride: n.panOverride,
       reverbSend: n.reverbSend ?? 0, delaySend: n.delaySend ?? 0,
+      nodeDelayTime: n.nodeDelayTime ?? 250, nodeDelayFeedback: n.nodeDelayFeedback ?? 0, nodeDelayWet: n.nodeDelayWet ?? 0,
       typeParams: { ...n.typeParams },
     })),
   };
@@ -1521,6 +1616,7 @@ function applyPreset(preset) {
       type: nd.type, muted: nd.muted, volume: nd.volume,
       panOverride: nd.panOverride,
       reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
+      nodeDelayTime: nd.nodeDelayTime ?? 250, nodeDelayFeedback: nd.nodeDelayFeedback ?? 0, nodeDelayWet: nd.nodeDelayWet ?? 0,
       typeParams: { ...nd.typeParams },
       pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null };
     nodes.push(node); createAudio(node);
@@ -1657,6 +1753,42 @@ document.getElementById('fx-overlay-close').addEventListener('click', () => {
 document.getElementById('fx-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) document.getElementById('fx-overlay').classList.remove('open');
 });
+
+// ── Hamburger menu ────────────────────────────────────────────
+const hamburgerBtn   = document.getElementById('hamburger-btn');
+const hamburgerDropdown = document.getElementById('topbar-dropdown');
+hamburgerBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  hamburgerDropdown.classList.toggle('open');
+  hamburgerBtn.classList.toggle('active', hamburgerDropdown.classList.contains('open'));
+});
+document.addEventListener('pointerdown', e => {
+  if (!hamburgerDropdown.contains(e.target) && e.target !== hamburgerBtn) {
+    hamburgerDropdown.classList.remove('open');
+    hamburgerBtn.classList.remove('active');
+  }
+});
+
+// mirror buttons in dropdown to their desktop counterparts
+function mirrorBtn(mobileId, desktopId, fn) {
+  const btn = document.getElementById(mobileId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    hamburgerDropdown.classList.remove('open');
+    hamburgerBtn.classList.remove('active');
+    if (desktopId) document.getElementById(desktopId)?.click();
+    else fn?.();
+  });
+}
+mirrorBtn('theme-toggle-m',       'theme-toggle');
+mirrorBtn('random-btn-m',         'random-btn');
+mirrorBtn('presets-btn-m',        'presets-btn');
+mirrorBtn('nodes-overview-btn-m', 'nodes-overview-btn');
+mirrorBtn('reset-view-m',         'reset-view');
+mirrorBtn('large-toggle-m',       'large-toggle');
+mirrorBtn('fx-btn-m',             'fx-btn');
+mirrorBtn('version-btn-m',        null, () => showWhatsNew(APP_VERSION));
+mirrorBtn('help-btn-m',           'help-btn');
 
 document.getElementById('fx-locut').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
@@ -1885,8 +2017,13 @@ function gravityPull(n) {
 
 // ── Audio ─────────────────────────────────────────────────────
 function createAudio(node) {
-  const panner = new Tone.Panner(effectivePan(node)).connect(masterGain);
-  const filter = new Tone.Filter(filterFromNorm(node.filterNorm ?? 0.5), 'lowpass').connect(panner);
+  const panner    = new Tone.Panner(effectivePan(node)).connect(masterGain);
+  const nodeDelay = new Tone.FeedbackDelay({
+    delayTime: (node.nodeDelayTime ?? 250) / 1000,
+    feedback:  (node.nodeDelayFeedback ?? 0) / 100,
+    wet:       (node.nodeDelayWet ?? 0) / 100,
+  }).connect(panner);
+  const filter = new Tone.Filter(filterFromNorm(node.filterNorm ?? 0.5), 'lowpass').connect(nodeDelay);
   const gain   = new Tone.Gain(0).connect(filter);
   let source, vibrato = null;
   if (node.type === 'noise') {
@@ -1919,7 +2056,7 @@ function createAudio(node) {
   analyser.smoothing = 0.8;
   panner.connect(analyser);
 
-  node.audio = { source, gain, filter, panner, vibrato, reverbSend, delaySend, analyser };
+  node.audio = { source, gain, filter, nodeDelay, panner, vibrato, reverbSend, delaySend, analyser };
   if (isPlaying) { source.start?.(); if (!node.muted) gain.gain.rampTo(node.volume * .28, .3); }
 }
 
@@ -1929,7 +2066,7 @@ function destroyAudio(node) {
   const a = node.audio; node.audio = null;
   setTimeout(() => {
     try { a.source.stop?.(); } catch {}
-    [a.vibrato, a.source, a.gain, a.filter, a.panner, a.reverbSend, a.delaySend, a.analyser].forEach(x => { try { x?.disconnect(); } catch {} });
+    [a.vibrato, a.source, a.gain, a.filter, a.nodeDelay, a.panner, a.reverbSend, a.delaySend, a.analyser].forEach(x => { try { x?.disconnect(); } catch {} });
   }, 220);
 }
 
@@ -1941,6 +2078,9 @@ function updateAudio(node) {
   }
   node.audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), .06);
   if (node.type === 'noise') node.audio.filter.set({ Q: node.typeParams.resonance ?? 1 });
+  node.audio.nodeDelay.delayTime.rampTo((node.nodeDelayTime ?? 250) / 1000, .1);
+  node.audio.nodeDelay.feedback.rampTo((node.nodeDelayFeedback ?? 0) / 100, .1);
+  node.audio.nodeDelay.wet.rampTo((node.nodeDelayWet ?? 0) / 100, .1);
   node.audio.panner.pan.rampTo(effectivePan(node), .06);
   node.audio.gain.gain.rampTo((isPlaying && !node.muted) ? node.volume * .28 : 0, .08);
 }
@@ -1953,7 +2093,7 @@ function stopAll()  { for (const n of nodes) if (n.audio) n.audio.gain.gain.ramp
 // x, y are world coordinates
 function addNode(x, y, filterNorm = 0.5) {
   const node = { id: ++nodeSeq, x, y, filterNorm, type:'sine', muted:false, volume:.55, panOverride:null,
-    reverbSend:0, delaySend:0,
+    reverbSend:0, delaySend:0, nodeDelayTime:250, nodeDelayFeedback:0, nodeDelayWet:0,
     typeParams:{...TYPE_DEFAULTS.sine}, pulsePhase:Math.random()*Math.PI*2, rippleTimer:0, audio:null };
   nodes.push(node); createAudio(node); syncCount();
 }
@@ -2071,11 +2211,23 @@ function buildNodeCards(node) {
     nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
   }
 
+  // filter cutoff direct slider
+  nodeCards.appendChild(mkC('fcut','fcut','Filter','Filter cutoff','Lowpass cutoff frequency',
+    0,100,1,Math.round((node.filterNorm??0.5)*100),v=>`${Math.round(filterFromNorm(v/100))}Hz`,v=>{ node.filterNorm=v/100; updateAudio(node); }));
+
   // reverb/delay sends (always shown)
-  nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to reverb bus',
+  nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
     0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); }));
-  nodeCards.appendChild(mkC('dsnd','dsnd','Delay','Delay send','Amount routed to delay bus',
+  nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
     0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); }));
+
+  // per-node local delay
+  nodeCards.appendChild(mkC('ndly','ndly','Dly Time','Node delay time','Local echo delay in ms',
+    10,1000,10,node.nodeDelayTime??250,v=>`${v}ms`,v=>{ node.nodeDelayTime=v; if(node.audio) node.audio.nodeDelay.delayTime.rampTo(v/1000,.1); }));
+  nodeCards.appendChild(mkC('nfdb','nfdb','Dly Fbk','Node delay feedback','Echo repeat amount',
+    0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); }));
+  nodeCards.appendChild(mkC('nwet','nwet','Dly Wet','Node delay wet','Local echo mix',
+    0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
 
   // tint each card with node color
   nodeCards.querySelectorAll('.param-card').forEach(c => {
