@@ -2,6 +2,23 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 19
+
+#### Version badge + "What's new" overlay
+- `APP_VERSION` constant in JS — bump it with each release
+- On first visit after a version update, a modal sheet shows what changed
+- Content defined in `WHATSNEW` object keyed by version string — sections + bullet points
+- "Got it" button dismisses and saves `lastSeenVersion` to `noisen-settings` in localStorage
+- Won't show again until a new version is deployed
+- Current changelog covers v1.3 (background audio, wizard) and v1.4 (settings, dark theme, audio perf, pan fix)
+
+#### UI tests via Docker playwright
+- `infrastructure/docker/Dockerfile.test` — python:3.12-slim + playwright + chromium
+- `infrastructure/scripts/test-settings.sh` — builds image and runs tests
+- `infrastructure/tests/test-settings.py` — tests dark theme default, theme persistence, volume save/restore
+
+---
+
 ### 2026-06-10 — Concept iteration 18
 
 #### Dark theme by default

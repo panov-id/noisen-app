@@ -26,9 +26,10 @@ def run():
             # ── Test 1: dark theme by default ────────────────────────────
             page.goto(BASE, wait_until='domcontentloaded')
             time.sleep(0.5)
-            # dismiss wizard if open (it blocks all pointer events)
+            # dismiss wizard and whatsnew if open (they block all pointer events)
             page.evaluate("localStorage.setItem('noisen-wizard-done', '1')")
             page.evaluate("document.getElementById('wizard').style.display = 'none'")
+            page.evaluate("document.getElementById('whatsnew-overlay').classList.remove('open')")
             theme = page.evaluate("document.documentElement.dataset.theme")
             assert theme == 'dark', f"Expected dark theme by default, got: {theme}"
             print('✓ Dark theme by default')
