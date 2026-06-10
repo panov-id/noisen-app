@@ -90,10 +90,12 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   background:var(--accent-dim); border-color:var(--accent); color:var(--accent);
 }
 #pwa-btn {
-  display:none; padding:0 10px; height:26px; border-radius:7px;
+  display:none; width:36px; height:36px; border-radius:8px;
   border:1px solid var(--accent); background:var(--accent-dim); color:var(--accent);
-  font-size:10px; letter-spacing:.06em; cursor:pointer; font-family:inherit;
+  cursor:pointer; font-family:inherit;
+  align-items:center; justify-content:center; flex-shrink:0;
 }
+#pwa-btn svg { width:18px; height:18px; }
 
 /* ── bottom panel ─────────────────────────────────────────── */
 #bottom {
@@ -342,6 +344,15 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 /* ? help button in topbar */
 #help-btn { font-size:13px; font-weight:700; }
 
+/* version badge button */
+#version-btn {
+  font-size:10px; letter-spacing:.06em; font-family:inherit;
+  padding:0 8px; height:24px; border-radius:6px;
+  border:1px solid var(--border); background:transparent; color:var(--text-faint);
+  cursor:pointer; white-space:nowrap; transition:all .13s; flex-shrink:0;
+}
+#version-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
 /* ── nodes overview overlay ───────────────────────────────── */
 #nodes-overlay {
   position:fixed; inset:0; z-index:90;
@@ -571,6 +582,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   /* topbar: hide github link, tighten gap */
   #topbar { padding: 0 8px; }
   #topbar a.icon-btn { display: none; }
+  #version-btn { display: none; }
   .topbar-right { gap: 3px; }
   .icon-btn { width: 40px; height: 40px; border-radius: 10px; }
   .icon-btn svg { width: 20px; height: 20px; }
@@ -678,12 +690,17 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 <!-- top bar -->
 <div id="topbar">
   <div id="app-name">NOISEN</div>
+  <button id="version-btn" data-tip="Version" data-tip-desc="Show changelog"></button>
   <div class="topbar-right">
     <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
        class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
     </a>
-    <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">＋ Install</button>
+    <button id="pwa-btn" data-tip="Install" data-tip-desc="Add to home screen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 16 L12 4 M8 12 L12 16 L16 12"/><rect x="3" y="18" width="18" height="3" rx="1"/>
+      </svg>
+    </button>
     <button id="theme-toggle" class="icon-btn" data-tip="Light / Dark" data-tip-desc="Switch theme">
       <svg id="ti-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/>
@@ -1050,8 +1067,15 @@ const PARAM_ICONS = {
 };
 
 // ── Version & what's new ──────────────────────────────────────
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const WHATSNEW = {
+  '1.6': {
+    title: 'Canvas zoom',
+    items: [
+      { section: 'Zoom', changes: ['Scroll wheel zooms in/out toward cursor', 'Pinch gesture on touch devices', 'Zoom range ×0.25 – ×4', 'Zoom level shown in corner indicator'] },
+      { section: 'Filter stability', changes: ['Node filter frequency no longer changes when window is resized or zoomed', 'Filter position is now stored on the node, not derived from canvas size'] },
+    ]
+  },
   '1.5': {
     title: 'FX chain + frequency response',
     items: [
@@ -1095,6 +1119,10 @@ document.getElementById('whatsnew-close-btn').addEventListener('click', () => {
 });
 
 // show on first load with new version
+// set version badge text and wire click
+document.getElementById('version-btn').textContent = `v${APP_VERSION}`;
+document.getElementById('version-btn').addEventListener('click', () => showWhatsNew(APP_VERSION));
+
 (function checkVersion() {
   const seen = loadSettings().lastSeenVersion;
   if (seen !== APP_VERSION) {
@@ -1176,7 +1204,7 @@ function buildNodesOverlay() {
   }
   for (const node of nodes) {
     const freq = nodeFreq(node);
-    const filter = filterFromY(node.y);
+    const filter = filterFromNorm(node.filterNorm ?? 0.5);
     const row = document.createElement('div');
     row.className = 'node-row';
     if (node.muted) row.style.opacity = '.52';
@@ -1391,14 +1419,15 @@ function generateHarmonicPreset() {
   for (const semi of chosen) {
     const freq = semitoneToFreq(semi);
     const wx   = freqToWorldX(freq);
-    // Y in upper-mid zone (bright filter): 10–60% from top of canvas area
-    const wy   = TOP_H + canvasArea * (0.10 + Math.random() * 0.50);
+    // filterNorm 0.10–0.60: upper-mid zone (bright filter)
+    const filterNorm = 0.10 + Math.random() * 0.50;
+    const wy   = TOP_H + canvasArea * filterNorm;
     const type = typePool[Math.floor(Math.random() * typePool.length)];
     const vol  = 0.35 + Math.random() * 0.30;
     // slight detune for warmth (±8 cents)
     const tp   = { ...TYPE_DEFAULTS[type], detune: (Math.random() - 0.5) * 16 };
 
-    const node = { id: ++nodeSeq, x: wx, y: wy, type, muted: false, volume: vol,
+    const node = { id: ++nodeSeq, x: wx, y: wy, filterNorm, type, muted: false, volume: vol,
       panOverride: null, typeParams: tp,
       pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, audio: null };
     nodes.push(node); createAudio(node);
@@ -1413,7 +1442,7 @@ function generateHarmonicPreset() {
     spread: 30 + Math.floor(Math.random() * 30),  // 30-60
   });
 
-  viewX = 0; viewY = 0; velX = 0; velY = 0;
+  viewX = 0; viewY = 0; velX = 0; velY = 0; zoom = 1;
 
   const rootName = NOTE_NAMES[rootNote] + rootOctave;
   showToast(`${rootName} ${scaleName} — ${count} nodes`);
@@ -1450,6 +1479,7 @@ function captureState(name) {
     },
     nodes: nodes.map(n => ({
       x: Math.round(n.x), y: Math.round(n.y),
+      filterNorm: +(n.filterNorm ?? 0.5).toFixed(4),
       type: n.type, volume: n.volume,
       muted: n.muted, panOverride: n.panOverride,
       reverbSend: n.reverbSend ?? 0, delaySend: n.delaySend ?? 0,
@@ -1487,6 +1517,7 @@ function applyPreset(preset) {
   // add nodes with saved state
   for (const nd of preset.nodes) {
     const node = { id: ++nodeSeq, x: nd.x, y: nd.y,
+      filterNorm: nd.filterNorm ?? 0.5,
       type: nd.type, muted: nd.muted, volume: nd.volume,
       panOverride: nd.panOverride,
       reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
@@ -1496,7 +1527,7 @@ function applyPreset(preset) {
   }
   syncCount();
   // reset view to see nodes
-  viewX = 0; viewY = 0; velX = 0; velY = 0;
+  viewX = 0; viewY = 0; velX = 0; velY = 0; zoom = 1;
 }
 
 // localStorage helpers
@@ -1676,7 +1707,7 @@ document.getElementById('fx-feedback').addEventListener('input', e => {
 let deferredInstall = null;
 addEventListener('beforeinstallprompt', e => {
   e.preventDefault(); deferredInstall = e;
-  document.getElementById('pwa-btn').style.display = 'block';
+  document.getElementById('pwa-btn').style.display = 'flex';
 });
 document.getElementById('pwa-btn').addEventListener('click', () => {
   if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; }
@@ -1795,24 +1826,42 @@ let dragNode = null, dragStartClientX = 0, dragStartClientY = 0, dragStartNodeX 
 let pDown = 0, pNode = null, didDrag = false;
 let nodeSeq = 0;
 
-// ── Viewport pan ──────────────────────────────────────────────
+// ── Viewport pan + zoom ───────────────────────────────────────
 let viewX = 0, viewY = 0;                 // world offset (world origin at top-left of screen)
+let zoom  = 1;                            // canvas scale factor (0.25 – 4)
+const ZOOM_MIN = 0.25, ZOOM_MAX = 4;
 let panStartViewX = 0, panStartViewY = 0; // view at pan start
 let panStartClientX = 0, panStartClientY = 0;
 let isPanning = false;
 let velX = 0, velY = 0;                   // momentum velocity
 let lastMoveX = 0, lastMoveY = 0, lastMoveTime = 0;
 
-function screenToWorld(sx, sy) { return { x: sx + viewX, y: sy + viewY }; }
-function worldToScreen(wx, wy) { return { x: wx - viewX, y: wy - viewY }; }
+// two-pointer pinch tracking
+const activePointers = new Map();         // pointerId → {x, y}
+let isPinching = false;
+let pinchStartDist = 0, pinchStartZoom = 1;
+let pinchStartViewX = 0, pinchStartViewY = 0, pinchMidX = 0, pinchMidY = 0;
+
+function screenToWorld(sx, sy) { return { x: sx / zoom + viewX, y: sy / zoom + viewY }; }
+function worldToScreen(wx, wy) { return { x: (wx - viewX) * zoom, y: (wy - viewY) * zoom }; }
+
+function applyZoom(newZoom, pivotSX, pivotSY) {
+  newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
+  const wx = pivotSX / zoom + viewX;
+  const wy = pivotSY / zoom + viewY;
+  zoom = newZoom;
+  viewX = wx - pivotSX / zoom;
+  viewY = wy - pivotSY / zoom;
+}
 
 // ── Frequency math (uses world coordinates) ───────────────────
-// World X = 0 → 8Hz, world X = WORLD_WIDTH → ~40kHz; scale never changes on resize
+// World X = 0 → 8Hz, world X = WORLD_WIDTH → ~40kHz; scale never changes on resize or zoom
 function freqFromX(wx)  { return Math.pow(2, (wx / WORLD_WIDTH) * 12.3) * 8; }
-function filterFromY(wy) {
-  const t = 1 - (wy - TOP_H) / (canvas.height - PANEL_H - TOP_H);
-  return Math.pow(10, Math.max(0, Math.min(1, t)) * 3.8 + 1.5);
+// filterNorm: 0 = top of canvas (high filter), 1 = bottom (low filter); zoom/resize invariant
+function computeFilterNorm(screenY) {
+  return Math.max(0, Math.min(1, (screenY - TOP_H) / (canvas.height - PANEL_H - TOP_H)));
 }
+function filterFromNorm(norm) { return Math.pow(10, (1 - norm) * 3.8 + 1.5); }
 function effectivePan(n) { return n.panOverride ?? 0; }
 function nodeRadius(n) { return NODE_MIN_R + (NODE_MAX_R - NODE_MIN_R) * n.volume; }
 
@@ -1837,7 +1886,7 @@ function gravityPull(n) {
 // ── Audio ─────────────────────────────────────────────────────
 function createAudio(node) {
   const panner = new Tone.Panner(effectivePan(node)).connect(masterGain);
-  const filter = new Tone.Filter(filterFromY(node.y), 'lowpass').connect(panner);
+  const filter = new Tone.Filter(filterFromNorm(node.filterNorm ?? 0.5), 'lowpass').connect(panner);
   const gain   = new Tone.Gain(0).connect(filter);
   let source, vibrato = null;
   if (node.type === 'noise') {
@@ -1890,7 +1939,7 @@ function updateAudio(node) {
     node.audio.source.frequency?.rampTo(nodeFreq(node), .06);
     node.audio.source.detune?.rampTo(node.typeParams.detune ?? 0, .06);
   }
-  node.audio.filter.frequency.rampTo(filterFromY(node.y), .06);
+  node.audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), .06);
   if (node.type === 'noise') node.audio.filter.set({ Q: node.typeParams.resonance ?? 1 });
   node.audio.panner.pan.rampTo(effectivePan(node), .06);
   node.audio.gain.gain.rampTo((isPlaying && !node.muted) ? node.volume * .28 : 0, .08);
@@ -1902,8 +1951,8 @@ function stopAll()  { for (const n of nodes) if (n.audio) n.audio.gain.gain.ramp
 
 // ── Nodes ────────────────────────────────────────────────────
 // x, y are world coordinates
-function addNode(x, y) {
-  const node = { id: ++nodeSeq, x, y, type:'sine', muted:false, volume:.55, panOverride:null,
+function addNode(x, y, filterNorm = 0.5) {
+  const node = { id: ++nodeSeq, x, y, filterNorm, type:'sine', muted:false, volume:.55, panOverride:null,
     reverbSend:0, delaySend:0,
     typeParams:{...TYPE_DEFAULTS.sine}, pulsePhase:Math.random()*Math.PI*2, rippleTimer:0, audio:null };
   nodes.push(node); createAudio(node); syncCount();
@@ -1917,11 +1966,10 @@ function syncCount() {
   document.getElementById('an-nodes').textContent = n;
 }
 function hitTest(clientX, clientY) {
-  // convert screen to world for hit testing
-  const wx = clientX + viewX, wy = clientY + viewY;
+  const { x: wx, y: wy } = screenToWorld(clientX, clientY);
   for (let i = nodes.length - 1; i >= 0; i--) {
     const n = nodes[i];
-    if (Math.hypot(wx - n.x, wy - n.y) <= nodeRadius(n) + 10) return n;
+    if (Math.hypot(wx - n.x, wy - n.y) <= nodeRadius(n) + 10 / zoom) return n;
   }
   return null;
 }
@@ -2056,7 +2104,7 @@ function buildTypeButtons(node) {
 function updateNodeInfoStrip(node) {
   if (!node) return;
   const freq   = nodeFreq(node);
-  const filter = filterFromY(node.y);
+  const filter = filterFromNorm(node.filterNorm ?? 0.5);
   const pan    = effectivePan(node);
   const pull   = gravityPull(node);
   document.getElementById('ni-freq').textContent   = fmtHz(freq);
@@ -2174,10 +2222,22 @@ canvas.addEventListener('contextmenu', e => {
 });
 
 canvas.addEventListener('pointerdown', e => {
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 2) {
+    // start pinch — cancel any ongoing pan/drag
+    const pts = [...activePointers.values()];
+    pinchStartDist  = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    pinchStartZoom  = zoom;
+    pinchMidX = (pts[0].x + pts[1].x) / 2;
+    pinchMidY = (pts[0].y + pts[1].y) / 2;
+    pinchStartViewX = viewX; pinchStartViewY = viewY;
+    isPinching = true; isPanning = false; dragNode = null;
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
   if (e.button === 2) return;
   if (e.clientY < TOP_H || e.clientY > canvas.height - PANEL_H) return;
   const hit = hitTest(e.clientX, e.clientY);
-  // when node selected: tap elsewhere = deselect; tap other node = switch
   if (selectedNode && !hit) { deselectNode(); return; }
   if (selectedNode && hit && hit !== selectedNode) { selectNode(hit); return; }
   pDown = Date.now(); didDrag = false; velX = 0; velY = 0;
@@ -2196,40 +2256,54 @@ canvas.addEventListener('pointerdown', e => {
 });
 
 canvas.addEventListener('pointermove', e => {
+  if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (isPinching && activePointers.size === 2) {
+    const pts = [...activePointers.values()];
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    applyZoom(pinchStartZoom * dist / pinchStartDist, pinchMidX, pinchMidY);
+    return;
+  }
   if (dragNode) {
     const dx = e.clientX - dragStartClientX, dy = e.clientY - dragStartClientY;
     if (Math.hypot(dx, dy) > 4) didDrag = true;
-    dragNode.x = dragStartNodeX + dx;
-    dragNode.y = dragStartNodeY + dy;
+    dragNode.x = dragStartNodeX + dx / zoom;
+    dragNode.y = dragStartNodeY + dy / zoom;
+    dragNode.filterNorm = computeFilterNorm(e.clientY);
     updateAudio(dragNode);
   } else if (isPanning) {
     const dx = e.clientX - panStartClientX, dy = e.clientY - panStartClientY;
     if (Math.hypot(dx, dy) > 4) didDrag = true;
-    viewX = panStartViewX - dx;
-    viewY = panStartViewY - dy;
-    // track velocity for momentum
+    viewX = panStartViewX - dx / zoom;
+    viewY = panStartViewY - dy / zoom;
     const now = Date.now(), dt = Math.max(1, now - lastMoveTime);
-    velX = (lastMoveX - e.clientX) / dt * 16;
-    velY = (lastMoveY - e.clientY) / dt * 16;
+    velX = (lastMoveX - e.clientX) / dt * 16 / zoom;
+    velY = (lastMoveY - e.clientY) / dt * 16 / zoom;
     lastMoveX = e.clientX; lastMoveY = e.clientY; lastMoveTime = now;
   }
 });
 
 canvas.addEventListener('pointerup', e => {
+  activePointers.delete(e.pointerId);
+  if (activePointers.size < 2) isPinching = false;
   const dt = Date.now() - pDown;
   if (dragNode) {
     // noop — node already moved
   } else if (isPanning) {
     if (!didDrag && dt < 350 && e.clientY > TOP_H && e.clientY < canvas.height - PANEL_H) {
       const w = screenToWorld(e.clientX, e.clientY);
-      addNode(w.x, w.y);
+      addNode(w.x, w.y, computeFilterNorm(e.clientY));
     }
-    // keep velX/velY for momentum
   }
   if (pNode && !didDrag && dt < 400) selectNode(pNode);
   dragNode = null; pNode = null; didDrag = false; isPanning = false;
   canvas.style.cursor = 'crosshair';
 });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  applyZoom(zoom * factor, e.clientX, e.clientY);
+}, { passive: false });
 
 // ── Spectrum canvas ───────────────────────────────────────────
 const specCanvas = document.getElementById('spectrum-canvas');
@@ -2310,7 +2384,7 @@ function drawSpectrum() {
       const data = node.audio.analyser.getValue();
       const [rr,gg,bb] = TYPES[node.type].rgb;
       // fill under curve
-      const fc = filterFromY(node.y);
+      const fc = filterFromNorm(node.filterNorm ?? 0.5);
       const fcx = freqToSpecX(fc, w);
       specCtx.setLineDash([2,3]);
       specCtx.strokeStyle = `rgba(${rr},${gg},${bb},0.18)`; specCtx.lineWidth=1;
@@ -2402,7 +2476,7 @@ function updateAnalytics() {
 // ── Ripples ───────────────────────────────────────────────────
 function spawnRipple(node) {
   const freq  = nodeFreq(node);
-  const filterN = Math.max(0, 1 - (node.y - TOP_H) / (canvas.height - PANEL_H - TOP_H));
+  const filterN = 1 - (node.filterNorm ?? 0.5);
   const maxR  = Math.hypot(canvas.width, canvas.height) * (.05 + filterN * .38 + waveSpread * .2);
   const speed = .4 + Math.log2(Math.max(1, freq / 10)) * .45;
   ripples.push({ x:node.x, y:node.y, rgb:TYPES[node.type].rgb, radius:nodeRadius(node), maxRadius:maxR, alpha:.12 + node.volume * .25, speed });
@@ -2502,21 +2576,22 @@ function drawNode(node, time) {
 
 // ── Grid background ───────────────────────────────────────────
 function drawGrid() {
-  const step  = 120;
+  const worldStep = 120;
+  const screenStep = worldStep * zoom;
   const color = isDark ? 'rgba(255,255,255,0.025)' : 'rgba(40,35,30,0.04)';
   ctx.strokeStyle = color; ctx.lineWidth = 1;
-  // vertical lines (x)
-  const startX = -((viewX % step) + step) % step;
-  for (let x = startX; x <= canvas.width; x += step) {
+  // vertical lines
+  const startX = -(((viewX * zoom) % screenStep) + screenStep) % screenStep;
+  for (let x = startX; x <= canvas.width; x += screenStep) {
     ctx.beginPath(); ctx.moveTo(x, TOP_H); ctx.lineTo(x, canvas.height - PANEL_H); ctx.stroke();
   }
-  // horizontal lines (y)
-  const startY = -((viewY % step) + step) % step;
-  for (let y = startY + TOP_H; y <= canvas.height - PANEL_H; y += step) {
+  // horizontal lines
+  const startY = -(((viewY * zoom) % screenStep) + screenStep) % screenStep;
+  for (let y = startY + TOP_H; y <= canvas.height - PANEL_H; y += screenStep) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }
-  // origin cross (0,0 in world = screen at -viewX, -viewY)
-  const ox = -viewX, oy = -viewY;
+  // origin cross in screen coords
+  const ox = -viewX * zoom, oy = -viewY * zoom;
   if (ox > -10 && ox < canvas.width + 10 && oy > TOP_H - 10 && oy < canvas.height - PANEL_H + 10) {
     const cc = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(40,35,30,0.12)';
     ctx.strokeStyle = cc; ctx.lineWidth = 1;
@@ -2527,12 +2602,17 @@ function drawGrid() {
 
 // ── View position indicator ───────────────────────────────────
 function drawViewIndicator() {
-  if (Math.abs(viewX) < 20 && Math.abs(viewY) < 20) return;
+  const hasOffset = Math.abs(viewX) >= 20 || Math.abs(viewY) >= 20;
+  const hasZoom   = Math.abs(zoom - 1) >= 0.05;
+  if (!hasOffset && !hasZoom) return;
   ctx.save();
   ctx.font = '9px SF Mono,Fira Code,monospace';
   ctx.fillStyle = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(40,35,30,0.22)';
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillText(`${Math.round(viewX)}, ${Math.round(viewY)}`, canvas.width - 10, TOP_H + 8);
+  const parts = [];
+  if (hasOffset) parts.push(`${Math.round(viewX)}, ${Math.round(viewY)}`);
+  if (hasZoom)   parts.push(`×${zoom.toFixed(2)}`);
+  ctx.fillText(parts.join('  '), canvas.width - 10, TOP_H + 8);
   ctx.restore();
 }
 
@@ -2565,6 +2645,7 @@ function loop(time = 0) {
   drawGrid();
 
   ctx.save();
+  ctx.scale(zoom, zoom);
   ctx.translate(-viewX, -viewY);
   for (const node of nodes) if (!node.muted) drawNodeWaves(node, time);
   drawLinks();
