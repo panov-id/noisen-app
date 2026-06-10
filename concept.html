@@ -1154,14 +1154,25 @@ const PARAM_ICONS = {
   rsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg>`,
   dsnd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg>`,
   fcut:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 18 Q6 18 8 12 Q10 6 14 6 Q18 6 22 6"/></svg>`,
+  atk:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 20 L8 4 L14 14 L18 10 L22 10"/></svg>`,
+  dcy:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 4 L8 4 L14 16 L18 14 L22 14"/></svg>`,
+  sus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L8 12 L8 6 L22 6"/></svg>`,
+  rel:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6 L8 6 L14 18 L22 18"/></svg>`,
   ndly:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L7 8 M10 8 L14 8 M17 8 L19 8"/><path d="M5 16 L9 16 M12 16 L16 16 M19 16 L21 16"/><circle cx="20" cy="8" r="1.5" fill="currentColor" stroke="none"/></svg>`,
   nfdb:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 C6 4 10 20 14 12 C16 8 18 10 22 12"/><path d="M18 8 L22 12 L18 16"/></svg>`,
   nwet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 L12 3 C12 3 5 11 5 15 A7 7 0 0 0 19 15 C19 11 12 3 12 3Z"/></svg>`,
 };
 
 // ── Version & what's new ──────────────────────────────────────
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const WHATSNEW = {
+  '1.8': {
+    title: 'ADSR envelope per node',
+    items: [
+      { section: 'Envelope', changes: ['Attack — fade-in time (10ms – 10s)', 'Decay — fall to sustain level', 'Sustain — held amplitude level (%)', 'Release — fade-out time when stopped or muted'] },
+      { section: 'Behaviour', changes: ['Mute now triggers release instead of instant silence', 'Play triggers attack through the full ADSR curve', 'Envelope parameters saved in presets'] },
+    ]
+  },
   '1.7': {
     title: 'Bigger UI + hamburger + per-node delay',
     items: [
@@ -1588,6 +1599,7 @@ function captureState(name) {
       filterNorm: +(n.filterNorm ?? 0.5).toFixed(4),
       type: n.type, volume: n.volume,
       muted: n.muted, panOverride: n.panOverride,
+      attack: n.attack ?? 0.3, decay: n.decay ?? 0.1, sustain: n.sustain ?? 100, release: n.release ?? 0.8,
       reverbSend: n.reverbSend ?? 0, delaySend: n.delaySend ?? 0,
       nodeDelayTime: n.nodeDelayTime ?? 250, nodeDelayFeedback: n.nodeDelayFeedback ?? 0, nodeDelayWet: n.nodeDelayWet ?? 0,
       typeParams: { ...n.typeParams },
@@ -1627,6 +1639,7 @@ function applyPreset(preset) {
       filterNorm: nd.filterNorm ?? 0.5,
       type: nd.type, muted: nd.muted, volume: nd.volume,
       panOverride: nd.panOverride,
+      attack: nd.attack ?? 0.3, decay: nd.decay ?? 0.1, sustain: nd.sustain ?? 100, release: nd.release ?? 0.8,
       reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
       nodeDelayTime: nd.nodeDelayTime ?? 250, nodeDelayFeedback: nd.nodeDelayFeedback ?? 0, nodeDelayWet: nd.nodeDelayWet ?? 0,
       typeParams: { ...nd.typeParams },
@@ -2035,8 +2048,14 @@ function createAudio(node) {
     feedback:  (node.nodeDelayFeedback ?? 0) / 100,
     wet:       (node.nodeDelayWet ?? 0) / 100,
   }).connect(panner);
-  const filter = new Tone.Filter(filterFromNorm(node.filterNorm ?? 0.5), 'lowpass').connect(nodeDelay);
-  const gain   = new Tone.Gain(0).connect(filter);
+  const envelope = new Tone.AmplitudeEnvelope({
+    attack:  node.attack  ?? 0.3,
+    decay:   node.decay   ?? 0.1,
+    sustain: (node.sustain ?? 100) / 100,
+    release: node.release ?? 0.8,
+  }).connect(nodeDelay);
+  const filter = new Tone.Filter(filterFromNorm(node.filterNorm ?? 0.5), 'lowpass').connect(envelope);
+  const gain   = new Tone.Gain(node.volume * .28).connect(filter);
   let source, vibrato = null;
   if (node.type === 'noise') {
     source = new Tone.Noise(node.typeParams.color ?? 'pink');
@@ -2068,18 +2087,19 @@ function createAudio(node) {
   analyser.smoothing = 0.8;
   panner.connect(analyser);
 
-  node.audio = { source, gain, filter, nodeDelay, panner, vibrato, reverbSend, delaySend, analyser };
-  if (isPlaying) { source.start?.(); if (!node.muted) gain.gain.rampTo(node.volume * .28, .3); }
+  node.audio = { source, gain, envelope, filter, nodeDelay, panner, vibrato, reverbSend, delaySend, analyser };
+  if (isPlaying) { source.start?.(); if (!node.muted) envelope.triggerAttack(); }
 }
 
 function destroyAudio(node) {
   if (!node.audio) return;
-  node.audio.gain.gain.rampTo(0, .15);
   const a = node.audio; node.audio = null;
+  const releaseMs = Math.min(((node.release ?? 0.8) + 0.1) * 1000, 3000);
+  try { a.envelope.triggerRelease(); } catch {}
   setTimeout(() => {
     try { a.source.stop?.(); } catch {}
-    [a.vibrato, a.source, a.gain, a.filter, a.nodeDelay, a.panner, a.reverbSend, a.delaySend, a.analyser].forEach(x => { try { x?.disconnect(); } catch {} });
-  }, 220);
+    [a.vibrato, a.source, a.gain, a.filter, a.envelope, a.nodeDelay, a.panner, a.reverbSend, a.delaySend, a.analyser].forEach(x => { try { x?.disconnect(); } catch {} });
+  }, releaseMs + 100);
 }
 
 function updateAudio(node) {
@@ -2094,17 +2114,26 @@ function updateAudio(node) {
   node.audio.nodeDelay.feedback.rampTo((node.nodeDelayFeedback ?? 0) / 100, .1);
   node.audio.nodeDelay.wet.rampTo((node.nodeDelayWet ?? 0) / 100, .1);
   node.audio.panner.pan.rampTo(effectivePan(node), .06);
-  node.audio.gain.gain.rampTo((isPlaying && !node.muted) ? node.volume * .28 : 0, .08);
+  node.audio.gain.gain.rampTo(node.volume * .28, .06);
+  node.audio.envelope.set({
+    attack:  node.attack  ?? 0.3,
+    decay:   node.decay   ?? 0.1,
+    sustain: (node.sustain ?? 100) / 100,
+    release: node.release ?? 0.8,
+  });
+  if (isPlaying && !node.muted) node.audio.envelope.triggerAttack();
+  else if (node.muted) node.audio.envelope.triggerRelease();
 }
 
 function rebuildAudio(node) { destroyAudio(node); createAudio(node); }
-function startAll() { for (const n of nodes) { if (n.audio) { n.audio.source.start?.(); if (!n.muted) n.audio.gain.gain.rampTo(n.volume * .28, .3); } else createAudio(n); } }
-function stopAll()  { for (const n of nodes) if (n.audio) n.audio.gain.gain.rampTo(0, .4); }
+function startAll() { for (const n of nodes) { if (n.audio) { n.audio.source.start?.(); if (!n.muted) n.audio.envelope.triggerAttack(); } else createAudio(n); } }
+function stopAll()  { for (const n of nodes) if (n.audio) n.audio.envelope.triggerRelease(); }
 
 // ── Nodes ────────────────────────────────────────────────────
 // x, y are world coordinates
 function addNode(x, y, filterNorm = 0.5) {
   const node = { id: ++nodeSeq, x, y, filterNorm, type:'sine', muted:false, volume:.55, panOverride:null,
+    attack:0.3, decay:0.1, sustain:100, release:0.8,
     reverbSend:0, delaySend:0, nodeDelayTime:250, nodeDelayFeedback:0, nodeDelayWet:0,
     typeParams:{...TYPE_DEFAULTS.sine}, pulsePhase:Math.random()*Math.PI*2, rippleTimer:0, audio:null };
   nodes.push(node); createAudio(node); syncCount();
@@ -2209,6 +2238,17 @@ function buildNodeCards(node) {
   // pan
   nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right, overrides X-axis',
     -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); }));
+
+  // ADSR envelope
+  const fmtSec = v => v >= 1 ? `${(+v).toFixed(1)}s` : `${Math.round(v*1000)}ms`;
+  nodeCards.appendChild(mkC('atk','atk','Attack','Envelope attack','Fade-in time',
+    0.01,10,.01,node.attack??0.3,fmtSec,v=>{ node.attack=+v; if(node.audio) node.audio.envelope.attack=+v; }));
+  nodeCards.appendChild(mkC('dcy','dcy','Decay','Envelope decay','Fall to sustain level',
+    0.01,5,.01,node.decay??0.1,fmtSec,v=>{ node.decay=+v; if(node.audio) node.audio.envelope.decay=+v; }));
+  nodeCards.appendChild(mkC('sus','sus','Sustain','Envelope sustain','Held level',
+    0,100,1,node.sustain??100,v=>`${v}%`,v=>{ node.sustain=+v; if(node.audio) node.audio.envelope.sustain=v/100; }));
+  nodeCards.appendChild(mkC('rel','rel','Release','Envelope release','Fade-out time',
+    0.01,10,.01,node.release??0.8,fmtSec,v=>{ node.release=+v; if(node.audio) node.audio.envelope.release=+v; }));
 
   if (node.type==='sine'||node.type==='triangle') {
     nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
