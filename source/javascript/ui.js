@@ -479,7 +479,7 @@ const WIZARD_STEPS = [
     body: 'The ▶ button in the top bar starts audio. On iOS, audio requires this first tap to unlock the Web Audio context — after that it plays silently even with the mute switch on. Press again to stop. Node positions, types, and parameters are preserved — press play again to resume exactly as you left it.' },
   { icon: '⚄', title: 'Random harmonic generator', highlight: 'random-btn',
     body: 'The shuffle button generates a full configuration from a random musical scale: Major, Natural Minor, Pentatonic, Minor Pentatonic, Dorian, Mixolydian, Lydian, or Phrygian. Nodes land precisely on note frequencies for that root and scale. Gravity is kept light so intervals stay recognisable. Hit it repeatedly — each result is unique.' },
-  { icon: '💾', title: 'Save & share presets', highlight: 'presets-btn',
+  { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;display:block"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>', title: 'Save & share presets', highlight: 'presets-btn',
     body: 'The floppy icon opens the Presets panel. Name your configuration and save it to this device (localStorage). The share button generates a URL — the entire state is encoded in the link as compressed base64. Anyone who opens the link gets your exact nodes, types, volumes, and global parameters. No server, no account.' },
   { icon: '∞', title: 'Infinite canvas', highlight: 'reset-view',
     body: 'The workspace is infinite — drag the background to pan. Momentum carries the view after you release. Use the crosshair button in the toolbar to snap back to the origin. The frequency scale is fixed regardless of screen size or zoom — a node at world X = 960 is always 220 Hz (A3), on any device.' },
@@ -504,7 +504,7 @@ function wizardRender() {
     pip.className = 'wiz-pip' + (i < wizardStep ? ' done' : i === wizardStep ? ' active' : '');
     bar.appendChild(pip);
   }
-  document.getElementById('wiz-icon').textContent  = step.icon;
+  document.getElementById('wiz-icon').innerHTML  = step.icon;
   document.getElementById('wiz-title').textContent = step.title;
   document.getElementById('wiz-body').textContent  = step.body;
   document.getElementById('wiz-next').textContent  = wizardStep === total - 1 ? 'Let\'s go ✓' : 'Next →';

@@ -310,7 +310,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 .wiz-pip.done   { background:var(--accent); }
 .wiz-pip.active { background:var(--accent); opacity:.5; }
-.wiz-icon { font-size:28px; margin-bottom:10px; display:block; line-height:1; }
+.wiz-icon { font-size:28px; margin-bottom:10px; display:block; line-height:1; color:var(--text); }
+.wiz-icon svg { display:block; }
 .wiz-title {
   font-size:15px; font-weight:700; color:var(--text);
   margin-bottom:8px; letter-spacing:.01em;
