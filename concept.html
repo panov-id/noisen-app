@@ -71,21 +71,21 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* ── top bar ──────────────────────────────────────────────── */
 #topbar {
-  position:fixed; top:0; left:0; right:0; height:46px;
+  position:fixed; top:0; left:0; right:0; height:52px;
   display:flex; align-items:center; justify-content:space-between;
   padding:0 14px; background:var(--bg2); border-bottom:1px solid var(--border);
   backdrop-filter:blur(24px); z-index:30;
 }
 #app-name { font-size:12px; letter-spacing:.2em; color:var(--text); opacity:.55; }
 .topbar-right { display:flex; align-items:center; gap:5px; }
-.topbar-sep { width:1px; height:20px; background:var(--border); margin:0 3px; flex-shrink:0; }
+.topbar-sep { width:1px; height:24px; background:var(--border); margin:0 3px; flex-shrink:0; }
 .icon-btn {
-  width:30px; height:30px; border-radius:7px;
+  width:36px; height:36px; border-radius:8px;
   border:1px solid var(--border); background:transparent; color:var(--text-dim);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all .13s; flex-shrink:0; text-decoration:none;
 }
-.icon-btn svg { width:15px; height:15px; }
+.icon-btn svg { width:18px; height:18px; }
 .icon-btn:hover, .icon-btn.active {
   background:var(--accent-dim); border-color:var(--accent); color:var(--accent);
 }
@@ -107,14 +107,14 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* play button (lives in topbar) */
 #play-btn {
-  width:32px; height:32px; border-radius:8px;
+  width:36px; height:36px; border-radius:8px;
   border:1.5px solid var(--border); background:transparent; color:var(--text);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all .18s; flex-shrink:0;
 }
 #play-btn:hover { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
 #play-btn.on { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
-#play-btn svg { width:14px; height:14px; }
+#play-btn svg { width:16px; height:16px; }
 
 /* param area — full width now that play col is gone */
 #param-area { flex:1; min-width:0; position:relative; overflow:hidden; }
@@ -201,12 +201,12 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 /* action buttons */
 #node-actions { display:flex; gap:4px; align-items:center; }
 .action-btn {
-  width:28px; height:28px; border-radius:7px;
+  width:32px; height:32px; border-radius:7px;
   border:1px solid var(--border); background:transparent; color:var(--text-dim);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all .12s; flex-shrink:0;
 }
-.action-btn svg { width:14px; height:14px; }
+.action-btn svg { width:16px; height:16px; }
 .action-btn:hover { border-color:var(--accent); color:var(--accent); }
 .action-btn.danger:hover { border-color:#e03030; color:#e03030; }
 .action-btn.muted { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
@@ -536,14 +536,17 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
    breakpoint: ≤ 480px (covers all phone portrait orientations)   */
 @media (max-width: 480px) {
 
-  /* topbar: hide github link, reduce gaps */
-  #topbar { padding: 0 10px; }
+  /* topbar: hide github link, tighten gap */
+  #topbar { padding: 0 8px; }
   #topbar a.icon-btn { display: none; }
-  .topbar-right { gap: 4px; }
-  .icon-btn { width: 34px; height: 34px; }
+  .topbar-right { gap: 3px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 10px; }
+  .icon-btn svg { width: 20px; height: 20px; }
+  #play-btn { width: 40px; height: 40px; }
+  #play-btn svg { width: 18px; height: 18px; }
 
-  /* bottom panel: taller to give breathing room */
-  :root { --panel-h: 228px; }
+  /* bottom panel: taller to fit wrapped node cards */
+  :root { --panel-h: 270px; }
 
   /* analytics strip: horizontal scroll, compact */
   #analytics-strip {
@@ -591,8 +594,9 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   .card-slider::-webkit-slider-thumb { width: 20px; height: 20px; }
   .card-slider::-moz-range-thumb    { width: 20px; height: 20px; }
 
-  /* action buttons: slightly bigger touch target */
-  .action-btn { width: 32px; height: 32px; }
+  /* action buttons: bigger touch targets */
+  .action-btn { width: 40px; height: 40px; }
+  .action-btn svg { width: 18px; height: 18px; }
 
   /* nodes overlay sheet */
   #nodes-sheet { width: 96vw; max-height: 72vh; border-radius: 14px; }
@@ -602,10 +606,14 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   /* presets sheet */
   #presets-sheet { width: 96vw; max-height: 76vh; border-radius: 14px; }
 
-  /* cards: wrap to 2 rows so sliders are usable on narrow screens */
+  /* cards: wrap to 2-column grid; node-cards scrolls vertically */
   #global-cards, #node-cards {
     flex-wrap: wrap; overflow-x: visible;
     align-content: flex-start;
+  }
+  #node-cards {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .param-card {
     flex: 1 1 calc(50% - 8px); min-width: 0; max-width: calc(50% - 4px);
@@ -682,9 +690,9 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
       </svg>
     </button>
     <button id="large-toggle" class="icon-btn" data-tip="Font size" data-tip-desc="Toggle larger text">
-      <svg viewBox="0 0 20 20" fill="currentColor">
-        <text x="1" y="16" font-size="15" font-family="monospace" font-weight="bold">A</text>
-        <text x="12" y="13" font-size="9" font-family="monospace">a</text>
+      <svg viewBox="0 0 22 18" fill="currentColor" stroke="none">
+        <path d="M1 16 L5.5 4 L10 16 M2.5 12.5 L8.5 12.5"/>
+        <path d="M13 16 L16 9 L19 16 M14 13.5 L18 13.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
       </svg>
     </button>
     <button id="help-btn" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
@@ -968,7 +976,7 @@ document.getElementById('whatsnew-close-btn').addEventListener('click', () => {
 })();
 
 // ── Constants ─────────────────────────────────────────────────
-const TOP_H      = 46;
+const TOP_H      = 52;
 const NODE_MIN_R = 13;
 const NODE_MAX_R = 40;
 // Fixed world width — frequency/pan mapping is invariant to screen resize

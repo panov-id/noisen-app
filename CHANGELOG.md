@@ -2,6 +2,24 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 20
+
+#### UI buttons — 1.5× bigger
+- `.icon-btn` desktop: 30→36px, SVG 15→18px; topbar height 46→52px; `TOP_H` constant updated to 52
+- `.icon-btn` mobile: 40px, SVG 20px — better touch targets
+- `#play-btn`: 32→36px desktop, 40px mobile
+- `.action-btn` (mute/delete/close): 28→32px desktop, 40px mobile, SVG 14→16/18px
+
+#### Large text toggle icon — fixed
+- Replaced SVG `<text>` elements (unreliable cross-browser rendering) with proper SVG paths for two A glyphs
+
+#### Node sliders layout on mobile — improved
+- `#node-cards` on mobile gets `overflow-y: auto` — all per-node parameter cards are reachable by scrolling vertically (no cards cut off)
+- `--panel-h` on mobile increased from 228px to 270px for more card area
+- Vertical scroll uses `-webkit-overflow-scrolling: touch` for smooth momentum on iOS
+
+---
+
 ### 2026-06-10 — Concept iteration 19
 
 #### Version badge + "What's new" overlay
