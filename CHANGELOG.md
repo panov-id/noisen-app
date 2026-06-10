@@ -2,6 +2,20 @@
 
 ## [Unreleased] — concept phase
 
+### 2026-06-10 — Concept iteration 18
+
+#### Dark theme by default
+- `<html data-theme="dark">` — app opens in dark theme instead of light
+- Theme choice persisted to `localStorage` (`noisen-settings.theme`); reopening restores last selection
+
+#### Settings persistence
+- `loadSettings()` / `saveSettings(patch)` helpers write to `localStorage` key `noisen-settings`
+- Persisted: `theme`, `largeText`, `vol`, `grav`, `tone`, `spread`
+- On startup, saved global params are restored via `applyGlobal` (only if at least one was saved)
+- Large text toggle now restores on page load (previously reset to off every time)
+
+---
+
 ### 2026-06-09 — Concept iteration 17
 
 #### Pan — removed auto-pan from X position

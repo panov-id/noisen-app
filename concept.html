@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-large="0">
+<html lang="en" data-theme="dark" data-large="0">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -891,15 +891,26 @@ function resize() {
 resize();
 addEventListener('resize', resize);
 
+// ── Settings persistence ──────────────────────────────────────
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem('noisen-settings') || '{}'); } catch { return {}; }
+}
+function saveSettings(patch) {
+  const current = loadSettings();
+  localStorage.setItem('noisen-settings', JSON.stringify({ ...current, ...patch }));
+}
+
 // ── Theme ────────────────────────────────────────────────────
-let isDark = false;
-function applyTheme(dark) {
+let isDark = true;
+function applyTheme(dark, persist = true) {
   isDark = dark;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   document.getElementById('ti-light').style.display = dark ? 'none' : '';
   document.getElementById('ti-dark').style.display  = dark ? '' : 'none';
+  if (persist) saveSettings({ theme: dark ? 'dark' : 'light' });
 }
-applyTheme(false);
+const savedTheme = loadSettings().theme;
+applyTheme(savedTheme ? savedTheme === 'dark' : true, false);
 document.getElementById('theme-toggle').addEventListener('click', () => applyTheme(!isDark));
 
 // reset view button — animates smoothly to origin
@@ -1347,11 +1358,14 @@ document.getElementById('preset-share-current-btn').addEventListener('click', ()
   }
 })();
 
-let largeText = false;
+let largeText = loadSettings().largeText === true;
+document.documentElement.dataset.large = largeText ? '1' : '0';
+document.getElementById('large-toggle').classList.toggle('active', largeText);
 document.getElementById('large-toggle').addEventListener('click', () => {
   largeText = !largeText;
   document.documentElement.dataset.large = largeText ? '1' : '0';
   document.getElementById('large-toggle').classList.toggle('active', largeText);
+  saveSettings({ largeText });
 });
 
 // ── PWA ──────────────────────────────────────────────────────
@@ -1418,6 +1432,7 @@ document.getElementById('vol').addEventListener('input', e => {
   masterVolume = v / 100; masterGain.gain.rampTo(masterVolume, .05);
   document.getElementById('gv-vol-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
+  saveSettings({ vol: v });
 });
 document.getElementById('grav').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
@@ -1425,19 +1440,34 @@ document.getElementById('grav').addEventListener('input', e => {
   document.getElementById('gv-grav-val').textContent = `${v}%`;
   document.getElementById('an-grav').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
+  saveSettings({ grav: v });
 });
 document.getElementById('tone').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
   masterTone = v / 100; masterFilter.frequency.rampTo(toneHz(masterTone), .1);
   document.getElementById('gv-tone-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
+  saveSettings({ tone: v });
 });
 document.getElementById('spread').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
   waveSpread = v / 100;
   document.getElementById('gv-spread-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
+  saveSettings({ spread: v });
 });
+
+// restore saved global params on startup
+(function restoreSettings() {
+  const s = loadSettings();
+  const vol    = s.vol    ?? 70;
+  const grav   = s.grav   ?? 50;
+  const tone   = s.tone   ?? 60;
+  const spread = s.spread ?? 40;
+  if (s.vol !== undefined || s.grav !== undefined || s.tone !== undefined || s.spread !== undefined) {
+    applyGlobal({ vol, grav, tone, spread });
+  }
+})();
 
 // ── State ─────────────────────────────────────────────────────
 let nodes = [], ripples = [];
