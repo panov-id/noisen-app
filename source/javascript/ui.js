@@ -300,6 +300,14 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '1.9': {
+    title: 'UI polish + modular codebase',
+    items: [
+      { section: 'Typography', changes: ['All text now scales with the large/small text toggle — modals, overlays, wizard, presets, node panel'] },
+      { section: 'Mobile panel', changes: ['Node parameter cards can be collapsed with a chevron button — panel shrinks to header + info strip'] },
+      { section: 'Under the hood', changes: ['Codebase split into ES modules: store, audio, canvas, ui, main', 'Vite build pipeline — source/ → dist/ via Docker'] },
+    ],
+  },
   '1.8': {
     title: 'ADSR envelope per node',
     items: [
