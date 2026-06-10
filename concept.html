@@ -76,9 +76,12 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   padding:0 16px; background:var(--bg2); border-bottom:1px solid var(--border);
   backdrop-filter:blur(24px); z-index:30;
 }
+#topbar-left { display:flex; align-items:center; gap:10px; }
 #app-name { font-size:12px; letter-spacing:.2em; color:var(--text); opacity:.55; }
 .topbar-right { display:flex; align-items:center; gap:6px; }
 #topbar-buttons { display:flex; align-items:center; gap:6px; }
+#donate-btn { color:var(--text-dim); }
+#donate-btn:hover { color:#e0476a; border-color:#e0476a; background:rgba(224,71,106,.1); }
 .topbar-sep { width:1px; height:30px; background:var(--border); margin:0 4px; flex-shrink:0; }
 .icon-btn {
   width:48px; height:48px; border-radius:10px;
@@ -155,8 +158,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 .an-item {
   display:flex; flex-direction:column; gap:1px; min-width:0;
 }
-.an-label { font-size:8px; text-transform:uppercase; letter-spacing:.14em; color:var(--text-faint); }
-.an-value { font-size:11px; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.an-label { font-size:9px; text-transform:uppercase; letter-spacing:.14em; color:var(--text-faint); }
+.an-value { font-size:13px; color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .an-sep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
 
 /* spectrum / ЧКХ canvas */
@@ -242,8 +245,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 .ni-item {
   display:flex; gap:4px; align-items:baseline;
 }
-.ni-label { font-size:8px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-faint); }
-.ni-value { font-size:11px; color:var(--text); font-variant-numeric:tabular-nums; }
+.ni-label { font-size:9px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-faint); }
+.ni-value { font-size:13px; color:var(--text); font-variant-numeric:tabular-nums; }
 
 /* node cards row */
 #node-cards {
@@ -266,14 +269,14 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 .card-top { display:flex; align-items:center; justify-content:space-between; }
 .card-icon { color:var(--text-dim); display:flex; align-items:center; }
-.card-icon svg { width:13px; height:13px; }
+.card-icon svg { width:15px; height:15px; }
 .card-val {
-  font-size:11px; color:var(--card-accent, var(--text));
+  font-size:13px; color:var(--card-accent, var(--text));
   font-variant-numeric:tabular-nums; font-weight:500;
 }
 .card-slider {
   -webkit-appearance:none; appearance:none;
-  width:100%; height:3px; border-radius:2px; border:none;
+  width:100%; height:4px; border-radius:2px; border:none;
   outline:none; cursor:pointer; touch-action:none;
   background:linear-gradient(to right,
     var(--card-accent, var(--thumb)) 0%,
@@ -282,14 +285,14 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   );
 }
 .card-slider::-webkit-slider-thumb {
-  -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
   background:var(--card-accent, var(--thumb)); box-shadow:0 1px 5px rgba(0,0,0,.2); cursor:pointer;
 }
 .card-slider::-moz-range-thumb {
-  width:15px; height:15px; border-radius:50%; border:none;
+  width:18px; height:18px; border-radius:50%; border:none;
   background:var(--card-accent, var(--thumb)); cursor:pointer;
 }
-.card-label { font-size:8px; text-transform:uppercase; letter-spacing:.13em; color:var(--text-faint); }
+.card-label { font-size:10px; text-transform:uppercase; letter-spacing:.13em; color:var(--text-faint); }
 
 /* ── onboarding wizard ────────────────────────────────────── */
 #wizard {
@@ -596,7 +599,6 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #topbar { padding: 0 8px; }
   /* on mobile: hide all topbar buttons, show hamburger instead */
   #topbar { padding: 0 10px; }
-  #version-btn { display: none; }
   .topbar-right { gap: 6px; }
   #topbar-buttons { display: none; }
   #hamburger-btn { display: flex; }
@@ -704,10 +706,16 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 <!-- top bar -->
 <div id="topbar">
-  <div id="app-name">NOISEN</div>
-  <button id="version-btn" data-tip="Version" data-tip-desc="Show changelog"></button>
+  <div id="topbar-left">
+    <div id="app-name">NOISEN</div>
+    <button id="version-btn" data-tip="Version" data-tip-desc="Show changelog"></button>
+  </div>
   <div class="topbar-right">
     <div id="topbar-buttons">
+      <a id="donate-btn" href="https://www.paypal.com/donate?business=ev.panov%40gmail.com&currency_code=USD"
+         target="_blank" rel="noopener" class="icon-btn" data-tip="Donate" data-tip-desc="Support Noisen via PayPal">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </a>
       <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
          class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
@@ -787,6 +795,10 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 <!-- hamburger dropdown (mobile) -->
 <div id="topbar-dropdown">
+  <a href="https://www.paypal.com/donate?business=ev.panov%40gmail.com&currency_code=USD"
+     target="_blank" rel="noopener" class="icon-btn" data-tip="Donate" data-tip-desc="Support Noisen via PayPal">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+  </a>
   <a href="https://github.com/panov-id/noisen-app" target="_blank" rel="noopener"
      class="icon-btn" data-tip="Source code" data-tip-desc="Open repository on GitHub">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.746 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
