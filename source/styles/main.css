@@ -2,12 +2,12 @@
 :root {
   --bg:         #f0ede8;
   --bg2:        rgba(240,237,232,0.93);
-  --border:     rgba(40,35,30,0.11);
-  --text:       rgba(40,35,30,0.85);
-  --text-dim:   rgba(40,35,30,0.42);
-  --text-faint: rgba(40,35,30,0.24);
-  --thumb:      rgba(40,35,30,0.72);
-  --track:      rgba(40,35,30,0.14);
+  --border:     rgba(40,35,30,0.16);
+  --text:       rgba(40,35,30,0.92);
+  --text-dim:   rgba(40,35,30,0.60);
+  --text-faint: rgba(40,35,30,0.36);
+  --thumb:      rgba(40,35,30,0.78);
+  --track:      rgba(40,35,30,0.16);
   --shadow:     rgba(0,0,0,0.10);
   --accent:     rgb(50,110,220);
   --accent-dim: rgba(50,110,220,0.14);
@@ -16,15 +16,15 @@
 [data-theme="dark"] {
   --bg:         #08080e;
   --bg2:        rgba(11,11,20,0.94);
-  --border:     rgba(255,255,255,0.08);
-  --text:       rgba(255,255,255,0.83);
-  --text-dim:   rgba(255,255,255,0.36);
-  --text-faint: rgba(255,255,255,0.16);
-  --thumb:      rgba(255,255,255,0.80);
-  --track:      rgba(255,255,255,0.12);
+  --border:     rgba(255,255,255,0.13);
+  --text:       rgba(255,255,255,0.92);
+  --text-dim:   rgba(255,255,255,0.58);
+  --text-faint: rgba(255,255,255,0.32);
+  --thumb:      rgba(255,255,255,0.85);
+  --track:      rgba(255,255,255,0.16);
   --shadow:     rgba(0,0,0,0.45);
   --accent:     rgb(90,162,255);
-  --accent-dim: rgba(90,162,255,0.14);
+  --accent-dim: rgba(90,162,255,0.16);
   --spec-bg:    rgba(255,255,255,0.04);
 }
 [data-large="1"] {
