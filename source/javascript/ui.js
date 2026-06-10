@@ -2,6 +2,7 @@
 
 import {
   state, APP_VERSION, TYPES, TYPE_DEFAULTS, WAVE_ICONS, PARAM_ICONS,
+  ORBIT_TARGETS, ORBIT_DEFAULTS,
   saveSettings, loadSettings,
 } from './store.js';
 import {
@@ -9,6 +10,7 @@ import {
   createAudio, destroyAudio, updateAudio, rebuildAudio,
   masterGain, masterFilter, masterReverb, masterDelay, locut, hiCut,
   locutHz, hicutHz, decaySeconds, delayMilliseconds, toneHz,
+  syncOrbitLFO,
 } from './audio.js';
 
 // ── Format helpers ────────────────────────────────────────────
@@ -175,6 +177,99 @@ export function buildNodeCards(node) {
     0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); }));
   nodeCards.appendChild(mkC('nwet','nwet','Dly Wet','Node delay wet','Local echo mix',
     0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
+
+  // ── Orbit section ─────────────────────────────────────────
+  const orbitSection = document.createElement('div');
+  orbitSection.className = 'orbit-section';
+  orbitSection.innerHTML = `<div class="orbit-section-header">
+    <span class="orbit-section-title">Orbits</span>
+    <button class="orbit-add-btn" ${(node.orbits?.length ?? 0) >= 3 ? 'disabled' : ''}>+ Add</button>
+  </div>`;
+
+  if (!node.orbits) node.orbits = [];
+
+  const renderOrbitCards = () => {
+    const existing = orbitSection.querySelector('.orbit-cards');
+    if (existing) existing.remove();
+    const container = document.createElement('div');
+    container.className = 'orbit-cards';
+    node.orbits.forEach((orbit, index) => {
+      const colors = ['#78c8ff', '#ffb450', '#8cffa0'];
+      const card = document.createElement('div');
+      card.className = 'orbit-card';
+      card.style.setProperty('--orbit-color', colors[index % colors.length]);
+      card.innerHTML = `
+        <div class="orbit-card-header">
+          <span class="orbit-dot" style="background:${colors[index % colors.length]}"></span>
+          <div class="orbit-target-btns">
+            ${ORBIT_TARGETS.map(t => `<button class="orbit-target-btn ${orbit.target === t.id ? 'active' : ''}" data-target="${t.id}">${t.label}</button>`).join('')}
+          </div>
+          <button class="orbit-toggle ${orbit.enabled ? 'on' : ''}" title="Enable/disable">${orbit.enabled ? '●' : '○'}</button>
+          <button class="orbit-remove-btn" title="Remove">✕</button>
+        </div>
+        <div class="orbit-sliders">
+          <div class="orbit-slider-row">
+            <span class="orbit-slider-label">Rate</span>
+            <input type="range" class="card-slider orbit-rate" min="0.02" max="2" step="0.01" value="${orbit.rate}" style="--pct:${((orbit.rate - 0.02) / 1.98 * 100).toFixed(1)}%">
+            <span class="orbit-slider-val orbit-rate-val">${orbit.rate.toFixed(2)}Hz</span>
+          </div>
+          <div class="orbit-slider-row">
+            <span class="orbit-slider-label">Depth</span>
+            <input type="range" class="card-slider orbit-depth" min="0" max="100" step="1" value="${orbit.depth}" style="--pct:${orbit.depth}%">
+            <span class="orbit-slider-val orbit-depth-val">${orbit.depth}%</span>
+          </div>
+        </div>`;
+
+      card.querySelector('.orbit-toggle').addEventListener('click', () => {
+        orbit.enabled = !orbit.enabled;
+        syncOrbitLFO(node, index);
+        renderOrbitCards();
+      });
+      card.querySelector('.orbit-remove-btn').addEventListener('click', () => {
+        node.orbits.splice(index, 1);
+        syncOrbitLFO(node, index);
+        orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+        renderOrbitCards();
+      });
+      card.querySelectorAll('.orbit-target-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          orbit.target = btn.dataset.target;
+          syncOrbitLFO(node, index);
+          card.querySelectorAll('.orbit-target-btn').forEach(b => b.classList.toggle('active', b.dataset.target === orbit.target));
+        });
+      });
+      card.querySelector('.orbit-rate').addEventListener('input', e => {
+        orbit.rate = parseFloat(e.target.value);
+        card.querySelector('.orbit-rate-val').textContent = `${orbit.rate.toFixed(2)}Hz`;
+        setSliderPct(e.target, orbit.rate, 0.02, 2);
+        syncOrbitLFO(node, index);
+      });
+      card.querySelector('.orbit-depth').addEventListener('input', e => {
+        orbit.depth = parseInt(e.target.value);
+        card.querySelector('.orbit-depth-val').textContent = `${orbit.depth}%`;
+        setSliderPct(e.target, orbit.depth, 0, 100);
+        syncOrbitLFO(node, index);
+      });
+      container.appendChild(card);
+    });
+    orbitSection.appendChild(container);
+  };
+
+  orbitSection.querySelector('.orbit-add-btn').addEventListener('click', () => {
+    if (node.orbits.length >= 3) return;
+    // each new orbit defaults to a different target
+    const usedTargets = node.orbits.map(o => o.target);
+    const available = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
+    const newOrbit = ORBIT_DEFAULTS();
+    if (available) newOrbit.target = available.id;
+    node.orbits.push(newOrbit);
+    syncOrbitLFO(node, node.orbits.length - 1);
+    orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+    renderOrbitCards();
+  });
+
+  renderOrbitCards();
+  nodeCards.appendChild(orbitSection);
 
   nodeCards.querySelectorAll('.param-card').forEach(c => {
     c.style.setProperty('--card-accent',     color);

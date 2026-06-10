@@ -214,6 +214,61 @@ export function drawNode(node, time) {
   context.fill();
 }
 
+// ── Orbit rings + dots ────────────────────────────────────────
+// Orbits are drawn in world space (canvas is already scaled by zoom).
+// Each orbit is a dashed ring + moving dot; dot angle = LFO phase derived
+// from wall clock so it's smooth without needing audio API access.
+const ORBIT_COLORS = [
+  [120, 200, 255],  // blue-ish
+  [255, 180,  80],  // amber
+  [140, 255, 160],  // green
+];
+const ORBIT_RADII_OFFSET = [18, 30, 42]; // world-px offset from node edge
+
+export function drawOrbits(node, time) {
+  if (!node.orbits?.length) return;
+  const R = nodeRadius(node);
+  const [nr, ng, nb] = TYPES[node.type].rgb;
+
+  for (let i = 0; i < node.orbits.length; i++) {
+    const orbit = node.orbits[i];
+    if (!orbit.enabled) continue;
+    const [cr, cg, cb] = ORBIT_COLORS[i % ORBIT_COLORS.length];
+    const orbitR = R + ORBIT_RADII_OFFSET[i];
+    const alpha  = node.muted ? 0.10 : 0.22;
+
+    // dashed ring
+    context.beginPath();
+    context.arc(node.x, node.y, orbitR, 0, Math.PI * 2);
+    context.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+    context.lineWidth   = 0.8;
+    context.setLineDash([3, 5]);
+    context.stroke();
+    context.setLineDash([]);
+
+    // moving dot — angle from wall clock * rate (Hz) * 2π
+    const angle = (time * 0.001 * orbit.rate * Math.PI * 2) % (Math.PI * 2);
+    const dotX  = node.x + Math.cos(angle) * orbitR;
+    const dotY  = node.y + Math.sin(angle) * orbitR;
+    const dotAlpha = node.muted ? 0.18 : 0.75;
+    context.beginPath();
+    context.arc(dotX, dotY, 2.8, 0, Math.PI * 2);
+    context.fillStyle = `rgba(${cr},${cg},${cb},${dotAlpha})`;
+    context.shadowColor = `rgba(${cr},${cg},${cb},0.6)`;
+    context.shadowBlur  = 6;
+    context.fill();
+    context.shadowBlur  = 0;
+
+    // depth arc — shows modulation depth as a short arc segment
+    const depthAngle = (orbit.depth / 100) * Math.PI;
+    context.beginPath();
+    context.arc(node.x, node.y, orbitR, angle - depthAngle / 2, angle + depthAngle / 2);
+    context.strokeStyle = `rgba(${cr},${cg},${cb},${alpha * 1.8})`;
+    context.lineWidth   = 1.5;
+    context.stroke();
+  }
+}
+
 // ── Grid background ───────────────────────────────────────────
 export function drawGrid() {
   const worldStep  = 120;

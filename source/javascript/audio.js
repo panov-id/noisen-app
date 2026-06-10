@@ -3,6 +3,74 @@
 
 import { state, TYPES, TYPE_DEFAULTS, WORLD_WIDTH, NODE_MIN_R, NODE_MAX_R } from './store.js';
 
+// ── Orbit LFO helpers ─────────────────────────────────────────
+// Each orbit modulates one audio parameter via a sine LFO.
+// LFO output range is computed relative to the current param value.
+
+function createOrbitLFO(orbit, node) {
+  const audio = node.audio;
+  if (!audio) return null;
+  const { target, rate, depth } = orbit;
+  const d = depth / 100;
+  let lfo;
+
+  if (target === 'filter') {
+    const base = filterFromNorm(node.filterNorm ?? 0.5);
+    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: base * Math.pow(2, -d * 2), max: base * Math.pow(2, d * 2) });
+    lfo.connect(audio.filter.frequency);
+  } else if (target === 'pan') {
+    const base = effectivePan(node);
+    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: Math.max(-1, base - d), max: Math.min(1, base + d) });
+    lfo.connect(audio.panner.pan);
+  } else if (target === 'volume') {
+    const base = node.volume * 0.28;
+    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: base * (1 - d * 0.9), max: base });
+    lfo.connect(audio.gain.gain);
+  } else if (target === 'delay') {
+    lfo = new Tone.LFO({ type: 'sine', frequency: rate, min: 0, max: d });
+    lfo.connect(audio.nodeDelay.wet);
+  }
+
+  if (lfo && state.isPlaying && orbit.enabled) lfo.start();
+  return lfo;
+}
+
+export function createOrbitLFOs(node) {
+  if (!node.audio || !node.orbits?.length) return;
+  node.audio.orbitLFOs = (node.orbits).map(orbit =>
+    orbit.enabled ? createOrbitLFO(orbit, node) : null
+  );
+}
+
+export function destroyOrbitLFOs(node) {
+  if (!node.audio?.orbitLFOs) return;
+  for (const lfo of node.audio.orbitLFOs) {
+    try { lfo?.stop(); lfo?.disconnect(); } catch {}
+  }
+  node.audio.orbitLFOs = [];
+}
+
+export function syncOrbitLFO(node, index) {
+  if (!node.audio) return;
+  if (!node.audio.orbitLFOs) node.audio.orbitLFOs = [];
+  const old = node.audio.orbitLFOs[index];
+  try { old?.stop(); old?.disconnect(); } catch {}
+  const orbit = node.orbits?.[index];
+  node.audio.orbitLFOs[index] = (orbit?.enabled) ? createOrbitLFO(orbit, node) : null;
+}
+
+export function startOrbitLFOs(node) {
+  for (const lfo of node.audio?.orbitLFOs ?? []) {
+    try { lfo?.start(); } catch {}
+  }
+}
+
+export function stopOrbitLFOs(node) {
+  for (const lfo of node.audio?.orbitLFOs ?? []) {
+    try { lfo?.stop(); } catch {}
+  }
+}
+
 // ── Frequency / filter math ───────────────────────────────────
 // World X = 0 → 8Hz, world X = WORLD_WIDTH → ~40kHz; scale is zoom/resize invariant
 export function freqFromX(worldX) {
@@ -134,12 +202,13 @@ export function createAudio(node) {
   analyser.smoothing = 0.8;
   panner.connect(analyser);
 
-  node.audio = { source, gain, envelope, filter, nodeDelay, panner, vibrato, reverbSend, delaySend, analyser };
+  node.audio = { source, gain, envelope, filter, nodeDelay, panner, vibrato, reverbSend, delaySend, analyser, orbitLFOs: [] };
 
   if (state.isPlaying) {
     source.start?.();
     if (!node.muted) envelope.triggerAttack();
   }
+  createOrbitLFOs(node);
 }
 
 export function destroyAudio(node) {
@@ -148,6 +217,7 @@ export function destroyAudio(node) {
   node.audio = null;
   const releaseMs = Math.min(((node.release ?? 0.8) + 0.1) * 1000, 3000);
   try { audio.envelope.triggerRelease(); } catch {}
+  for (const lfo of audio.orbitLFOs ?? []) { try { lfo?.stop(); lfo?.disconnect(); } catch {} }
   setTimeout(() => {
     try { audio.source.stop?.(); } catch {}
     [audio.vibrato, audio.source, audio.gain, audio.filter, audio.envelope,
@@ -189,6 +259,7 @@ export function startAll() {
     if (node.audio) {
       node.audio.source.start?.();
       if (!node.muted) node.audio.envelope.triggerAttack();
+      startOrbitLFOs(node);
     } else {
       createAudio(node);
     }
@@ -197,7 +268,10 @@ export function startAll() {
 
 export function stopAll() {
   for (const node of state.nodes) {
-    if (node.audio) node.audio.envelope.triggerRelease();
+    if (node.audio) {
+      node.audio.envelope.triggerRelease();
+      stopOrbitLFOs(node);
+    }
   }
 }
 

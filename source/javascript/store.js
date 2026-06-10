@@ -26,6 +26,15 @@ export const WAVE_ICONS = {
   noise:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 L3.5 8 L5 15 L6.5 9 L8 13 L9.5 7 L11 14 L12 10 L13 13 L14.5 9 L16 15 L17.5 8 L19 12 L20.5 10 L22 12"/></svg>`,
 };
 
+export const ORBIT_TARGETS = [
+  { id: 'filter', label: 'Filter' },
+  { id: 'pan',    label: 'Pan'    },
+  { id: 'volume', label: 'Vol'    },
+  { id: 'delay',  label: 'Delay'  },
+];
+
+export const ORBIT_DEFAULTS = () => ({ target: 'filter', rate: 0.2, depth: 40, enabled: true });
+
 export const PARAM_ICONS = {
   vol:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`,
   pan:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 12h8M4 8l4 4-4 4M20 8l-4 4 4 4"/></svg>`,

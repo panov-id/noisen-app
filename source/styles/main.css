@@ -711,3 +711,74 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   background:var(--card-accent, var(--accent));
   border-color:var(--card-accent, var(--accent)); color:#fff;
 }
+
+/* ── Orbit controls ───────────────────────────────────────────── */
+.orbit-section {
+  width: 100%; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 8px 14px 10px;
+}
+.orbit-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.orbit-section-title {
+  font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.orbit-add-btn {
+  font-size: var(--fs-xs); color: var(--accent); background: var(--accent-dim);
+  border: 1px solid transparent; border-radius: 6px;
+  padding: 2px 10px; cursor: pointer; font-family: inherit;
+  transition: all .12s;
+}
+.orbit-add-btn:hover:not(:disabled) { border-color: var(--accent); }
+.orbit-add-btn:disabled { opacity: .35; cursor: default; }
+.orbit-cards { display: flex; flex-direction: column; gap: 6px; }
+.orbit-card {
+  border: 1px solid color-mix(in srgb, var(--orbit-color) 30%, var(--border));
+  border-radius: 9px; padding: 7px 10px 8px;
+  background: color-mix(in srgb, var(--orbit-color) 5%, transparent);
+}
+.orbit-card-header {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+}
+.orbit-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 5px currentcolor;
+}
+.orbit-target-btns { display: flex; gap: 3px; flex: 1; }
+.orbit-target-btn {
+  flex: 1; padding: 2px 0; border-radius: 4px;
+  font-size: var(--card-label-fs); font-family: inherit;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-dim); cursor: pointer; transition: all .1s;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.orbit-target-btn.active {
+  background: color-mix(in srgb, var(--orbit-color) 20%, transparent);
+  border-color: var(--orbit-color); color: var(--text);
+}
+.orbit-toggle {
+  font-size: 12px; background: none; border: none;
+  color: var(--text-faint); cursor: pointer; padding: 0 2px;
+  transition: color .12s;
+}
+.orbit-toggle.on { color: var(--orbit-color); }
+.orbit-remove-btn {
+  font-size: 10px; background: none; border: none;
+  color: var(--text-faint); cursor: pointer; padding: 0 2px;
+  transition: color .12s;
+}
+.orbit-remove-btn:hover { color: #e03030; }
+.orbit-sliders { display: flex; flex-direction: column; gap: 5px; }
+.orbit-slider-row { display: flex; align-items: center; gap: 6px; }
+.orbit-slider-label {
+  font-size: var(--card-label-fs); color: var(--text-dim);
+  min-width: 34px; text-transform: uppercase; letter-spacing: .06em;
+}
+.orbit-slider-val {
+  font-size: var(--card-val-fs); color: var(--text);
+  min-width: 44px; text-align: right; font-variant-numeric: tabular-nums;
+}
+.orbit-slider-row .card-slider { flex: 1; }

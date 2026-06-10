@@ -10,6 +10,7 @@ import {
   toneHz, locutHz, hicutHz,
   createAudio, destroyAudio, updateAudio, rebuildAudio,
   startAll, stopAll,
+  syncOrbitLFO, createOrbitLFOs,
   masterGain, masterFilter, masterReverb, masterDelay, locut, hiCut,
   masterRecorder,
 } from './audio.js';
@@ -18,7 +19,7 @@ import {
   canvas, context,
   screenToWorld, worldToScreen, applyZoom, computeFilterNorm,
   hitTest, spawnRipple, rippleInterval,
-  drawNodeWaves, drawLinks, drawRipples, drawNode,
+  drawNodeWaves, drawLinks, drawRipples, drawNode, drawOrbits,
   drawGrid, drawViewIndicator,
   drawSpectrum, resizeSpectrumCanvas,
   setFrameBudget,
@@ -624,6 +625,7 @@ function loop(time = 0) {
   for (const node of state.nodes) if (!node.muted) drawNodeWaves(node, time);
   drawLinks();
   drawRipples();
+  for (const node of state.nodes) drawOrbits(node, time);
   for (const node of state.nodes) drawNode(node, time);
   context.restore();
 
