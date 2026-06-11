@@ -17,7 +17,7 @@ import {
 
 import {
   canvas, context,
-  screenToWorld, worldToScreen, applyZoom, computeFilterNorm,
+  screenToWorld, worldToScreen, applyZoom, computeFilterNorm, toCanvasCoords,
   hitTest, spawnRipple, rippleInterval,
   drawNodeWaves, drawLinks, drawRipples, drawNode, drawOrbits,
   drawGrid, drawViewIndicator,
@@ -87,14 +87,26 @@ fullscreenBtn.addEventListener('click', () => {
 document.addEventListener('fullscreenchange', updateFullscreenIcon);
 
 // ── Canvas resize ─────────────────────────────────────────────
+let canvasInitialized = false;
+
 function resize() {
   const viewportWidth  = window.visualViewport?.width  ?? innerWidth;
   const viewportHeight = window.visualViewport?.height ?? innerHeight;
-  canvas.width  = viewportWidth;
-  canvas.height = viewportHeight;
-  state.panelHeight = document.getElementById('bottom').offsetHeight || 240;
-  // Nodes stay in world coordinates — no position remap on resize.
-  // filterNorm is recalculated from world Y via WORLD_HEIGHT (consistent with gravity loop).
+
+  // Fix canvas pixel size on first call — never resize after that.
+  // CSS (position:fixed; inset:0) scales it to fill the viewport.
+  // All event coords are remapped via toCanvasCoords() in canvas.js.
+  if (!canvasInitialized) {
+    canvas.width  = viewportWidth;
+    canvas.height = viewportHeight;
+    canvasInitialized = true;
+  }
+
+  // panelHeight in canvas pixels (may differ from CSS pixels after orientation change)
+  const rect = canvas.getBoundingClientRect();
+  const scaleY = canvas.height / (rect.height || viewportHeight);
+  state.panelHeight = (document.getElementById('bottom').offsetHeight || 240) * scaleY;
+
   for (const node of state.nodes) {
     node.filterNorm = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / WORLD_HEIGHT));
   }
@@ -618,8 +630,22 @@ function setupMediaSession(playing) {
   navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
 }
 
+// When the tab is hidden, rAF pauses — run comet physics via setInterval so comets keep moving.
+let hiddenCometInterval = null;
 document.addEventListener('visibilitychange', () => {
   if (state.isPlaying) Tone.context.resume();
+  if (document.hidden) {
+    if (!hiddenCometInterval) {
+      let lastHiddenTime = performance.now();
+      hiddenCometInterval = setInterval(() => {
+        const now = performance.now();
+        updateComets(now);
+        lastHiddenTime = now;
+      }, 33); // ~30fps
+    }
+  } else {
+    if (hiddenCometInterval) { clearInterval(hiddenCometInterval); hiddenCometInterval = null; }
+  }
 });
 
 playBtn.addEventListener('click', async () => {
@@ -1635,7 +1661,8 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   if (e.button === 2) return;
-  if (e.clientY < TOP_H || e.clientY > canvas.height - state.panelHeight) return;
+  const { y: pdownCanvasY } = toCanvasCoords(e.clientX, e.clientY);
+  if (pdownCanvasY < TOP_H || pdownCanvasY > canvas.height - state.panelHeight) return;
 
   // comet move-center mode: next tap relocates orbit center
   if (cometMoveMode) {
@@ -1729,7 +1756,8 @@ canvas.addEventListener('pointerup', e => {
   if (dragNode) {
     // node position already updated during move
   } else if (isPanning) {
-    if (!didDrag && dt < 350 && e.clientY > TOP_H && e.clientY < canvas.height - state.panelHeight) {
+    const { y: pupCanvasY } = toCanvasCoords(e.clientX, e.clientY);
+    if (!didDrag && dt < 350 && pupCanvasY > TOP_H && pupCanvasY < canvas.height - state.panelHeight) {
       const world = screenToWorld(e.clientX, e.clientY);
       addNode(world.x, world.y, computeFilterNorm(e.clientY));
     }

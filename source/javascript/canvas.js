@@ -13,25 +13,40 @@ export const canvas = document.getElementById('main');
 export const context = canvas.getContext('2d');
 
 // ── Viewport math ─────────────────────────────────────────────
-export function screenToWorld(screenX, screenY) {
-  return { x: screenX / state.zoom + state.viewX, y: screenY / state.zoom + state.viewY };
+
+// Convert viewport (CSS pixel) coords to canvas pixel coords.
+// Needed because canvas.width/height may differ from CSS size (fixed canvas scaled by browser).
+export function toCanvasCoords(viewportX, viewportY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (viewportX - rect.left) * (canvas.width  / rect.width),
+    y: (viewportY - rect.top)  * (canvas.height / rect.height),
+  };
+}
+
+export function screenToWorld(viewportX, viewportY) {
+  const { x: cx, y: cy } = toCanvasCoords(viewportX, viewportY);
+  return { x: cx / state.zoom + state.viewX, y: cy / state.zoom + state.viewY };
 }
 
 export function worldToScreen(worldX, worldY) {
   return { x: (worldX - state.viewX) * state.zoom, y: (worldY - state.viewY) * state.zoom };
 }
 
-export function applyZoom(newZoom, pivotScreenX, pivotScreenY) {
+export function applyZoom(newZoom, pivotViewportX, pivotViewportY) {
   newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
-  const worldX = pivotScreenX / state.zoom + state.viewX;
-  const worldY = pivotScreenY / state.zoom + state.viewY;
+  const { x: cx, y: cy } = toCanvasCoords(pivotViewportX, pivotViewportY);
+  const worldX = cx / state.zoom + state.viewX;
+  const worldY = cy / state.zoom + state.viewY;
   state.zoom = newZoom;
-  state.viewX = worldX - pivotScreenX / state.zoom;
-  state.viewY = worldY - pivotScreenY / state.zoom;
+  state.viewX = worldX - cx / state.zoom;
+  state.viewY = worldY - cy / state.zoom;
 }
 
-export function computeFilterNorm(screenY) {
-  return Math.max(0, Math.min(1, (screenY - TOP_H) / (canvas.height - state.panelHeight - TOP_H)));
+export function computeFilterNorm(viewportY) {
+  const rect = canvas.getBoundingClientRect();
+  const cy = (viewportY - rect.top) * (canvas.height / rect.height);
+  return Math.max(0, Math.min(1, (cy - TOP_H) / (canvas.height - state.panelHeight - TOP_H)));
 }
 
 // ── Hit testing ───────────────────────────────────────────────
