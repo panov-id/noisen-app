@@ -9,9 +9,9 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 
 | # | Status | Area | Description |
 |---|---|---|---|
-| B-01 | planned | Audio | Crackling/clicks on drum hits — shared synth pan changes cause discontinuities |
-| B-02 | planned | Audio | Filter frequency changes when screen size / orientation changes — filterNorm tied to canvas.height |
-| B-03 | planned | Interface | Portrait mode: too many text labels in topbar and node panel — needs icon-only layout |
+| B-01 | done | Audio | Crackling/clicks on drum hits — shared synth pan changes cause discontinuities |
+| B-02 | done | Audio | Filter frequency changes when screen size / orientation changes — filterNorm tied to canvas.height |
+| B-03 | done | Interface | Portrait mode: too many text labels in topbar and node panel — needs icon-only layout |
 
 ---
 
@@ -19,9 +19,9 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 
 | # | Status | Area | Description |
 |---|---|---|---|
-| F-01 | planned | Infrastructure | GitHub Actions CI/CD — auto-deploy UAT on push to main, production on tag |
-| F-02 | planned | Testing | Interface responsiveness tests — portrait / landscape panel layout |
-| F-03 | planned | Testing | Audio filter stability test — place node, resize viewport, assert filterNorm unchanged |
+| F-01 | done | Infrastructure | GitHub Actions CI/CD — auto-deploy UAT on push to main, production on tag |
+| F-02 | done | Testing | Interface responsiveness tests — portrait / landscape panel layout |
+| F-03 | done | Testing | Audio filter stability test — place node, resize viewport, assert filterNorm unchanged |
 | F-04 | planned | Testing | Node interaction tests — drag, step toggle, orbit enable |
 | F-05 | planned | Beat mode | Swing / groove — per-step timing offset (0–50%) |
 | F-06 | planned | Beat mode | Mute per step — hold step to cycle off / soft / on |
@@ -32,6 +32,14 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 ---
 
 ## Done (by version)
+
+### v3.1 — CI/CD + stability fixes
+- GitHub Actions: UAT deploy on push to main, production deploy on git tag (F-01)
+- filterNorm screen-size independence: WORLD_HEIGHT=1080 constant, resize() resyncs node.y from filterNorm (B-02)
+- Audio crackling fix: fast-attack Compressor before Limiter, drum volume via setValueAtTime (B-01)
+- Portrait mode: topbar collapses to logo mark, card labels hidden at ≤480px (B-03)
+- Responsiveness tests: portrait/landscape layout, filter stability across resize (F-02, F-03)
+- qrcode pre-bundled as IIFE vendor script — Rollup no longer tries to resolve CJS package
 
 ### v3.0 — Beat mode drum sequencer
 - Beat mode (♩ button) with BPM-locked Transport
