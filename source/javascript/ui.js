@@ -146,7 +146,7 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
   orbitSection.className = 'orbit-section';
   orbitSection.innerHTML = `<div class="orbit-section-header">
     <span class="orbit-section-title">Orbits</span>
-    <button class="orbit-add-btn" ${(node.orbits?.length ?? 0) >= 3 ? 'disabled' : ''}>+ Add</button>
+    <button class="orbit-add-btn" ${(node.orbits?.length ?? 0) >= 5 ? 'disabled' : ''}>+ Add</button>
   </div>`;
   if (!node.orbits) node.orbits = [];
 
@@ -195,7 +195,7 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
       card.querySelector('.orbit-remove-btn').addEventListener('click', () => {
         node.orbits.splice(index, 1);
         syncFn(index);
-        orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+        orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 5;
         renderOrbitCards();
       });
       card.querySelectorAll('.orbit-target-btn').forEach(btn => {
@@ -223,16 +223,18 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
   };
 
   orbitSection.querySelector('.orbit-add-btn').addEventListener('click', () => {
-    if (node.orbits.length >= 3) return;
+    if (node.orbits.length >= 5) return;
     const usedTargets = node.orbits.map(o => o.target);
-    const available = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
     const newOrbit = ORBIT_DEFAULTS();
-    newOrbit.target = defaultTarget;
-    if (available && !usedTargets.includes(defaultTarget)) newOrbit.target = defaultTarget;
-    else if (available) newOrbit.target = available.id;
+    if (!usedTargets.includes(defaultTarget)) {
+      newOrbit.target = defaultTarget;
+    } else {
+      const next = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
+      newOrbit.target = next ? next.id : defaultTarget;
+    }
     node.orbits.push(newOrbit);
     syncFn(node.orbits.length - 1);
-    orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
+    orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 5;
     renderOrbitCards();
   });
 
@@ -354,7 +356,8 @@ export function buildNodeCards(node) {
         0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; }));
 
     } else if (activeNodeTab === 'orbits') {
-      buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx), { filter: 'Pitch', delay: 'Decay' }, 'volume');
+      buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx),
+        { filter: 'Pitch', delay: 'Decay', 'delay-time': 'Dly Snd', attack: '—', release: '—' }, 'volume');
     }
 
     nodeCards.querySelectorAll('.param-card').forEach(c => {

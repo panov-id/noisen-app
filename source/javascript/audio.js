@@ -35,16 +35,31 @@ function createOrbitLFO(orbit, node) {
         return { min: base * (1 - d * 0.9), max: base };
       } else if (target === 'delay') {
         return { min: 0, max: d };
+      } else if (target === 'reverb') {
+        return { min: 0, max: d };
+      } else if (target === 'delay-time') {
+        const base = (node.nodeDelayTime ?? 250) / 1000;
+        return { min: Math.max(0.01, base - d * 0.5), max: Math.min(2, base + d * 0.5) };
+      } else if (target === 'attack') {
+        const base = node.attack ?? 0.3;
+        return { min: Math.max(0.01, base * (1 - d)), max: Math.min(10, base * (1 + d)) };
+      } else if (target === 'release') {
+        const base = node.release ?? 0.8;
+        return { min: Math.max(0.05, base * (1 - d)), max: Math.min(10, base * (1 + d)) };
       }
       return null;
     }
 
     function applyValue(value) {
       try {
-        if (target === 'filter')  audio.filter.frequency.rampTo(value, 0.05);
-        else if (target === 'pan')    audio.panner.pan.rampTo(value, 0.05);
-        else if (target === 'volume') audio.gain.gain.rampTo(value, 0.05);
-        else if (target === 'delay')  audio.nodeDelay.wet.rampTo(value, 0.05);
+        if      (target === 'filter')     audio.filter.frequency.rampTo(value, 0.05);
+        else if (target === 'pan')        audio.panner.pan.rampTo(value, 0.05);
+        else if (target === 'volume')     audio.gain.gain.rampTo(value, 0.05);
+        else if (target === 'delay')      audio.nodeDelay.wet.rampTo(value, 0.05);
+        else if (target === 'reverb')     audio.reverbSend?.gain.rampTo(value, 0.05);
+        else if (target === 'delay-time') audio.nodeDelay.delayTime.rampTo(value, 0.1);
+        else if (target === 'attack')     audio.envelope.set({ attack: value });
+        else if (target === 'release')    audio.envelope.set({ release: value });
       } catch (error) {
         console.error('[orbit] applyValue failed:', error);
       }
@@ -79,10 +94,14 @@ function createOrbitLFO(orbit, node) {
       stop();
       // restore param to static node value so audio continues normally
       try {
-        if (target === 'filter')  audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), 0.1);
-        else if (target === 'pan')    audio.panner.pan.rampTo(effectivePan(node), 0.1);
-        else if (target === 'volume') audio.gain.gain.rampTo(node.volume * 0.28, 0.1);
-        else if (target === 'delay')  audio.nodeDelay.wet.rampTo((node.nodeDelayWet ?? 0) / 100, 0.1);
+        if      (target === 'filter')     audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), 0.1);
+        else if (target === 'pan')        audio.panner.pan.rampTo(effectivePan(node), 0.1);
+        else if (target === 'volume')     audio.gain.gain.rampTo(node.volume * 0.28, 0.1);
+        else if (target === 'delay')      audio.nodeDelay.wet.rampTo((node.nodeDelayWet ?? 0) / 100, 0.1);
+        else if (target === 'reverb')     audio.reverbSend?.gain.rampTo(node.reverbSend ?? 0, 0.1);
+        else if (target === 'delay-time') audio.nodeDelay.delayTime.rampTo((node.nodeDelayTime ?? 250) / 1000, 0.1);
+        else if (target === 'attack')     audio.envelope.set({ attack: node.attack ?? 0.3 });
+        else if (target === 'release')    audio.envelope.set({ release: node.release ?? 0.8 });
       } catch {}
     }
 
@@ -444,6 +463,22 @@ function createDrumOrbitLFO(orbit, node) {
       orbit._baseDecay = base;
       node.typeParams = node.typeParams ?? {};
       node.typeParams.decay = Math.max(0.01, Math.min(2, base + sine * d * base));
+    } else if (target === 'reverb') {
+      if (drumReverbSends?.[node.type]) {
+        const base = orbit._baseReverb ?? (node.reverbSend ?? 0);
+        orbit._baseReverb = base;
+        const val = Math.max(0, Math.min(1, base + sine * d * 0.5));
+        drumReverbSends[node.type].gain.rampTo(val, 0.05);
+      }
+    } else if (target === 'delay-time') {
+      if (drumDelaySends?.[node.type]) {
+        const base = orbit._baseDelayLevel ?? (node.delaySend ?? 0);
+        orbit._baseDelayLevel = base;
+        const val = Math.max(0, Math.min(1, base + sine * d * 0.5));
+        drumDelaySends[node.type].gain.rampTo(val, 0.05);
+      }
+    } else if (target === 'attack' || target === 'release') {
+      // not applicable to drums — no-op
     }
   }, LFO_INTERVAL_MS);
 

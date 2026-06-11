@@ -48,10 +48,14 @@ export const WAVE_ICONS = {
 };
 
 export const ORBIT_TARGETS = [
-  { id: 'filter', label: 'Filter' },
-  { id: 'pan',    label: 'Pan'    },
-  { id: 'volume', label: 'Vol'    },
-  { id: 'delay',  label: 'Delay'  },
+  { id: 'filter',    label: 'Filter'  },
+  { id: 'pan',       label: 'Pan'     },
+  { id: 'volume',    label: 'Vol'     },
+  { id: 'delay',     label: 'Delay'   },
+  { id: 'reverb',    label: 'Reverb'  },
+  { id: 'delay-time',label: 'Dly T'  },
+  { id: 'attack',    label: 'Attack'  },
+  { id: 'release',   label: 'Release' },
 ];
 
 export const ORBIT_DEFAULTS = () => ({ target: 'filter', rate: 0.2, depth: 40, enabled: true });
