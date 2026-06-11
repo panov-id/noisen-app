@@ -87,6 +87,7 @@ export const PARAM_ICONS = {
 // ── Mutable app state ─────────────────────────────────────────
 export const state = {
   nodes: [],
+  comets: [],
   ripples: [],
   selectedNode: null,
   isPlaying: false,

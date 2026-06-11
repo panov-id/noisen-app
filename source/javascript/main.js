@@ -361,6 +361,9 @@ mirrorBtn('version-btn-m',        null, () => showWhatsNew(APP_VERSION));
 mirrorBtn('help-btn-m',           'help-btn');
 mirrorBtn('beat-mode-btn-m',      'beat-mode-btn');
 mirrorBtn('rec-btn-m',            'rec-btn');
+mirrorBtn('comet-btn-m',          'comet-btn');
+
+document.getElementById('comet-btn').addEventListener('click', spawnComet);
 
 // ── Tooltip ───────────────────────────────────────────────────
 document.addEventListener('pointerover',  e => { const el = e.target.closest('[data-tip]'); if (el) showTooltip(el); else hideTooltip(); });
@@ -1198,6 +1201,10 @@ function generateDrumKit() {
   state.nodes = [];
   state.nodeSeq = 0;
 
+  state.bpm = pick([75, 85, 90, 95, 100, 110, 120, 125, 130, 140]);
+  const bpmDisplay = document.getElementById('bpm-display');
+  if (bpmDisplay) bpmDisplay.textContent = `${state.bpm} BPM`;
+
   const style = pick(['four-on-floor', 'breakbeat', 'half-time', 'euclidean', 'sparse', 'dense']);
 
   // Decide composition randomly — each type may appear 0, 1 or 2 times
@@ -1518,6 +1525,154 @@ let gravityFrame = 0;
 let frameBudgetMs = 33;
 const FRAME_TARGET_MS = 33; // ~30fps
 
+// ── Comets ────────────────────────────────────────────────────
+const COMET_COLORS = ['#a8d8ff', '#ffe8a8', '#c8a8ff', '#a8ffd8', '#ffa8c8'];
+const COMET_MAX    = 5;
+const COMET_TRAIL  = 32;
+
+function spawnComet() {
+  if (state.comets.length >= COMET_MAX) {
+    // remove oldest instead of blocking
+    state.comets.shift();
+  }
+  // orbital center: random point in world space near the visible area
+  const vCx = state.viewX + canvas.width  / state.zoom / 2;
+  const vCy = state.viewY + canvas.height / state.zoom / 2;
+  const spread = Math.max(canvas.width, canvas.height) / state.zoom * 0.6;
+  const cx = vCx + (Math.random() - 0.5) * spread;
+  const cy = vCy + (Math.random() - 0.5) * spread;
+
+  const rx = spread * (0.25 + Math.random() * 0.55);
+  const ry = rx * (0.35 + Math.random() * 0.55);
+  const tilt  = Math.random() * Math.PI * 2;
+  const speed = (0.012 + Math.random() * 0.022) * (Math.random() < 0.5 ? 1 : -1);
+  const mass  = 0.4 + Math.random() * 0.8;
+  const influence = 180 + Math.random() * 220;
+  const color = COMET_COLORS[Math.floor(Math.random() * COMET_COLORS.length)];
+  const lifeSeconds = 12 + Math.random() * 18;
+  const lifeFrames  = Math.round(lifeSeconds * 30);
+
+  state.comets.push({
+    id: Date.now() + Math.random(),
+    cx, cy, rx, ry, tilt,
+    angle: Math.random() * Math.PI * 2,
+    speed, mass, influence, color,
+    size: 4 + Math.random() * 4,
+    trail: [],
+    life: lifeFrames, maxLife: lifeFrames,
+  });
+}
+
+function cometWorldPos(c) {
+  const cosT = Math.cos(c.tilt), sinT = Math.sin(c.tilt);
+  const ex = c.rx * Math.cos(c.angle);
+  const ey = c.ry * Math.sin(c.angle);
+  return {
+    x: c.cx + ex * cosT - ey * sinT,
+    y: c.cy + ex * sinT + ey * cosT,
+  };
+}
+
+function updateComets(time) {
+  for (let i = state.comets.length - 1; i >= 0; i--) {
+    const c = state.comets[i];
+    c.life--;
+    if (c.life <= 0) { state.comets.splice(i, 1); continue; }
+
+    c.angle += c.speed;
+    const pos = cometWorldPos(c);
+
+    // update trail
+    c.trail.unshift({ x: pos.x, y: pos.y });
+    if (c.trail.length > COMET_TRAIL) c.trail.length = COMET_TRAIL;
+
+    // alpha for fade-in / fade-out
+    const lifeRatio = c.life / c.maxLife;
+    const fadeIn  = 1 - Math.max(0, (lifeRatio - 0.85) / 0.15);
+    const fadeOut = Math.min(1, lifeRatio / 0.12);
+    c.alpha = fadeIn * fadeOut;
+
+    // influence on nodes — temporary displacement + filterNorm pull
+    for (const node of state.nodes) {
+      if (node === dragNode) continue;
+      const dx = pos.x - node.x;
+      const dy = pos.y - node.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 4 || dist > c.influence) {
+        // spring restore: decay displacement back to zero
+        node._cDx = (node._cDx ?? 0) * 0.88;
+        node._cDy = (node._cDy ?? 0) * 0.88;
+        continue;
+      }
+      const t     = 1 - dist / c.influence;
+      const force = c.mass * t * t * 0.7 * c.alpha;
+      node._cDx = ((node._cDx ?? 0) + (dx / dist) * force) * 0.82;
+      node._cDy = ((node._cDy ?? 0) + (dy / dist) * force) * 0.82;
+
+      // audio: shift filterNorm toward comet's Y-based value
+      const cometNorm = Math.max(0.02, Math.min(0.98, (pos.y - TOP_H) / WORLD_HEIGHT));
+      const pull = force * 0.04;
+      const baseNorm = (node.y - TOP_H) / WORLD_HEIGHT;
+      node._cFilterOffset = ((node._cFilterOffset ?? 0) + (cometNorm - baseNorm) * pull) * 0.85;
+      const effectiveNorm = Math.max(0.02, Math.min(0.98, node.filterNorm + (node._cFilterOffset ?? 0)));
+      if (node.audio?.filter) {
+        node.audio.filter.frequency.rampTo(
+          node.audio.filter.frequency.value * 0.5 +
+          filterFromNorm(effectiveNorm) * 0.5, 0.05
+        );
+      }
+    }
+  }
+
+  // restore nodes not touched by any comet
+  for (const node of state.nodes) {
+    if (!(node._cDx) && !(node._cDy)) continue;
+    node._cDx = (node._cDx ?? 0) * 0.88;
+    node._cDy = (node._cDy ?? 0) * 0.88;
+    node._cFilterOffset = (node._cFilterOffset ?? 0) * 0.88;
+    if (Math.abs(node._cDx) < 0.01) node._cDx = 0;
+    if (Math.abs(node._cDy) < 0.01) node._cDy = 0;
+  }
+}
+
+function drawComets(ctx, time) {
+  for (const c of state.comets) {
+    if (!c.trail.length) continue;
+    const alpha = c.alpha ?? 1;
+
+    // trail
+    for (let i = 1; i < c.trail.length; i++) {
+      const t0 = c.trail[i - 1], t1 = c.trail[i];
+      const trailAlpha = alpha * (1 - i / c.trail.length) * 0.7;
+      const width = c.size * (1 - i / c.trail.length) * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(t0.x, t0.y);
+      ctx.lineTo(t1.x, t1.y);
+      ctx.strokeStyle = c.color + Math.round(trailAlpha * 255).toString(16).padStart(2, '0');
+      ctx.lineWidth = Math.max(0.5, width);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    // head glow
+    const head = c.trail[0];
+    const grad = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, c.size * 3);
+    grad.addColorStop(0, c.color + Math.round(alpha * 255).toString(16).padStart(2, '0'));
+    grad.addColorStop(0.4, c.color + Math.round(alpha * 140).toString(16).padStart(2, '0'));
+    grad.addColorStop(1, c.color + '00');
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, c.size * 3, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // solid core
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, c.size * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff' + Math.round(alpha * 220).toString(16).padStart(2, '0');
+    ctx.fill();
+  }
+}
+
 function loop(time = 0) {
   requestAnimationFrame(loop);
 
@@ -1562,17 +1717,29 @@ function loop(time = 0) {
     }
   }
 
+  // ── Comet physics & audio influence ──────────────────────────
+  updateComets(time);
+
   context.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
   context.save();
   context.scale(state.zoom, state.zoom);
   context.translate(-state.viewX, -state.viewY);
-  for (const node of state.nodes) if (!node.muted) drawNodeWaves(node, time);
+  for (const node of state.nodes) if (!node.muted) {
+    node.x += node._cDx ?? 0; node.y += node._cDy ?? 0;
+    drawNodeWaves(node, time);
+    node.x -= node._cDx ?? 0; node.y -= node._cDy ?? 0;
+  }
   drawLinks();
   drawRipples();
-  for (const node of state.nodes) drawOrbits(node, time);
-  for (const node of state.nodes) drawNode(node, time);
+  drawComets(context, time);
+  for (const node of state.nodes) {
+    node.x += node._cDx ?? 0; node.y += node._cDy ?? 0;
+    drawOrbits(node, time);
+    drawNode(node, time);
+    node.x -= node._cDx ?? 0; node.y -= node._cDy ?? 0;
+  }
   context.restore();
 
   drawViewIndicator();
