@@ -235,6 +235,9 @@ export const masterAnalyser = new Tone.Analyser('fft', 2048);
 masterAnalyser.smoothing = 0.85;
 masterGain.connect(masterAnalyser);
 
+// 20ms fade on play/stop eliminates click artifacts from abrupt gain changes
+const CLICK_FADE = 0.02;
+
 // ── Per-node audio lifecycle ──────────────────────────────────
 export function createAudio(node) {
   const panner    = new Tone.Panner(effectivePan(node)).connect(masterGain);
@@ -351,6 +354,10 @@ export function rebuildAudio(node) {
 }
 
 export function startAll() {
+  const now = Tone.now();
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.linearRampToValueAtTime(state.masterVolume, now + CLICK_FADE);
   for (const node of state.nodes) {
     if (DRUM_TYPES.has(node.type)) continue;
     if (node.audio) {
@@ -364,13 +371,19 @@ export function startAll() {
 }
 
 export function stopAll() {
-  for (const node of state.nodes) {
-    if (DRUM_TYPES.has(node.type)) continue;
-    if (node.audio) {
-      node.audio.envelope.triggerRelease();
-      stopOrbitLFOs(node);
+  const now = Tone.now();
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+  masterGain.gain.linearRampToValueAtTime(0, now + CLICK_FADE);
+  setTimeout(() => {
+    for (const node of state.nodes) {
+      if (DRUM_TYPES.has(node.type)) continue;
+      if (node.audio) {
+        node.audio.envelope.triggerRelease();
+        stopOrbitLFOs(node);
+      }
     }
-  }
+  }, CLICK_FADE * 1000 + 5);
 }
 
 // ── Beat mode: shared drum synths ────────────────────────────
@@ -561,6 +574,10 @@ export function startDrumOrbitLFOs(node) {
 
 export function startBeat(bpm) {
   initDrumSynths();
+  const now = Tone.now();
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.linearRampToValueAtTime(state.masterVolume, now + CLICK_FADE);
   // start orbit LFOs for all drum nodes that have orbits defined
   for (const node of state.nodes) {
     if (DRUM_TYPES.has(node.type)) startDrumOrbitLFOs(node);
@@ -583,15 +600,22 @@ export function startBeat(bpm) {
 }
 
 export function stopBeat() {
-  if (beatScheduleId !== null) {
-    Tone.Transport.clear(beatScheduleId);
-    beatScheduleId = null;
-  }
-  Tone.Transport.stop();
-  state.beatStep = -1;
-  for (const node of state.nodes) {
-    if (DRUM_TYPES.has(node.type)) destroyDrumOrbitLFOs(node);
-  }
+  const now = Tone.now();
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+  masterGain.gain.linearRampToValueAtTime(0, now + CLICK_FADE);
+  setTimeout(() => {
+    if (beatScheduleId !== null) {
+      Tone.Transport.clear(beatScheduleId);
+      beatScheduleId = null;
+    }
+    Tone.Transport.stop();
+    state.beatStep = -1;
+    for (const node of state.nodes) {
+      if (DRUM_TYPES.has(node.type)) destroyDrumOrbitLFOs(node);
+    }
+    masterGain.gain.setValueAtTime(0, Tone.now());
+  }, CLICK_FADE * 1000 + 5);
 }
 
 // ── FX parameter converters ───────────────────────────────────
