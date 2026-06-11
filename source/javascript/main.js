@@ -93,13 +93,10 @@ function resize() {
   canvas.width  = viewportWidth;
   canvas.height = viewportHeight;
   state.panelHeight = document.getElementById('bottom').offsetHeight || 240;
-  // Re-sync node Y from filterNorm (canonical) so audio is screen-size independent.
-  // filterNorm is the source of truth; Y is derived from it against current canvas.
-  const canvasArea = canvas.height - state.panelHeight - TOP_H;
+  // Nodes stay in world coordinates — no position remap on resize.
+  // filterNorm is recalculated from world Y via WORLD_HEIGHT (consistent with gravity loop).
   for (const node of state.nodes) {
-    if (node.filterNorm != null) {
-      node.y = TOP_H + node.filterNorm * canvasArea;
-    }
+    node.filterNorm = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / WORLD_HEIGHT));
   }
 }
 resize();
