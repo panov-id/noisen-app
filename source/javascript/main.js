@@ -429,13 +429,32 @@ function showView(name) {
 
 function renderCometList() {
   const list = document.getElementById('comet-list');
-  list.innerHTML = '';
-  state.comets.forEach(c => {
-    const chip = document.createElement('div');
-    chip.className = 'comet-chip' + (c.id === selectedCometId ? ' selected' : '');
-    chip.innerHTML = `<span class="comet-chip-dot" style="background:${c.color}"></span>Comet`;
-    chip.addEventListener('click', () => selectComet(c));
-    list.appendChild(chip);
+  const existingIds = [...list.querySelectorAll('.comet-chip')].map(el => el.dataset.cometId);
+  const currentIds  = state.comets.map(c => String(c.id));
+
+  // rebuild only when the set of comets changed
+  if (existingIds.join(',') !== currentIds.join(',')) {
+    list.innerHTML = '';
+    state.comets.forEach(c => {
+      const chip = document.createElement('div');
+      chip.className = 'comet-chip';
+      chip.dataset.cometId = c.id;
+      chip.innerHTML = `<span class="comet-chip-dot" style="background:${c.color}"></span>Comet`;
+      chip.addEventListener('click', () => {
+        selectedCometId = c.id;
+        updateCometChipSelection();
+        renderCometParams(c);
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  updateCometChipSelection();
+}
+
+function updateCometChipSelection() {
+  document.querySelectorAll('#comet-list .comet-chip').forEach(el => {
+    el.classList.toggle('selected', el.dataset.cometId === String(selectedCometId));
   });
 }
 
@@ -1899,7 +1918,7 @@ function loop(time = 0) {
   if (selectedCometId !== null) {
     const sel = getSelectedComet();
     if (!sel) { deselectComet(); }
-    else { updateCometLifeDisplay(sel); renderCometList(); }
+    else { updateCometLifeDisplay(sel); renderCometList(); /* rebuilds only if comet set changed */ }
   }
 
   // Apply comet displacement to node positions for this frame.
