@@ -487,6 +487,8 @@ export function selectNode(node) {
   updateNodeInfoStrip(node);
   globalView.classList.remove('active');
   document.getElementById('comet-view')?.classList.remove('active');
+  document.getElementById('fx-view')?.classList.remove('active');
+  document.getElementById('fx-btn')?.classList.remove('on');
   nodeView.classList.add('active');
 }
 
@@ -898,67 +900,49 @@ function fmtHicut(v) {
 }
 
 export function initFxOverlay() {
-  document.getElementById('fx-locut').addEventListener('input', e => {
+  document.getElementById('fxv-locut').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     locut.frequency.rampTo(locutHz(v), .1);
-    document.getElementById('fx-locut-val').textContent = v < 1 ? '20Hz' : fmtLocut(v);
+    document.getElementById('fxv-locut-val').textContent = v < 1 ? '20Hz' : fmtLocut(v);
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-hicut').addEventListener('input', e => {
+  document.getElementById('fxv-hicut').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     hiCut.frequency.rampTo(hicutHz(v), .1);
-    document.getElementById('fx-hicut-val').textContent = v > 99 ? '20kHz' : fmtHicut(v);
+    document.getElementById('fxv-hicut-val').textContent = v > 99 ? '20kHz' : fmtHicut(v);
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-reverb').addEventListener('input', e => {
+  document.getElementById('fxv-reverb').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     masterReverb.wet.rampTo(v / 100, .1);
-    document.getElementById('fx-reverb-val').textContent = `${v}%`;
+    document.getElementById('fxv-reverb-val').textContent = `${v}%`;
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-decay').addEventListener('input', e => {
+  document.getElementById('fxv-decay').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     const seconds = decaySeconds(v);
     masterReverb.decay = seconds;
-    document.getElementById('fx-decay-val').textContent = `${seconds.toFixed(1)}s`;
+    document.getElementById('fxv-decay-val').textContent = `${seconds.toFixed(1)}s`;
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-delay').addEventListener('input', e => {
+  document.getElementById('fxv-delay').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     masterDelay.wet.rampTo(v / 100, .1);
-    document.getElementById('fx-delay-val').textContent = `${v}%`;
+    document.getElementById('fxv-delay-val').textContent = `${v}%`;
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-delaytime').addEventListener('input', e => {
+  document.getElementById('fxv-delaytime').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     const ms = delayMilliseconds(v);
     masterDelay.delayTime.rampTo(ms / 1000, .1);
-    document.getElementById('fx-delaytime-val').textContent = `${Math.round(ms)}ms`;
+    document.getElementById('fxv-delaytime-val').textContent = `${Math.round(ms)}ms`;
     setSliderPct(e.target, v, 0, 100);
   });
-  document.getElementById('fx-feedback').addEventListener('input', e => {
+  document.getElementById('fxv-feedback').addEventListener('input', e => {
     const v = e.target.valueAsNumber;
     masterDelay.feedback.rampTo(v / 100, .1);
-    document.getElementById('fx-feedback-val').textContent = `${v}%`;
+    document.getElementById('fxv-feedback-val').textContent = `${v}%`;
     setSliderPct(e.target, v, 0, 90);
-  });
-  document.getElementById('fx-comet-orbit').addEventListener('input', e => {
-    const v = e.target.valueAsNumber;
-    state.cometOrbitScale = v / 100;
-    document.getElementById('fx-comet-orbit-val').textContent = `${(v / 100).toFixed(1)}×`;
-    setSliderPct(e.target, v, 20, 300);
-  });
-  document.getElementById('fx-comet-speed').addEventListener('input', e => {
-    const v = e.target.valueAsNumber;
-    state.cometSpeedScale = v / 100;
-    document.getElementById('fx-comet-speed-val').textContent = `${(v / 100).toFixed(1)}×`;
-    setSliderPct(e.target, v, 10, 400);
-  });
-  document.getElementById('fx-comet-gravity').addEventListener('input', e => {
-    const v = e.target.valueAsNumber;
-    state.cometGravityScale = v / 100;
-    document.getElementById('fx-comet-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
-    setSliderPct(e.target, v, 10, 400);
   });
 }
 

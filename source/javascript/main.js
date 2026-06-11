@@ -291,16 +291,18 @@ document.getElementById('nodes-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeNodesOverlay();
 });
 
-// ── FX overlay ────────────────────────────────────────────────
+// ── FX view ───────────────────────────────────────────────────
 initFxOverlay();
 document.getElementById('fx-btn').addEventListener('click', () => {
-  document.getElementById('fx-overlay').classList.toggle('open');
+  if (document.getElementById('fx-view').classList.contains('active')) {
+    showView('global');
+  } else {
+    deselectNode();
+    showView('fx');
+  }
 });
-document.getElementById('fx-overlay-close').addEventListener('click', () => {
-  document.getElementById('fx-overlay').classList.remove('open');
-});
-document.getElementById('fx-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) document.getElementById('fx-overlay').classList.remove('open');
+document.getElementById('fx-view-close').addEventListener('click', () => {
+  showView('global');
 });
 
 // ── Presets ───────────────────────────────────────────────────
@@ -421,10 +423,12 @@ function renderCometParamsEmpty() {
 }
 
 function showView(name) {
-  document.getElementById('global-view').classList.toggle('active', name === 'global');
-  document.getElementById('node-view').classList.toggle('active',   name === 'node');
-  document.getElementById('comet-view').classList.toggle('active',  name === 'comet');
+  document.getElementById('global-view').classList.toggle('active',  name === 'global');
+  document.getElementById('node-view').classList.toggle('active',    name === 'node');
+  document.getElementById('comet-view').classList.toggle('active',   name === 'comet');
+  document.getElementById('fx-view').classList.toggle('active',      name === 'fx');
   document.getElementById('comet-btn').classList.toggle('on', name === 'comet');
+  document.getElementById('fx-btn').classList.toggle('on',    name === 'fx');
 }
 
 function renderCometList() {

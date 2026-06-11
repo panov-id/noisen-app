@@ -371,6 +371,53 @@
       <div id="node-cards"></div>
     </div>
 
+    <!-- master fx view -->
+    <div id="fx-view" class="param-view">
+      <div id="fx-view-header">
+        <span class="fx-view-title">Master FX</span>
+        <button class="action-btn" id="fx-view-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="fx-view-cards">
+        <div class="param-card" data-tip="Lo Cut" data-tip-desc="Highpass filter — removes low rumble">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,20 8,20 8,12 14,4 20,4"/></svg></span><span class="card-val" id="fxv-locut-val">20Hz</span></div>
+          <input type="range" class="card-slider" id="fxv-locut" min="0" max="100" value="0" style="--pct:0%">
+          <span class="card-label">Lo Cut</span>
+        </div>
+        <div class="param-card" data-tip="Hi Cut" data-tip-desc="Lowpass filter — removes harsh highs">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,4 10,4 16,12 21,20"/></svg></span><span class="card-val" id="fxv-hicut-val">20kHz</span></div>
+          <input type="range" class="card-slider" id="fxv-hicut" min="0" max="100" value="100" style="--pct:100%">
+          <span class="card-label">Hi Cut</span>
+        </div>
+        <div class="param-card" data-tip="Reverb" data-tip-desc="Room/space effect">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg></span><span class="card-val" id="fxv-reverb-val">0%</span></div>
+          <input type="range" class="card-slider" id="fxv-reverb" min="0" max="100" value="0" style="--pct:0%">
+          <span class="card-label">Reverb</span>
+        </div>
+        <div class="param-card" data-tip="Reverb Decay" data-tip-desc="Reverb tail length">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6 Q8 4 12 8 Q16 12 21 18"/></svg></span><span class="card-val" id="fxv-decay-val">2.5s</span></div>
+          <input type="range" class="card-slider" id="fxv-decay" min="0" max="100" value="30" style="--pct:30%">
+          <span class="card-label">Decay</span>
+        </div>
+        <div class="param-card" data-tip="Delay" data-tip-desc="Echo effect">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg></span><span class="card-val" id="fxv-delay-val">0%</span></div>
+          <input type="range" class="card-slider" id="fxv-delay" min="0" max="100" value="0" style="--pct:0%">
+          <span class="card-label">Delay</span>
+        </div>
+        <div class="param-card" data-tip="Delay Time" data-tip-desc="Echo repeat interval">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span><span class="card-val" id="fxv-delaytime-val">250ms</span></div>
+          <input type="range" class="card-slider" id="fxv-delaytime" min="0" max="100" value="25" style="--pct:25%">
+          <span class="card-label">Time</span>
+        </div>
+        <div class="param-card" data-tip="Delay Feedback" data-tip-desc="Number of echo repeats">
+          <div class="card-top"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15 A9 9 0 1 0 7.17 5.7 L1 10"/></svg></span><span class="card-val" id="fxv-feedback-val">35%</span></div>
+          <input type="range" class="card-slider" id="fxv-feedback" min="0" max="90" value="35" style="--pct:39%">
+          <span class="card-label">Feedback</span>
+        </div>
+      </div>
+    </div>
+
     <!-- comet view — shown when a comet is selected -->
     <div id="comet-view" class="param-view">
       <div id="comet-header">
@@ -510,101 +557,6 @@
       </button>
     </div>
     <div id="nodes-list"></div>
-  </div>
-</div>
-
-<!-- master FX overlay -->
-<div id="fx-overlay">
-  <div id="fx-sheet">
-    <div class="presets-header">
-      <span class="presets-header-title">MASTER FX</span>
-      <button class="action-btn" id="fx-overlay-close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div id="fx-cards">
-      <div class="param-card" data-tip="Lo Cut" data-tip-desc="Highpass filter — removes low rumble">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,20 8,20 8,12 14,4 20,4"/></svg></span>
-          <span class="card-val" id="fx-locut-val">20Hz</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-locut" min="0" max="100" value="0" style="--pct:0%">
-        <span class="card-label">Lo Cut</span>
-      </div>
-      <div class="param-card" data-tip="Hi Cut" data-tip-desc="Lowpass filter — removes harsh highs">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3,4 10,4 16,12 21,20"/></svg></span>
-          <span class="card-val" id="fx-hicut-val">20kHz</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-hicut" min="0" max="100" value="100" style="--pct:100%">
-        <span class="card-label">Hi Cut</span>
-      </div>
-      <div class="param-card" data-tip="Reverb" data-tip-desc="Room/space effect — use node Reverb send to route signals">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18 C9 18 3 15 3 10 A9 9 0 0 1 21 10 C21 15 15 18 15 18"/><line x1="12" y1="18" x2="12" y2="22"/></svg></span>
-          <span class="card-val" id="fx-reverb-val">0%</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-reverb" min="0" max="100" value="0" style="--pct:0%">
-        <span class="card-label">Reverb</span>
-      </div>
-      <div class="param-card" data-tip="Reverb Decay" data-tip-desc="Reverb tail length">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6 Q8 4 12 8 Q16 12 21 18"/></svg></span>
-          <span class="card-val" id="fx-decay-val">2.5s</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-decay" min="0" max="100" value="30" style="--pct:30%">
-        <span class="card-label">Decay</span>
-      </div>
-      <div class="param-card" data-tip="Delay" data-tip-desc="Echo effect — use node Delay send to route signals">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8 L8 8 M11 8 L16 8 M19 8 L21 8"/><path d="M3 16 L5 16 M8 16 L13 16 M16 16 L21 16"/></svg></span>
-          <span class="card-val" id="fx-delay-val">0%</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-delay" min="0" max="100" value="0" style="--pct:0%">
-        <span class="card-label">Delay</span>
-      </div>
-      <div class="param-card" data-tip="Delay Time" data-tip-desc="Echo repeat interval">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span>
-          <span class="card-val" id="fx-delaytime-val">250ms</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-delaytime" min="0" max="100" value="25" style="--pct:25%">
-        <span class="card-label">Time</span>
-      </div>
-      <div class="param-card" data-tip="Delay Feedback" data-tip-desc="Number of echo repeats">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15 A9 9 0 1 0 7.17 5.7 L1 10"/></svg></span>
-          <span class="card-val" id="fx-feedback-val">35%</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-feedback" min="0" max="90" value="35" style="--pct:39%">
-        <span class="card-label">Feedback</span>
-      </div>
-      <div class="fx-section-divider">COMET</div>
-      <div class="param-card" data-tip="Comet Orbit" data-tip-desc="Orbit size — how wide the comet path is">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="5" transform="rotate(-30 12 12)"/><circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/></svg></span>
-          <span class="card-val" id="fx-comet-orbit-val">1×</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-comet-orbit" min="20" max="300" value="100" style="--pct:33%">
-        <span class="card-label">Orbit</span>
-      </div>
-      <div class="param-card" data-tip="Comet Speed" data-tip-desc="How fast the comet travels along its orbit">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
-          <span class="card-val" id="fx-comet-speed-val">1×</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-comet-speed" min="10" max="400" value="100" style="--pct:23%">
-        <span class="card-label">Speed</span>
-      </div>
-      <div class="param-card" data-tip="Comet Gravity" data-tip-desc="Gravitational pull strength — how much nodes are displaced">
-        <div class="card-top">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M2 12h4M18 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></span>
-          <span class="card-val" id="fx-comet-gravity-val">1×</span>
-        </div>
-        <input type="range" class="card-slider" id="fx-comet-gravity" min="10" max="400" value="100" style="--pct:23%">
-        <span class="card-label">Gravity</span>
-      </div>
-    </div>
   </div>
 </div>
 

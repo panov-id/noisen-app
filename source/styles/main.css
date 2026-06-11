@@ -316,6 +316,21 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 #comet-params::-webkit-scrollbar { display:none; }
 #comet-params .param-card { flex:1 1 90px; min-width:90px; }
 
+/* ── fx view ──────────────────────────────────────────────── */
+#fx-view { gap:0; overflow:hidden; }
+#fx-view-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 10px 7px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+.fx-view-title { font-size:13px; font-weight:600; color:var(--text); letter-spacing:.04em; }
+#fx-view-cards {
+  display:flex; gap:7px; padding:8px 12px 10px;
+  overflow-x:auto; flex:1; align-items:stretch; scrollbar-width:none;
+}
+#fx-view-cards::-webkit-scrollbar { display:none; }
+#fx-view-cards .param-card { flex:1 1 90px; min-width:90px; }
+
 /* ── node view ────────────────────────────────────────────── */
 #node-view { gap:0; }
 
