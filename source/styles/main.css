@@ -177,8 +177,16 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 #pwa-btn svg { width:22px; height:22px; }
 
-/* hamburger — hidden on desktop, shown on mobile */
-#hamburger-btn { display:none; }
+/* non-essential topbar buttons — accessible via hamburger on all screen sizes */
+#donate-btn,
+#topbar-buttons > a,
+#pwa-btn,
+#theme-toggle,
+#nodes-overview-btn,
+#reset-view,
+#large-toggle,
+#debug-btn,
+#help-btn { display: none; }
 
 /* hamburger dropdown */
 #topbar-dropdown {
@@ -723,9 +731,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
   /* portrait: hide beat/BPM/rec — keep only hamburger + play */
   #beat-mode-btn { display: none; }
-  #bpm-control { display: none !important; }
   #rec-btn { display: none; }
-  #rec-timer { display: none !important; }
+  #rec-timer { display: none; }
   .topbar-sep { display: none; }
 
   /* app name: collapse to icon-only logo mark */

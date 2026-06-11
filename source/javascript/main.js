@@ -177,7 +177,7 @@ function applyPreset(preset) {
     if (!DRUM_TYPES.has(node.type)) createAudio(node);
   }
   syncCount();
-  state.viewX = 0; state.viewY = 0; state.velX = 0; state.velY = 0; state.zoom = 1;
+  fitAllNodes();
 }
 
 registerApplyPreset(applyPreset);
@@ -261,19 +261,28 @@ document.getElementById('spread').addEventListener('input', e => {
 });
 
 // ── Reset view ────────────────────────────────────────────────
-document.getElementById('reset-view').addEventListener('click', () => {
-  let startX = state.viewX, startY = state.viewY, t = 0;
+function fitAllNodes() {
   state.velX = 0; state.velY = 0;
-  function animate() {
-    t += 0.08;
-    const ease = 1 - Math.pow(1 - Math.min(t, 1), 3);
-    state.viewX = startX * (1 - ease);
-    state.viewY = startY * (1 - ease);
-    if (t < 1) requestAnimationFrame(animate);
-    else { state.viewX = 0; state.viewY = 0; }
+  if (state.nodes.length === 0) {
+    state.viewX = 0; state.viewY = 0; state.zoom = 1;
+    return;
   }
-  requestAnimationFrame(animate);
-});
+  const pad = 80;
+  const minX = Math.min(...state.nodes.map(n => n.x)) - pad;
+  const maxX = Math.max(...state.nodes.map(n => n.x)) + pad;
+  const minY = Math.min(...state.nodes.map(n => n.y)) - pad;
+  const maxY = Math.max(...state.nodes.map(n => n.y)) + pad;
+  const viewW = canvas.width;
+  const viewH = canvas.height - state.panelHeight;
+  const newZoom = Math.max(0.25, Math.min(2, Math.min(viewW / (maxX - minX), viewH / (maxY - minY))));
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  state.zoom = newZoom;
+  state.viewX = centerX - viewW / (2 * newZoom);
+  state.viewY = centerY - viewH / (2 * newZoom);
+}
+
+document.getElementById('reset-view').addEventListener('click', fitAllNodes);
 
 // ── Nodes overview ────────────────────────────────────────────
 document.getElementById('nodes-overview-btn').addEventListener('click', openNodesOverlay);
@@ -435,6 +444,7 @@ function updateBpmDisplay() {
 beatModeBtn.addEventListener('click', () => {
   state.beatMode = !state.beatMode;
   beatModeBtn.classList.toggle('on', state.beatMode);
+  document.getElementById('beat-mode-btn-m')?.classList.toggle('on', state.beatMode);
   bpmControl.style.display = state.beatMode ? 'flex' : 'none';
   if (state.isPlaying) {
     if (state.beatMode) startBeat(state.bpm);
@@ -1249,7 +1259,7 @@ function generateHarmonicPreset() {
     spread: 25 + Math.floor(Math.random() * 35),
   });
 
-  state.viewX = 0; state.viewY = 0; state.velX = 0; state.velY = 0; state.zoom = 1;
+  fitAllNodes();
   showToast(label);
 
   const nameInput = document.getElementById('preset-name-input');

@@ -140,7 +140,8 @@ document.querySelectorAll('.node-tab').forEach(btn => {
   btn.addEventListener('click', () => switchNodeTab(btn.dataset.tab));
 });
 
-function buildOrbitSection(node, container, syncFn) {
+// targetLabelOverrides: { filter: 'Pitch', delay: 'Decay' } for drum nodes
+function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, defaultTarget = 'filter') {
   const orbitSection = document.createElement('div');
   orbitSection.className = 'orbit-section';
   orbitSection.innerHTML = `<div class="orbit-section-header">
@@ -163,7 +164,7 @@ function buildOrbitSection(node, container, syncFn) {
         <div class="orbit-card-header">
           <span class="orbit-dot" style="background:${colors[index % colors.length]}"></span>
           <div class="orbit-target-btns">
-            ${ORBIT_TARGETS.map(t => `<button class="orbit-target-btn ${orbit.target === t.id ? 'active' : ''}" data-target="${t.id}">${t.label}</button>`).join('')}
+            ${ORBIT_TARGETS.map(t => `<button class="orbit-target-btn ${orbit.target === t.id ? 'active' : ''}" data-target="${t.id}">${targetLabelOverrides[t.id] ?? t.label}</button>`).join('')}
           </div>
           <button class="orbit-dir-btn" title="Direction">${(orbit.direction ?? 1) === 1 ? '↻' : '↺'}</button>
           <button class="orbit-toggle ${orbit.enabled ? 'on' : ''}" title="Enable/disable">${orbit.enabled ? '●' : '○'}</button>
@@ -226,7 +227,9 @@ function buildOrbitSection(node, container, syncFn) {
     const usedTargets = node.orbits.map(o => o.target);
     const available = ORBIT_TARGETS.find(t => !usedTargets.includes(t.id));
     const newOrbit = ORBIT_DEFAULTS();
-    if (available) newOrbit.target = available.id;
+    newOrbit.target = defaultTarget;
+    if (available && !usedTargets.includes(defaultTarget)) newOrbit.target = defaultTarget;
+    else if (available) newOrbit.target = available.id;
     node.orbits.push(newOrbit);
     syncFn(node.orbits.length - 1);
     orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 3;
@@ -357,7 +360,7 @@ export function buildNodeCards(node) {
         0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; }));
 
     } else if (activeNodeTab === 'orbits') {
-      buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx));
+      buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx), { filter: 'Pitch', delay: 'Decay' }, 'volume');
     }
 
     nodeCards.querySelectorAll('.param-card').forEach(c => {

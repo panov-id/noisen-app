@@ -180,8 +180,10 @@ export function gravityPull(node) {
 }
 
 // ── Tone.js global setup ──────────────────────────────────────
-// Larger scheduling lookahead — reduces audio glitches under CPU load.
-// 300ms is imperceptible latency for ambient sound but prevents dropout.
+// 'balanced' latencyHint gives ~50ms hardware buffer — better glitch resistance
+// than the default 'interactive' without noticeable latency for ambient/beat use.
+Tone.setContext(new Tone.Context({ latencyHint: 'balanced' }));
+// Scheduling lookahead: 300ms prevents dropout under CPU load.
 Tone.context.lookAhead = 0.3;
 Tone.context.updateInterval = 0.05;
 
@@ -287,8 +289,18 @@ export function destroyAudio(node) {
     try { audio.source.stop?.(); } catch {}
     [audio.vibrato, audio.source, audio.gain, audio.filter, audio.envelope,
      audio.nodeDelay, audio.panner, audio.reverbSend, audio.delaySend, audio.analyser
-    ].forEach(x => { try { x?.disconnect(); } catch {} });
+    ].forEach(x => {
+      try { x?.disconnect(); } catch {}
+      try { x?.dispose?.(); } catch {}
+    });
   }, releaseMs + 100);
+}
+
+// Suspend and resume the AudioContext to flush stale scheduled events and
+// encourage GC of disconnected native nodes. Call when audio feels sluggish.
+export function cleanupAudioGraph() {
+  const ctx = Tone.context.rawContext;
+  ctx.suspend().then(() => ctx.resume()).catch(() => {});
 }
 
 export function updateAudio(node) {
@@ -343,21 +355,28 @@ export function stopAll() {
 }
 
 // ── Beat mode: shared drum synths ────────────────────────────
-let drumSynths   = null;
-let drumPanners  = null;
-let beatScheduleId = null;
+let drumSynths       = null;
+let drumPanners      = null;
+let drumReverbSends  = null;
+let drumDelaySends   = null;
+let beatScheduleId   = null;
 
 function initDrumSynths() {
   if (drumSynths) return;
 
-  // each drum type gets its own panner so pan can be set per-hit
-  drumPanners = {
-    kick:  new Tone.Panner(0).connect(masterGain),
-    snare: new Tone.Panner(0).connect(masterGain),
-    hihat: new Tone.Panner(0).connect(masterGain),
-    clap:  new Tone.Panner(0).connect(masterGain),
-    perc:  new Tone.Panner(0).connect(masterGain),
-  };
+  const DRUM_TYPES_LIST = ['kick', 'snare', 'hihat', 'clap', 'perc'];
+
+  // each drum type gets its own panner → main mix + per-type reverb/delay sends
+  drumPanners     = {};
+  drumReverbSends = {};
+  drumDelaySends  = {};
+  for (const type of DRUM_TYPES_LIST) {
+    drumReverbSends[type] = new Tone.Gain(0).connect(masterReverb);
+    drumDelaySends[type]  = new Tone.Gain(0).connect(masterDelay);
+    drumPanners[type]     = new Tone.Panner(0).connect(masterGain);
+    drumPanners[type].connect(drumReverbSends[type]);
+    drumPanners[type].connect(drumDelaySends[type]);
+  }
 
   const kickSynth = new Tone.MembraneSynth({
     pitchDecay: 0.07, octaves: 7,
@@ -411,6 +430,20 @@ function createDrumOrbitLFO(orbit, node) {
       const newPan = Math.max(-1, Math.min(1, base + sine * d));
       node.panOverride = newPan;
       if (drumPanners?.[node.type]) drumPanners[node.type].pan.rampTo(newPan, 0.05);
+    } else if (target === 'filter') {
+      // for drums: modulate tune/pitch of the next triggered hit
+      const defaultTune = node.type === 'kick' ? 60 : node.type === 'hihat' ? 400 : node.type === 'perc' ? 200 : 200;
+      const base = orbit._baseTune ?? (node.typeParams?.tune ?? defaultTune);
+      orbit._baseTune = base;
+      node.typeParams = node.typeParams ?? {};
+      node.typeParams.tune = Math.max(20, base + sine * d * 0.5 * base);
+    } else if (target === 'delay') {
+      // for drums: modulate decay time of the next triggered hit
+      const defaultDecay = node.type === 'kick' ? 0.35 : node.type === 'hihat' ? 0.06 : 0.18;
+      const base = orbit._baseDecay ?? (node.typeParams?.decay ?? defaultDecay);
+      orbit._baseDecay = base;
+      node.typeParams = node.typeParams ?? {};
+      node.typeParams.decay = Math.max(0.01, Math.min(2, base + sine * d * base));
     }
   }, LFO_INTERVAL_MS);
 
@@ -438,10 +471,12 @@ export function triggerDrumNode(node, time) {
   const params = node.typeParams ?? {};
   const volume = node.volume * 0.28;
 
-  // apply per-node pan with a short ramp to avoid discontinuity clicks
+  // apply per-node pan, reverb send, delay send for this hit
   if (drumPanners?.[node.type]) {
     drumPanners[node.type].pan.rampTo(effectivePan(node), 0.005);
   }
+  if (drumReverbSends?.[node.type]) drumReverbSends[node.type].gain.rampTo(node.reverbSend ?? 0, 0.01);
+  if (drumDelaySends?.[node.type])  drumDelaySends[node.type].gain.rampTo(node.delaySend  ?? 0, 0.01);
 
   if (node.type === 'kick') {
     const freq       = params.tune       ?? 60;

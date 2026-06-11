@@ -9,6 +9,11 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 
 | # | Status | Area | Description |
 |---|---|---|---|
+| B-10 | done | Audio | Drum node orbits/effects not applying — drums use separate synth path, orbit wiring missing |
+| B-06 | done | Interface | Topbar too many buttons on tablet/desktop — keep Random+Presets+FX+Fullscreen, rest to hamburger |
+| B-07 | done | Interface | Beat mode button not reflecting active state in hamburger; BPM control hidden behind CSS !important |
+| B-08 | done | Audio | Add AudioContext latency hint for smoother playback on slower devices |
+| B-09 | done | Audio | Browser freeze over time — AudioNodes not disposed properly, memory leak on node removal |
 | B-04 | done | Interface | Portrait topbar overflow — beat/BPM/rec visible, only logo+hamburger+play should stay |
 | B-05 | done | Interface | Analytics strip text labels — replace with icon-only (Nodes/Freq/Connections/Pan/Gravity) |
 | B-01 | done | Audio | Crackling/clicks on drum hits — shared synth pan changes cause discontinuities |
@@ -24,6 +29,7 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 | F-01 | done | Infrastructure | GitHub Actions CI/CD — auto-deploy UAT on push to main, production on tag |
 | F-02 | done | Testing | Interface responsiveness tests — portrait / landscape panel layout |
 | F-03 | done | Testing | Audio filter stability test — place node, resize viewport, assert filterNorm unchanged |
+| F-10 | done | Interface | Reset view / zoom-to-fit — fit all nodes into view; auto-fit on preset load |
 | F-04 | planned | Testing | Node interaction tests — drag, step toggle, orbit enable |
 | F-05 | planned | Beat mode | Swing / groove — per-step timing offset (0–50%) |
 | F-06 | planned | Beat mode | Mute per step — hold step to cycle off / soft / on |
