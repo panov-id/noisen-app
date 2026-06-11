@@ -133,7 +133,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   display:grid; grid-template-columns:repeat(var(--drum-cols,16),1fr); gap:3px;
 }
 .drum-step {
-  height:34px; border-radius:4px;
+  height:44px; border-radius:6px;
   border:1px solid var(--border); background:transparent;
   cursor:pointer; transition:background .07s, border-color .07s;
   min-width:0;
@@ -166,7 +166,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   transition:all .13s; flex-shrink:0; text-decoration:none;
 }
 .icon-btn svg { width:22px; height:22px; }
-.icon-btn:hover, .icon-btn.active {
+.icon-btn:hover, .icon-btn.active, .icon-btn.on {
   background:var(--accent-dim); border-color:var(--accent); color:var(--accent);
 }
 #pwa-btn {

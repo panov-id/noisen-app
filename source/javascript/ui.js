@@ -242,7 +242,6 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
 
 function buildDrumSequencer(node, container, color) {
   const steps = (node.steps = node.steps ?? Array(16).fill(false));
-  const isLandscape = window.innerWidth > window.innerHeight;
 
   const sequencer = document.createElement('div');
   sequencer.className = 'drum-sequencer';
@@ -265,14 +264,9 @@ function buildDrumSequencer(node, container, color) {
     return row;
   };
 
-  if (isLandscape) {
-    // two rows of 8
-    sequencer.appendChild(makeRow(0, 8));
-    sequencer.appendChild(makeRow(8, 8));
-  } else {
-    // one row of 16
-    sequencer.appendChild(makeRow(0, 16));
-  }
+  // always two rows of 8 for consistent tap target size
+  sequencer.appendChild(makeRow(0, 8));
+  sequencer.appendChild(makeRow(8, 8));
 
   container.appendChild(sequencer);
 

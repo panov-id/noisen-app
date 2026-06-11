@@ -127,12 +127,6 @@
         <rect x="14" y="10" width="4" height="6" rx="1"/><rect x="20" y="7" width="2" height="10" rx="1"/>
       </svg>
     </button>
-    <div id="bpm-control" style="display:none">
-      <button id="bpm-dec" class="bpm-step-btn">−</button>
-      <span id="bpm-display">120 BPM</span>
-      <button id="bpm-inc" class="bpm-step-btn">+</button>
-    </div>
-    <div class="topbar-sep"></div>
     <button id="rec-btn" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
       <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
     </button>
@@ -254,6 +248,12 @@
         <div class="an-item" data-tip="Gravity" data-tip-desc="Master gravity strength">
           <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>
           <span class="an-value" id="an-grav">50%</span>
+        </div>
+        <div id="bpm-control" style="display:none">
+          <div class="an-sep"></div>
+          <button id="bpm-dec" class="bpm-step-btn">−</button>
+          <span id="bpm-display">120 BPM</span>
+          <button id="bpm-inc" class="bpm-step-btn">+</button>
         </div>
       </div>
 
