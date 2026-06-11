@@ -371,6 +371,56 @@
       <div id="node-cards"></div>
     </div>
 
+    <!-- comet view — shown when a comet is selected -->
+    <div id="comet-view" class="param-view">
+      <div id="comet-header">
+        <span id="comet-title">Comet</span>
+        <div id="comet-actions">
+          <button class="action-btn danger" id="comet-delete-btn" data-tip="Remove" data-tip-desc="Remove this comet">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+          <button class="action-btn" id="comet-close-btn" data-tip="Close" data-tip-desc="Return to global controls">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="comet-list"></div>
+      <div id="comet-params">
+        <div class="param-card" data-tip="Orbit Size" data-tip-desc="Radius of the comet ellipse">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="5" transform="rotate(-30 12 12)"/></svg></span>
+            <span class="card-val" id="cp-orbit-val">1.0×</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-orbit" min="10" max="400" value="100" style="--pct:23%">
+          <span class="card-label">Orbit</span>
+        </div>
+        <div class="param-card" data-tip="Speed" data-tip-desc="Angular velocity along the orbit">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+            <span class="card-val" id="cp-speed-val">1.0×</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-speed" min="10" max="500" value="100" style="--pct:18%">
+          <span class="card-label">Speed</span>
+        </div>
+        <div class="param-card" data-tip="Gravity" data-tip-desc="Pull strength and influence radius">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>
+            <span class="card-val" id="cp-gravity-val">1.0×</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-gravity" min="10" max="400" value="100" style="--pct:23%">
+          <span class="card-label">Gravity</span>
+        </div>
+        <div class="param-card" data-tip="Life" data-tip-desc="Remaining lifetime of this comet">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span>
+            <span class="card-val" id="cp-life-val">—</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-life" min="0" max="100" value="100" style="--pct:100%" disabled>
+          <span class="card-label">Life</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 

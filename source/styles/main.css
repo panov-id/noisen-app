@@ -272,6 +272,42 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 #global-cards::-webkit-scrollbar { display:none; }
 
+/* ── comet view ───────────────────────────────────────────── */
+#comet-view { gap:0; overflow:hidden; }
+
+#comet-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 10px 7px; flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+#comet-title { font-size:13px; font-weight:600; color:var(--text); letter-spacing:.04em; }
+#comet-actions { display:flex; gap:4px; }
+
+#comet-list {
+  display:flex; gap:6px; padding:8px 12px 6px;
+  overflow-x:auto; flex-shrink:0; scrollbar-width:none;
+  border-bottom:1px solid var(--border);
+}
+#comet-list::-webkit-scrollbar { display:none; }
+#comet-list:empty { display:none; }
+
+.comet-chip {
+  display:flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:20px; cursor:pointer; flex-shrink:0;
+  font-size:11px; font-weight:600; letter-spacing:.04em;
+  background:var(--surface2); border:1.5px solid transparent;
+  transition:border-color .15s;
+}
+.comet-chip.selected { border-color:var(--accent); }
+.comet-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+#comet-params {
+  display:flex; gap:7px; padding:8px 12px 10px;
+  overflow-x:auto; flex:1; align-items:stretch; scrollbar-width:none;
+}
+#comet-params::-webkit-scrollbar { display:none; }
+#comet-params .param-card { flex:1 1 90px; min-width:90px; }
+
 /* ── node view ────────────────────────────────────────────── */
 #node-view { gap:0; }
 

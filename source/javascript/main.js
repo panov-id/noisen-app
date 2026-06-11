@@ -386,6 +386,118 @@ document.getElementById('act-delete').addEventListener('click', () => {
 });
 document.getElementById('node-close').addEventListener('click', deselectNode);
 
+// ── Comet panel ───────────────────────────────────────────────
+let selectedCometId = null;
+
+function getSelectedComet() {
+  return state.comets.find(c => c.id === selectedCometId) ?? null;
+}
+
+function selectComet(comet) {
+  if (state.selectedNode) deselectNode();
+  selectedCometId = comet.id;
+  showView('comet');
+  renderCometList();
+  renderCometParams(comet);
+}
+
+function deselectComet() {
+  selectedCometId = null;
+  showView('global');
+}
+
+function showView(name) {
+  document.getElementById('global-view').classList.toggle('active', name === 'global');
+  document.getElementById('node-view').classList.toggle('active',   name === 'node');
+  document.getElementById('comet-view').classList.toggle('active',  name === 'comet');
+}
+
+function renderCometList() {
+  const list = document.getElementById('comet-list');
+  list.innerHTML = '';
+  state.comets.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'comet-chip' + (c.id === selectedCometId ? ' selected' : '');
+    chip.innerHTML = `<span class="comet-chip-dot" style="background:${c.color}"></span>Comet`;
+    chip.addEventListener('click', () => selectComet(c));
+    list.appendChild(chip);
+  });
+}
+
+function renderCometParams(comet) {
+  const orbitSlider  = document.getElementById('cp-orbit');
+  const speedSlider  = document.getElementById('cp-speed');
+  const gravSlider   = document.getElementById('cp-gravity');
+  const lifeSlider   = document.getElementById('cp-life');
+
+  // orbit: store relative to original rx as 10–400 slider (100 = baseline)
+  if (!comet._baseRx) comet._baseRx = comet.rx;
+  const orbitVal = Math.round((comet.rx / comet._baseRx) * 100);
+  orbitSlider.value = orbitVal;
+  document.getElementById('cp-orbit-val').textContent = `${(orbitVal / 100).toFixed(1)}×`;
+  setSliderPct(orbitSlider, orbitVal, 10, 400);
+
+  // speed: map absolute speed to a 10–500 scale (100 = abs speed 0.02)
+  const absSpeed = Math.abs(comet.speed);
+  const speedVal = Math.round(absSpeed / 0.0002);
+  speedSlider.value = Math.min(500, Math.max(10, speedVal));
+  document.getElementById('cp-speed-val').textContent = `${(speedVal / 100).toFixed(1)}×`;
+  setSliderPct(speedSlider, speedVal, 10, 500);
+
+  // gravity: mass+influence on 10–400
+  if (!comet._baseMass) comet._baseMass = comet.mass;
+  if (!comet._baseInfluence) comet._baseInfluence = comet.influence;
+  const gravVal = Math.round((comet.mass / comet._baseMass) * 100);
+  gravSlider.value = gravVal;
+  document.getElementById('cp-gravity-val').textContent = `${(gravVal / 100).toFixed(1)}×`;
+  setSliderPct(gravSlider, gravVal, 10, 400);
+
+  updateCometLifeDisplay(comet);
+}
+
+function updateCometLifeDisplay(comet) {
+  const pct = Math.round((comet.life / comet.maxLife) * 100);
+  document.getElementById('cp-life').value = pct;
+  document.getElementById('cp-life-val').textContent = `${pct}%`;
+  setSliderPct(document.getElementById('cp-life'), pct, 0, 100);
+}
+
+['cp-orbit', 'cp-speed', 'cp-gravity'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    const comet = getSelectedComet();
+    if (!comet) return;
+    const v = e.target.valueAsNumber;
+    if (id === 'cp-orbit') {
+      if (!comet._baseRx) comet._baseRx = comet.rx;
+      comet.rx = comet._baseRx * (v / 100);
+      comet.ry = comet.rx * 0.55;
+      document.getElementById('cp-orbit-val').textContent = `${(v / 100).toFixed(1)}×`;
+      setSliderPct(e.target, v, 10, 400);
+    } else if (id === 'cp-speed') {
+      const dir = comet.speed < 0 ? -1 : 1;
+      comet.speed = dir * v * 0.0002;
+      document.getElementById('cp-speed-val').textContent = `${(v / 100).toFixed(1)}×`;
+      setSliderPct(e.target, v, 10, 500);
+    } else if (id === 'cp-gravity') {
+      if (!comet._baseMass) comet._baseMass = comet.mass;
+      if (!comet._baseInfluence) comet._baseInfluence = comet.influence;
+      comet.mass      = comet._baseMass      * (v / 100);
+      comet.influence = comet._baseInfluence * (v / 100);
+      document.getElementById('cp-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
+      setSliderPct(e.target, v, 10, 400);
+    }
+  });
+});
+
+document.getElementById('comet-delete-btn').addEventListener('click', () => {
+  const comet = getSelectedComet();
+  if (!comet) return;
+  const idx = state.comets.indexOf(comet);
+  if (idx >= 0) state.comets.splice(idx, 1);
+  deselectComet();
+});
+document.getElementById('comet-close-btn').addEventListener('click', deselectComet);
+
 // ── Play / Stop ───────────────────────────────────────────────
 const playBtn = document.getElementById('play-btn');
 
@@ -1432,6 +1544,17 @@ canvas.addEventListener('pointerdown', e => {
   if (e.clientY < TOP_H || e.clientY > canvas.height - state.panelHeight) return;
 
   const hit = hitTest(e.clientX, e.clientY);
+
+  // check comet hit before node logic
+  if (!hit) {
+    const w = screenToWorld(e.clientX, e.clientY);
+    const cometHit = state.comets.find(c => {
+      const pos = cometWorldPos(c);
+      return Math.hypot(w.x - pos.x, w.y - pos.y) <= 24 / state.zoom;
+    });
+    if (cometHit) { selectComet(cometHit); return; }
+  }
+
   if (state.selectedNode && !hit)              { deselectNode(); return; }
   if (state.selectedNode && hit && hit !== state.selectedNode) { selectNode(hit); return; }
 
@@ -1709,6 +1832,13 @@ function loop(time = 0) {
 
   // ── Comet physics & audio influence ──────────────────────────
   updateComets(time);
+
+  // sync comet panel: update life bar, close if selected comet expired
+  if (selectedCometId !== null) {
+    const sel = getSelectedComet();
+    if (!sel) { deselectComet(); }
+    else { updateCometLifeDisplay(sel); renderCometList(); }
+  }
 
   // Apply comet displacement to node positions for this frame.
   // All drawing, gravity, and audio calculations see the displaced coordinates.

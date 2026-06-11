@@ -486,6 +486,7 @@ export function selectNode(node) {
   buildNodeCards(node);
   updateNodeInfoStrip(node);
   globalView.classList.remove('active');
+  document.getElementById('comet-view')?.classList.remove('active');
   nodeView.classList.add('active');
 }
 
