@@ -560,6 +560,26 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '4.0': {
+    title: 'Master FX panel · Comet controls · Stable canvas',
+    items: [
+      { section: 'Master FX', changes: [
+        'FX panel moved to the bottom bar — tap the FX button to open filter, reverb and delay controls inline',
+        'Lo Cut, Hi Cut, Reverb, Decay, Delay, Time and Feedback sliders always accessible without overlay',
+      ]},
+      { section: 'Comet controls', changes: [
+        'Per-comet panel in the bottom bar: orbit size, speed, gravity, shape, fade speed',
+        'Permanent mode — toggle a comet to never fade out',
+        'Move center — tap anywhere on the canvas to relocate a comet\'s orbit center',
+        'Comet shape slider controls the ellipse ratio (circular to stretched)',
+        'Comets keep moving when the app tab is in the background',
+      ]},
+      { section: 'Canvas & layout', changes: [
+        'Canvas coordinate space is fixed at startup — rotating the device no longer repositions nodes',
+        'Cards in comet and FX panels wrap to two columns in portrait mode so all controls are reachable',
+      ]},
+    ],
+  },
   '3.1': {
     title: 'Comets + audio fixes + drum variety',
     items: [

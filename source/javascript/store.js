@@ -1,6 +1,6 @@
 // ── Shared reactive state ─────────────────────────────────────
 
-export const APP_VERSION = '3.1';
+export const APP_VERSION = '4.0';
 
 export const TYPES = {
   sine:     { color:'#3a7bd5', rgb:[58,123,213]   },
