@@ -1531,26 +1531,27 @@ const COMET_MAX    = 5;
 const COMET_TRAIL  = 32;
 
 function spawnComet() {
-  if (state.comets.length >= COMET_MAX) {
-    // remove oldest instead of blocking
-    state.comets.shift();
-  }
-  // orbital center: random point in world space near the visible area
+  if (state.comets.length >= COMET_MAX) state.comets.shift();
+
+  const orbitScale   = state.cometOrbitScale   ?? 1;
+  const speedScale   = state.cometSpeedScale   ?? 1;
+  const gravityScale = state.cometGravityScale ?? 1;
+
   const vCx = state.viewX + canvas.width  / state.zoom / 2;
   const vCy = state.viewY + canvas.height / state.zoom / 2;
-  const spread = Math.max(canvas.width, canvas.height) / state.zoom * 0.6;
-  const cx = vCx + (Math.random() - 0.5) * spread;
-  const cy = vCy + (Math.random() - 0.5) * spread;
+  const spread = Math.max(canvas.width, canvas.height) / state.zoom * 0.7;
 
-  const rx = spread * (0.25 + Math.random() * 0.55);
-  const ry = rx * (0.35 + Math.random() * 0.55);
+  const cx = vCx + (Math.random() - 0.5) * spread * 0.5;
+  const cy = vCy + (Math.random() - 0.5) * spread * 0.5;
+
+  const rx = spread * (0.3 + Math.random() * 0.5) * orbitScale;
+  const ry = rx * (0.4 + Math.random() * 0.5);
   const tilt  = Math.random() * Math.PI * 2;
-  const speed = (0.012 + Math.random() * 0.022) * (Math.random() < 0.5 ? 1 : -1);
-  const mass  = 0.4 + Math.random() * 0.8;
-  const influence = 180 + Math.random() * 220;
+  const speed = (0.015 + Math.random() * 0.025) * (Math.random() < 0.5 ? 1 : -1) * speedScale;
+  const mass  = (0.6 + Math.random() * 0.8) * gravityScale;
+  const influence = (200 + Math.random() * 250) * Math.max(0.4, gravityScale);
   const color = COMET_COLORS[Math.floor(Math.random() * COMET_COLORS.length)];
-  const lifeSeconds = 12 + Math.random() * 18;
-  const lifeFrames  = Math.round(lifeSeconds * 30);
+  const lifeSeconds = 14 + Math.random() * 16;
 
   state.comets.push({
     id: Date.now() + Math.random(),
@@ -1559,7 +1560,7 @@ function spawnComet() {
     speed, mass, influence, color,
     size: 4 + Math.random() * 4,
     trail: [],
-    life: lifeFrames, maxLife: lifeFrames,
+    life: Math.round(lifeSeconds * 60), maxLife: Math.round(lifeSeconds * 60),
   });
 }
 
@@ -1574,6 +1575,8 @@ function cometWorldPos(c) {
 }
 
 function updateComets(time) {
+  const touchedNodes = new Set();
+
   for (let i = state.comets.length - 1; i >= 0; i--) {
     const c = state.comets[i];
     c.life--;
@@ -1582,56 +1585,58 @@ function updateComets(time) {
     c.angle += c.speed;
     const pos = cometWorldPos(c);
 
-    // update trail
     c.trail.unshift({ x: pos.x, y: pos.y });
     if (c.trail.length > COMET_TRAIL) c.trail.length = COMET_TRAIL;
 
-    // alpha for fade-in / fade-out
     const lifeRatio = c.life / c.maxLife;
     const fadeIn  = 1 - Math.max(0, (lifeRatio - 0.85) / 0.15);
     const fadeOut = Math.min(1, lifeRatio / 0.12);
     c.alpha = fadeIn * fadeOut;
 
-    // influence on nodes — temporary displacement + filterNorm pull
     for (const node of state.nodes) {
       if (node === dragNode) continue;
       const dx = pos.x - node.x;
       const dy = pos.y - node.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < 4 || dist > c.influence) {
-        // spring restore: decay displacement back to zero
-        node._cDx = (node._cDx ?? 0) * 0.88;
-        node._cDy = (node._cDy ?? 0) * 0.88;
-        continue;
-      }
-      const t     = 1 - dist / c.influence;
-      const force = c.mass * t * t * 0.7 * c.alpha;
-      node._cDx = ((node._cDx ?? 0) + (dx / dist) * force) * 0.82;
-      node._cDy = ((node._cDy ?? 0) + (dy / dist) * force) * 0.82;
+      if (dist < 4 || dist > c.influence) continue;
 
-      // audio: shift filterNorm toward comet's Y-based value
+      touchedNodes.add(node);
+      const t     = 1 - dist / c.influence;
+      const force = c.mass * t * t * 15 * c.alpha;
+
+      node._cDx = (node._cDx ?? 0) + (dx / dist) * force;
+      node._cDy = (node._cDy ?? 0) + (dy / dist) * force;
+      // cap displacement so nodes don't fly off screen
+      const disp = Math.hypot(node._cDx, node._cDy);
+      if (disp > 100) { node._cDx = node._cDx / disp * 100; node._cDy = node._cDy / disp * 100; }
+
+      // audio: pull filter toward comet Y position
       const cometNorm = Math.max(0.02, Math.min(0.98, (pos.y - TOP_H) / WORLD_HEIGHT));
-      const pull = force * 0.04;
-      const baseNorm = (node.y - TOP_H) / WORLD_HEIGHT;
-      node._cFilterOffset = ((node._cFilterOffset ?? 0) + (cometNorm - baseNorm) * pull) * 0.85;
-      const effectiveNorm = Math.max(0.02, Math.min(0.98, node.filterNorm + (node._cFilterOffset ?? 0)));
-      if (node.audio?.filter) {
-        node.audio.filter.frequency.rampTo(
-          node.audio.filter.frequency.value * 0.5 +
-          filterFromNorm(effectiveNorm) * 0.5, 0.05
-        );
-      }
+      const baseNorm  = (node.y - TOP_H) / WORLD_HEIGHT;
+      node._cFilterOffset = Math.max(-0.45, Math.min(0.45,
+        (node._cFilterOffset ?? 0) + (cometNorm - baseNorm) * force * 0.006
+      ));
+      const effectiveNorm = Math.max(0.02, Math.min(0.98, (node.filterNorm ?? 0.5) + node._cFilterOffset));
+      if (node.audio?.filter) node.audio.filter.frequency.rampTo(filterFromNorm(effectiveNorm), 0.08);
     }
   }
 
-  // restore nodes not touched by any comet
+  // spring restore — separate touched vs untouched to avoid double decay
   for (const node of state.nodes) {
-    if (!(node._cDx) && !(node._cDy)) continue;
-    node._cDx = (node._cDx ?? 0) * 0.88;
-    node._cDy = (node._cDy ?? 0) * 0.88;
-    node._cFilterOffset = (node._cFilterOffset ?? 0) * 0.88;
-    if (Math.abs(node._cDx) < 0.01) node._cDx = 0;
-    if (Math.abs(node._cDy) < 0.01) node._cDy = 0;
+    if (touchedNodes.has(node)) {
+      node._cDx = (node._cDx ?? 0) * 0.88;
+      node._cDy = (node._cDy ?? 0) * 0.88;
+    } else {
+      node._cDx = (node._cDx ?? 0) * 0.84;
+      node._cDy = (node._cDy ?? 0) * 0.84;
+      node._cFilterOffset = (node._cFilterOffset ?? 0) * 0.88;
+      if (Math.abs(node._cDx) < 0.5) node._cDx = 0;
+      if (Math.abs(node._cDy) < 0.5) node._cDy = 0;
+      if (Math.abs(node._cFilterOffset ?? 0) < 0.005) {
+        node._cFilterOffset = 0;
+        if (node.audio?.filter) node.audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), 0.3);
+      }
+    }
   }
 }
 

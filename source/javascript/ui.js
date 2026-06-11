@@ -557,6 +557,28 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '3.1': {
+    title: 'Comets + audio fixes + drum variety',
+    items: [
+      { section: 'Comets', changes: [
+        'Tap the comet button (☄) to launch a comet on an elliptical orbit through the canvas',
+        'Comets have a gravitational field — nodes near the comet visually drift and their filter shifts',
+        'Up to 5 comets simultaneously; each fades out after 15–30 seconds',
+        'Comet controls in FX panel: Orbit size, Speed, Gravity',
+      ]},
+      { section: 'Audio', changes: [
+        'Fixed click/pop artifacts on play and stop — 20ms master gain fade-in/out',
+        'Random BPM on every drum preset: 75–140 BPM depending on the generated kit',
+      ]},
+      { section: 'Drum variety', changes: [
+        'Random drum kits no longer always have kick+snare+hihat+clap — composition is probabilistic',
+        'Types can double (two kicks, two hihats); some types may be absent',
+        'Six groove styles: four-on-floor, breakbeat, half-time, euclidean, sparse, dense',
+        'Drum nodes spawn at type-specific positions (kick=bottom, hihat=top-right) with jitter',
+        'Drum orbits randomised per node on every random preset',
+      ]},
+    ],
+  },
   '3.0': {
     title: 'Beat mode — drum sequencer',
     items: [
@@ -918,6 +940,24 @@ export function initFxOverlay() {
     masterDelay.feedback.rampTo(v / 100, .1);
     document.getElementById('fx-feedback-val').textContent = `${v}%`;
     setSliderPct(e.target, v, 0, 90);
+  });
+  document.getElementById('fx-comet-orbit').addEventListener('input', e => {
+    const v = e.target.valueAsNumber;
+    state.cometOrbitScale = v / 100;
+    document.getElementById('fx-comet-orbit-val').textContent = `${(v / 100).toFixed(1)}×`;
+    setSliderPct(e.target, v, 20, 300);
+  });
+  document.getElementById('fx-comet-speed').addEventListener('input', e => {
+    const v = e.target.valueAsNumber;
+    state.cometSpeedScale = v / 100;
+    document.getElementById('fx-comet-speed-val').textContent = `${(v / 100).toFixed(1)}×`;
+    setSliderPct(e.target, v, 10, 400);
+  });
+  document.getElementById('fx-comet-gravity').addEventListener('input', e => {
+    const v = e.target.valueAsNumber;
+    state.cometGravityScale = v / 100;
+    document.getElementById('fx-comet-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
+    setSliderPct(e.target, v, 10, 400);
   });
 }
 

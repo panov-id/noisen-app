@@ -565,6 +565,11 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 #fx-cards .param-card {
   flex: 1 1 calc(25% - 7px); min-width:100px;
 }
+.fx-section-divider {
+  flex: 0 0 100%; font-size:9px; letter-spacing:.14em; color:var(--text-faint);
+  text-transform:uppercase; padding:8px 4px 2px; border-top:1px solid var(--border);
+  margin-top:4px;
+}
 @media (max-width:480px) {
   #fx-cards .param-card { flex: 1 1 calc(50% - 7px); }
 }

@@ -120,6 +120,11 @@ export const state = {
 
   // canvas dimensions
   panelHeight: 240,
+
+  // comet spawn settings
+  cometOrbitScale:   1,
+  cometSpeedScale:   1,
+  cometGravityScale: 1,
 };
 
 export const WORLD_WIDTH  = 1920;
