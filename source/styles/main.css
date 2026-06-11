@@ -881,12 +881,16 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   /* presets sheet */
   #presets-sheet { width: 96vw; max-height: 76vh; border-radius: 14px; }
 
-  /* cards: wrap to 2-column grid; node-cards scrolls vertically */
-  #global-cards, #node-cards {
+  /* bottom panel: taller to fit wrapped rows */
+  #bottom-panel { max-height: 55vh; }
+  .param-view { overflow-y: auto; }
+
+  /* cards: wrap to 2-column grid; scroll vertically */
+  #global-cards, #node-cards, #comet-params, #fx-view-cards {
     flex-wrap: wrap; overflow-x: visible;
     align-content: flex-start;
   }
-  #node-cards {
+  #node-cards, #comet-params, #fx-view-cards {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
