@@ -363,7 +363,7 @@ mirrorBtn('beat-mode-btn-m',      'beat-mode-btn');
 mirrorBtn('rec-btn-m',            'rec-btn');
 mirrorBtn('comet-btn-m',          'comet-btn');
 
-document.getElementById('comet-btn').addEventListener('click', spawnComet);
+document.getElementById('comet-btn').addEventListener('click', openCometPanel);
 
 // ── Tooltip ───────────────────────────────────────────────────
 document.addEventListener('pointerover',  e => { const el = e.target.closest('[data-tip]'); if (el) showTooltip(el); else hideTooltip(); });
@@ -393,6 +393,16 @@ function getSelectedComet() {
   return state.comets.find(c => c.id === selectedCometId) ?? null;
 }
 
+function openCometPanel() {
+  if (state.selectedNode) deselectNode();
+  showView('comet');
+  renderCometList();
+  // auto-select most recent comet if any
+  const last = state.comets[state.comets.length - 1];
+  if (last) { selectedCometId = last.id; renderCometParams(last); renderCometList(); }
+  else { selectedCometId = null; renderCometParamsEmpty(); }
+}
+
 function selectComet(comet) {
   if (state.selectedNode) deselectNode();
   selectedCometId = comet.id;
@@ -404,6 +414,10 @@ function selectComet(comet) {
 function deselectComet() {
   selectedCometId = null;
   showView('global');
+}
+
+function renderCometParamsEmpty() {
+  document.getElementById('comet-params').style.opacity = '0.35';
 }
 
 function showView(name) {
@@ -425,6 +439,7 @@ function renderCometList() {
 }
 
 function renderCometParams(comet) {
+  document.getElementById('comet-params').style.opacity = '';
   const orbitSlider  = document.getElementById('cp-orbit');
   const speedSlider  = document.getElementById('cp-speed');
   const gravSlider   = document.getElementById('cp-gravity');
@@ -489,12 +504,20 @@ function updateCometLifeDisplay(comet) {
   });
 });
 
+document.getElementById('comet-add-btn').addEventListener('click', () => {
+  spawnComet();
+  const newest = state.comets[state.comets.length - 1];
+  if (newest) selectComet(newest);
+});
 document.getElementById('comet-delete-btn').addEventListener('click', () => {
   const comet = getSelectedComet();
   if (!comet) return;
   const idx = state.comets.indexOf(comet);
   if (idx >= 0) state.comets.splice(idx, 1);
-  deselectComet();
+  // select adjacent comet or go empty
+  const next = state.comets[Math.min(idx, state.comets.length - 1)];
+  if (next) { selectedCometId = next.id; renderCometList(); renderCometParams(next); }
+  else { selectedCometId = null; renderCometList(); renderCometParamsEmpty(); }
 });
 document.getElementById('comet-close-btn').addEventListener('click', deselectComet);
 

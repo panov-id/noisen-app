@@ -374,9 +374,12 @@
     <!-- comet view — shown when a comet is selected -->
     <div id="comet-view" class="param-view">
       <div id="comet-header">
-        <span id="comet-title">Comet</span>
+        <span id="comet-title">Comets</span>
         <div id="comet-actions">
-          <button class="action-btn danger" id="comet-delete-btn" data-tip="Remove" data-tip-desc="Remove this comet">
+          <button class="action-btn" id="comet-add-btn" data-tip="Add comet" data-tip-desc="Launch a new comet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button class="action-btn danger" id="comet-delete-btn" data-tip="Remove" data-tip-desc="Remove selected comet">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>
           <button class="action-btn" id="comet-close-btn" data-tip="Close" data-tip-desc="Return to global controls">
