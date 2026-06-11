@@ -552,8 +552,19 @@ export function triggerDrumNode(node, time) {
   node._beatFlash = true;
 }
 
+export function startDrumOrbitLFOs(node) {
+  if (!node.orbits?.length) return;
+  node.drumOrbitLFOs = node.orbits.map((orbit, idx) =>
+    orbit.enabled ? createDrumOrbitLFO(orbit, node) : null
+  );
+}
+
 export function startBeat(bpm) {
   initDrumSynths();
+  // start orbit LFOs for all drum nodes that have orbits defined
+  for (const node of state.nodes) {
+    if (DRUM_TYPES.has(node.type)) startDrumOrbitLFOs(node);
+  }
   Tone.Transport.bpm.value = bpm;
   state.beatStep = -1;
   beatScheduleId = Tone.Transport.scheduleRepeat(time => {
@@ -578,6 +589,9 @@ export function stopBeat() {
   }
   Tone.Transport.stop();
   state.beatStep = -1;
+  for (const node of state.nodes) {
+    if (DRUM_TYPES.has(node.type)) destroyDrumOrbitLFOs(node);
+  }
 }
 
 // ── FX parameter converters ───────────────────────────────────

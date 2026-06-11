@@ -529,6 +529,21 @@ function rnd(min, max) { return min + Math.random() * (max - min); }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function rndDir() { return Math.random() > 0.5 ? 1 : -1; }
 
+// Drum-valid orbit targets — excludes attack/release which are no-ops for drums
+const DRUM_ORBIT_IDS = ['volume', 'pan', 'filter', 'delay', 'reverb', 'delay-time'];
+
+function rndDrumOrbits() {
+  const count = Math.random() < 0.25 ? 0 : Math.random() < 0.55 ? 1 : Math.random() < 0.75 ? 2 : 3;
+  const targets = [...DRUM_ORBIT_IDS].sort(() => Math.random() - 0.5).slice(0, count);
+  return targets.map(target => ({
+    target,
+    rate:      parseFloat(rnd(0.03, 1.2).toFixed(2)),
+    depth:     Math.round(rnd(20, 75)),
+    direction: rndDir(),
+    enabled:   true,
+  }));
+}
+
 function makeNode(freq, { type = 'sine', volume = 0.5, filterFreq = null, pan = null, orbits = [], reverb = 0, delayWet = 0 } = {}) {
   const filterNorm = filterFreq != null
     ? Math.max(0.02, Math.min(0.98, freqToFilterNorm(filterFreq)))
@@ -1083,7 +1098,7 @@ const DRUM_NODE_LAYOUT = {
   perc:  { x: 0.22, y: 0.28 },
 };
 
-function makeDrumNode(type, steps, { volume = 0.7, tune = null, decay = null } = {}) {
+function makeDrumNode(type, steps, { volume = 0.7, tune = null, decay = null, orbits = null } = {}) {
   const defaults = { ...TYPE_DEFAULTS[type] };
   if (tune  !== null) defaults.tune  = tune;
   if (decay !== null) defaults.decay = decay;
@@ -1103,7 +1118,7 @@ function makeDrumNode(type, steps, { volume = 0.7, tune = null, decay = null } =
     panOverride: null,
     typeParams: defaults,
     steps: [...steps],
-    orbits: [],
+    orbits: orbits ?? [],
     pulsePhase: Math.random() * Math.PI * 2,
     rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
   };
@@ -1121,43 +1136,132 @@ function euclidean(steps, hits) {
   return pattern;
 }
 
+// Rhythm pattern generators
+function probPattern(prob) {
+  return Array.from({ length: 16 }, () => Math.random() < prob);
+}
+function shiftPattern(pattern, offset) {
+  return [...pattern.slice(offset), ...pattern.slice(0, offset)];
+}
+function invertPattern(pattern) {
+  return pattern.map(v => !v);
+}
+
+const GROOVE_PATTERNS = {
+  kick: {
+    'four-on-floor': () => [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0].map(Boolean),
+    'breakbeat':     () => [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,1,0,0].map(Boolean),
+    'half-time':     () => [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
+    'sparse':        () => euclidean(16, 2 + Math.floor(Math.random() * 2)),
+    'dense':         () => euclidean(16, 5 + Math.floor(Math.random() * 3)),
+    'euclidean':     () => euclidean(16, 3 + Math.floor(Math.random() * 4)),
+  },
+  snare: {
+    'four-on-floor': () => [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean),
+    'breakbeat':     () => [0,0,0,0, 1,0,0,0, 0,0,1,0, 1,0,0,0].map(Boolean),
+    'half-time':     () => [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean),
+    'sparse':        () => euclidean(16, 2 + Math.floor(Math.random() * 2)),
+    'dense':         () => euclidean(16, 4 + Math.floor(Math.random() * 3)),
+    'euclidean':     () => shiftPattern(euclidean(16, 3 + Math.floor(Math.random() * 3)), 4),
+  },
+  hihat: {
+    'four-on-floor': () => euclidean(16, 8 + Math.floor(Math.random() * 4)),
+    'breakbeat':     () => euclidean(16, 12),
+    'half-time':     () => euclidean(16, 6 + Math.floor(Math.random() * 3)),
+    'sparse':        () => euclidean(16, 4 + Math.floor(Math.random() * 3)),
+    'dense':         () => euclidean(16, 12 + Math.floor(Math.random() * 4)),
+    'euclidean':     () => euclidean(16, 7 + Math.floor(Math.random() * 6)),
+  },
+  clap: {
+    'four-on-floor': () => [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,Math.random()>.5?1:0].map(Boolean),
+    'breakbeat':     () => probPattern(0.22),
+    'half-time':     () => [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1].map(Boolean),
+    'sparse':        () => euclidean(16, 1 + Math.floor(Math.random() * 2)),
+    'dense':         () => probPattern(0.3),
+    'euclidean':     () => euclidean(16, 2 + Math.floor(Math.random() * 3)),
+  },
+  perc: {
+    'four-on-floor': () => shiftPattern(euclidean(16, 3 + Math.floor(Math.random() * 3)), 2),
+    'breakbeat':     () => probPattern(0.2),
+    'half-time':     () => euclidean(16, 3 + Math.floor(Math.random() * 2)),
+    'sparse':        () => euclidean(16, 2 + Math.floor(Math.random() * 2)),
+    'dense':         () => probPattern(0.35),
+    'euclidean':     () => euclidean(16, 4 + Math.floor(Math.random() * 4)),
+  },
+};
+
+function drumPattern(type, style) {
+  return (GROOVE_PATTERNS[type]?.[style] ?? (() => euclidean(16, 4)))();
+}
+
 function generateDrumKit() {
   state.nodes = [];
   state.nodeSeq = 0;
-  const style = pick(['four-on-floor', 'breakbeat', 'half-time', 'euclidean']);
 
-  let kick, snare, hihat, clap;
-  if (style === 'four-on-floor') {
-    kick  = [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0].map(Boolean);
-    snare = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0].map(Boolean);
-    hihat = euclidean(16, 8 + Math.floor(Math.random() * 4));
-    clap  = [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,Math.random()>.5?1:0].map(Boolean);
-  } else if (style === 'breakbeat') {
-    kick  = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,1,0,0].map(Boolean);
-    snare = [0,0,0,0, 1,0,0,0, 0,0,1,0, 1,0,0,0].map(Boolean);
-    hihat = euclidean(16, 12);
-    clap  = Array(16).fill(false).map((_, i) => Math.random() > 0.7);
-  } else if (style === 'half-time') {
-    kick  = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean);
-    snare = [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0].map(Boolean);
-    hihat = euclidean(16, 6);
-    clap  = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1].map(Boolean);
-  } else {
-    kick  = euclidean(16, 4 + Math.floor(Math.random() * 3));
-    snare = euclidean(16, 3 + Math.floor(Math.random() * 3));
-    hihat = euclidean(16, 8 + Math.floor(Math.random() * 5));
-    clap  = euclidean(16, 2 + Math.floor(Math.random() * 3));
+  const style = pick(['four-on-floor', 'breakbeat', 'half-time', 'euclidean', 'sparse', 'dense']);
+
+  // Decide composition randomly — each type may appear 0, 1 or 2 times
+  const slots = [];
+
+  // kick: almost always present, sometimes doubled for polyrhythm
+  if (Math.random() < 0.88) {
+    slots.push('kick');
+    if (Math.random() < 0.25) slots.push('kick'); // second kick with offset pattern
+  }
+  // snare: usually present
+  if (Math.random() < 0.75) {
+    slots.push('snare');
+    if (Math.random() < 0.15) slots.push('snare');
+  }
+  // hihat: usually present, often doubled (closed + open feel)
+  if (Math.random() < 0.80) {
+    slots.push('hihat');
+    if (Math.random() < 0.35) slots.push('hihat');
+  }
+  // clap: optional
+  if (Math.random() < 0.50) slots.push('clap');
+  // perc: occasional colour
+  if (Math.random() < 0.40) {
+    slots.push('perc');
+    if (Math.random() < 0.20) slots.push('perc');
   }
 
+  // guarantee minimum 2 nodes
+  if (slots.length === 0) { slots.push('kick'); slots.push('hihat'); }
+  if (slots.length === 1) { slots.push(slots[0] === 'hihat' ? 'kick' : 'hihat'); }
+
+  // cap at 6 nodes to keep it playable
+  while (slots.length > 6) slots.splice(Math.floor(Math.random() * slots.length), 1);
+
+  const typeCount = {};
+  const nodes = slots.map(type => {
+    typeCount[type] = (typeCount[type] ?? 0) + 1;
+    const instanceIdx = typeCount[type];
+    let pattern = drumPattern(type, style);
+
+    // second instance of same type: offset or invert for contrast
+    if (instanceIdx === 2) {
+      pattern = Math.random() < 0.5
+        ? shiftPattern(pattern, 2 + Math.floor(Math.random() * 6))
+        : invertPattern(pattern).map((v, i) => v && Math.random() < 0.6);
+    }
+
+    const params = {
+      kick:  { volume: rnd(0.70, 0.88), tune: rnd(45, 85),   decay: rnd(0.20, 0.55), orbits: rndDrumOrbits() },
+      snare: { volume: rnd(0.55, 0.78), decay: rnd(0.10, 0.28),                       orbits: rndDrumOrbits() },
+      hihat: { volume: rnd(0.35, 0.60), tune: rnd(280, 700), decay: instanceIdx === 2 ? rnd(0.15, 0.35) : rnd(0.03, 0.10), orbits: rndDrumOrbits() },
+      clap:  { volume: rnd(0.50, 0.68), decay: rnd(0.06, 0.20),                       orbits: rndDrumOrbits() },
+      perc:  { volume: rnd(0.40, 0.65), tune: rnd(80, 600),  decay: rnd(0.08, 0.30), orbits: rndDrumOrbits() },
+    }[type];
+
+    return makeDrumNode(type, pattern, params);
+  });
+
+  const typeList = [...new Set(slots)].join('+');
   return {
-    nodes: [
-      makeDrumNode('kick',  kick,  { volume: 0.80, tune: rnd(50, 80),   decay: rnd(0.25, 0.5) }),
-      makeDrumNode('snare', snare, { volume: 0.70, decay: rnd(0.12, 0.25) }),
-      makeDrumNode('hihat', hihat, { volume: 0.50, tune: rnd(300, 600), decay: rnd(0.04, 0.1) }),
-      makeDrumNode('clap',  clap,  { volume: 0.60, decay: rnd(0.08, 0.18) }),
-    ],
-    label: `Drum kit · ${style}`,
-    name:  `Drum kit`,
+    nodes,
+    label: `Drum kit · ${style} · ${typeList} (${slots.length})`,
+    name:  'Drum kit',
   };
 }
 
