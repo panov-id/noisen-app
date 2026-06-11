@@ -1,7 +1,7 @@
 // ── Entry point — wires all modules together ──────────────────
 
 import {
-  state, APP_VERSION, TYPES, TYPE_DEFAULTS, DRUM_TYPES, WORLD_WIDTH, TOP_H,
+  state, APP_VERSION, TYPES, TYPE_DEFAULTS, DRUM_TYPES, WORLD_WIDTH, WORLD_HEIGHT, TOP_H,
   saveSettings, loadSettings,
 } from './store.js';
 
@@ -93,6 +93,14 @@ function resize() {
   canvas.width  = viewportWidth;
   canvas.height = viewportHeight;
   state.panelHeight = document.getElementById('bottom').offsetHeight || 240;
+  // Re-sync node Y from filterNorm (canonical) so audio is screen-size independent.
+  // filterNorm is the source of truth; Y is derived from it against current canvas.
+  const canvasArea = canvas.height - state.panelHeight - TOP_H;
+  for (const node of state.nodes) {
+    if (node.filterNorm != null) {
+      node.y = TOP_H + node.filterNorm * canvasArea;
+    }
+  }
 }
 resize();
 addEventListener('resize', resize);
@@ -510,12 +518,12 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function rndDir() { return Math.random() > 0.5 ? 1 : -1; }
 
 function makeNode(freq, { type = 'sine', volume = 0.5, filterFreq = null, pan = null, orbits = [], reverb = 0, delayWet = 0 } = {}) {
-  const canvasArea = canvas.height - state.panelHeight - TOP_H;
   const filterNorm = filterFreq != null
     ? Math.max(0.02, Math.min(0.98, freqToFilterNorm(filterFreq)))
     : Math.max(0.02, Math.min(0.98, rnd(0.12, 0.55)));
   const worldX = freqToWorldX(freq);
-  const worldY = TOP_H + canvasArea * filterNorm;
+  // Use WORLD_HEIGHT (fixed) so node positions are screen-size independent (fix B-02).
+  const worldY = TOP_H + WORLD_HEIGHT * filterNorm;
   const typeParams = { ...TYPE_DEFAULTS[type] };
   if ('detune' in typeParams) typeParams.detune = rnd(-8, 8);
   return {
@@ -1417,8 +1425,8 @@ function loop(time = 0) {
       }
       node.x += fx;
       node.y += fy;
-      const canvasArea = canvas.height - state.panelHeight - TOP_H;
-      node.filterNorm  = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / canvasArea));
+      // Use WORLD_HEIGHT (fixed) so filterNorm is screen-size independent (fix B-02).
+      node.filterNorm = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / WORLD_HEIGHT));
     }
   }
 

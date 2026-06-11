@@ -117,8 +117,9 @@ export const state = {
   panelHeight: 240,
 };
 
-export const WORLD_WIDTH = 1920;
-export const TOP_H       = 68;
+export const WORLD_WIDTH  = 1920;
+export const WORLD_HEIGHT = 1080; // fixed Y space for filterNorm — screen-size independent
+export const TOP_H        = 68;
 export const NODE_MIN_R  = 13;
 export const NODE_MAX_R  = 40;
 export const ZOOM_MIN    = 0.25;

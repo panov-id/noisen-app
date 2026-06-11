@@ -189,15 +189,19 @@ export const masterGain   = new Tone.Gain(state.masterVolume);
 export const masterFilter = new Tone.Filter(toneHz(state.masterTone), 'lowpass');
 export const locut        = new Tone.Filter(20, 'highpass');
 export const hiCut        = new Tone.Filter(20000, 'lowpass');
-export const masterReverb = new Tone.Reverb({ decay: 2.5, preDelay: 0.01, wet: 0 });
-export const masterDelay  = new Tone.FeedbackDelay({ delayTime: 0.25, feedback: 0.35, wet: 0 });
-export const limiter      = new Tone.Limiter(-3).toDestination();
+export const masterReverb      = new Tone.Reverb({ decay: 2.5, preDelay: 0.01, wet: 0 });
+export const masterDelay       = new Tone.FeedbackDelay({ delayTime: 0.25, feedback: 0.35, wet: 0 });
+// Compressor catches drum transients before the hard limiter.
+// Fast attack (3ms) prevents click-through on loud hits.
+export const masterCompressor  = new Tone.Compressor({ threshold: -10, ratio: 4, attack: 0.003, release: 0.15, knee: 6 });
+export const limiter           = new Tone.Limiter(-2).toDestination();
 
-// master chain: gain → locut → hiCut → tone filter → delay → reverb → limiter
+// master chain: gain → locut → hiCut → tone filter → compressor → delay → reverb → limiter
 masterGain.connect(locut);
 locut.connect(hiCut);
 hiCut.connect(masterFilter);
-masterFilter.connect(masterDelay);
+masterFilter.connect(masterCompressor);
+masterCompressor.connect(masterDelay);
 masterDelay.connect(masterReverb);
 masterReverb.connect(limiter);
 
@@ -444,33 +448,33 @@ export function triggerDrumNode(node, time) {
     const decay      = params.decay      ?? 0.35;
     const pitchDecay = params.pitchDecay ?? 0.07;
     synth.set({ pitchDecay, octaves: 7, envelope: { decay } });
-    synth.volume.value = Tone.gainToDb(volume * 2.5);
+    synth.volume.setValueAtTime(Tone.gainToDb(volume * 2.5), time);
     synth.triggerAttackRelease(freq, '8n', time);
   } else if (node.type === 'snare') {
     const decay = params.decay ?? 0.18;
     const tone  = params.tone  ?? 0.5;
     const noiseType = tone < 0.33 ? 'brown' : tone < 0.67 ? 'pink' : 'white';
     synth.set({ noise: { type: noiseType }, envelope: { decay } });
-    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.volume.setValueAtTime(Tone.gainToDb(volume * 2), time);
     synth.triggerAttackRelease('8n', time);
   } else if (node.type === 'hihat') {
     const open  = params.open  ?? 0;
     const decay = open > 0.5 ? 0.28 : (params.decay ?? 0.06);
     synth.set({ frequency: params.tune ?? 400, envelope: { decay } });
-    synth.volume.value = Tone.gainToDb(volume * 1.5);
+    synth.volume.setValueAtTime(Tone.gainToDb(volume * 1.5), time);
     synth.triggerAttackRelease('16n', time);
   } else if (node.type === 'clap') {
     const decay = params.decay ?? 0.12;
     const tone  = params.tone  ?? 0.5;
     const noiseType = tone < 0.33 ? 'brown' : tone < 0.67 ? 'pink' : 'white';
     synth.set({ noise: { type: noiseType }, envelope: { decay } });
-    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.volume.setValueAtTime(Tone.gainToDb(volume * 2), time);
     synth.triggerAttackRelease('8n', time);
   } else if (node.type === 'perc') {
     const freq  = params.tune  ?? 200;
     const decay = params.decay ?? 0.25;
     synth.set({ frequency: freq, envelope: { decay } });
-    synth.volume.value = Tone.gainToDb(volume * 2);
+    synth.volume.setValueAtTime(Tone.gainToDb(volume * 2), time);
     synth.triggerAttackRelease('16n', time);
   }
 

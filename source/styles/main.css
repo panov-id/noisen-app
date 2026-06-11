@@ -710,9 +710,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
    breakpoint: ≤ 480px (covers all phone portrait orientations)   */
 @media (max-width: 480px) {
 
-  /* topbar: hide github link, tighten gap */
-  #topbar { padding: 0 8px; }
-  /* on mobile: hide all topbar buttons, show hamburger instead */
+  /* topbar: compact layout on mobile portrait */
   #topbar { padding: 0 10px; }
   .topbar-right { gap: 6px; }
   #topbar-buttons { display: none; }
@@ -720,6 +718,23 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #topbar-dropdown { top: 68px; }
   #topbar-dropdown .icon-btn { width: 52px; height: 52px; }
   #topbar-dropdown .icon-btn svg { width: 24px; height: 24px; }
+
+  /* app name: collapse to icon-only logo mark */
+  #app-name { display: none; }
+  #version-btn { display: none; }
+  #topbar-left::before {
+    content: '';
+    display: block;
+    width: 28px; height: 28px;
+    background: var(--text);
+    opacity: 0.55;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='12' cy='12' r='7'/%3E%3Ccircle cx='12' cy='12' r='11'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='12' cy='12' r='7'/%3E%3Ccircle cx='12' cy='12' r='11'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+
+  /* param cards: hide text labels, keep icon + value */
+  .card-label { display: none; }
+  .card-top { justify-content: center; }
 
   /* bottom panel: taller for spectrum + wrapped cards */
   :root { --panel-h: 310px; }
