@@ -9,6 +9,8 @@ Status: `planned` · `in-progress` · `done` · `cancelled`
 
 | # | Status | Area | Description |
 |---|---|---|---|
+| B-04 | done | Interface | Portrait topbar overflow — beat/BPM/rec visible, only logo+hamburger+play should stay |
+| B-05 | done | Interface | Analytics strip text labels — replace with icon-only (Nodes/Freq/Connections/Pan/Gravity) |
 | B-01 | done | Audio | Crackling/clicks on drum hits — shared synth pan changes cause discontinuities |
 | B-02 | done | Audio | Filter frequency changes when screen size / orientation changes — filterNorm tied to canvas.height |
 | B-03 | done | Interface | Portrait mode: too many text labels in topbar and node panel — needs icon-only layout |

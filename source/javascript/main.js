@@ -350,6 +350,8 @@ mirrorBtn('fullscreen-btn-m',     'fullscreen-btn');
 mirrorBtn('debug-btn-m',          'debug-btn');
 mirrorBtn('version-btn-m',        null, () => showWhatsNew(APP_VERSION));
 mirrorBtn('help-btn-m',           'help-btn');
+mirrorBtn('beat-mode-btn-m',      'beat-mode-btn');
+mirrorBtn('rec-btn-m',            'rec-btn');
 
 // ── Tooltip ───────────────────────────────────────────────────
 document.addEventListener('pointerover',  e => { const el = e.target.closest('[data-tip]'); if (el) showTooltip(el); else hideTooltip(); });

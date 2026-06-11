@@ -213,6 +213,15 @@
     </svg>
   </button>
   <button id="help-btn-m" class="icon-btn" data-tip="Help" data-tip-desc="Show interface guide">?</button>
+  <button id="beat-mode-btn-m" class="icon-btn" data-tip="Beat mode" data-tip-desc="Switch between Ambient and Beat mode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="8" width="4" height="8" rx="1"/><rect x="8" y="5" width="4" height="14" rx="1"/>
+      <rect x="14" y="10" width="4" height="6" rx="1"/><rect x="20" y="7" width="2" height="10" rx="1"/>
+    </svg>
+  </button>
+  <button id="rec-btn-m" class="icon-btn" data-tip="Record" data-tip-desc="Record audio to file">
+    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+  </button>
 </div>
 
 <!-- unified bottom panel -->
@@ -222,28 +231,28 @@
     <!-- global view -->
     <div id="global-view" class="param-view active">
       <div id="analytics-strip">
-        <div class="an-item">
-          <span class="an-label">Nodes</span>
+        <div class="an-item" data-tip="Nodes" data-tip-desc="Total number of active nodes">
+          <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="an-value" id="an-nodes">0</span>
         </div>
         <div class="an-sep"></div>
-        <div class="an-item">
-          <span class="an-label">Freq range</span>
+        <div class="an-item" data-tip="Freq range" data-tip-desc="Lowest to highest node frequency">
+          <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/></svg></span>
           <span class="an-value" id="an-range">—</span>
         </div>
         <div class="an-sep"></div>
-        <div class="an-item">
-          <span class="an-label">Connections</span>
+        <div class="an-item" data-tip="Connections" data-tip-desc="Number of gravity connections between nodes">
+          <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="12" r="2.5"/><line x1="8.5" y1="12" x2="15.5" y2="12"/></svg></span>
           <span class="an-value" id="an-conn">0</span>
         </div>
         <div class="an-sep"></div>
-        <div class="an-item">
-          <span class="an-label">Pan spread</span>
+        <div class="an-item" data-tip="Pan spread" data-tip-desc="Stereo width of all nodes combined">
+          <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><polyline points="17 8 21 12 17 16"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
           <span class="an-value" id="an-pan">—</span>
         </div>
         <div class="an-sep"></div>
-        <div class="an-item">
-          <span class="an-label">Gravity</span>
+        <div class="an-item" data-tip="Gravity" data-tip-desc="Master gravity strength">
+          <span class="an-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>
           <span class="an-value" id="an-grav">50%</span>
         </div>
       </div>

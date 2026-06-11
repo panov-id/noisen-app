@@ -235,6 +235,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   display:flex; flex-direction:column; gap:1px; min-width:0;
 }
 .an-label { font-size:var(--stat-label-fs,9px); text-transform:uppercase; letter-spacing:.14em; color:var(--text-faint); }
+.an-icon { display:flex; align-items:center; color:var(--text-faint); }
+.an-icon svg { width:13px; height:13px; }
 .an-value { font-size:var(--stat-val-fs,13px); color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .an-sep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
 
@@ -718,6 +720,13 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   #topbar-dropdown { top: 68px; }
   #topbar-dropdown .icon-btn { width: 52px; height: 52px; }
   #topbar-dropdown .icon-btn svg { width: 24px; height: 24px; }
+
+  /* portrait: hide beat/BPM/rec — keep only hamburger + play */
+  #beat-mode-btn { display: none; }
+  #bpm-control { display: none !important; }
+  #rec-btn { display: none; }
+  #rec-timer { display: none !important; }
+  .topbar-sep { display: none; }
 
   /* app name: collapse to icon-only logo mark */
   #app-name { display: none; }
