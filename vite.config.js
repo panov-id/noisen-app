@@ -8,10 +8,6 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    commonjsOptions: { include: [/qrcode/, /node_modules/] },
-  },
-  optimizeDeps: {
-    include: ['qrcode'],
   },
   server: { port: 3000 },
 });

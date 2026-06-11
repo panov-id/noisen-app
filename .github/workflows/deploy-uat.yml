@@ -18,6 +18,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Bundle vendor scripts
+        run: |
+          mkdir -p source/public/vendor
+          node_modules/.bin/esbuild node_modules/qrcode/lib/browser.js \
+            --bundle --format=iife --global-name=QRCode \
+            --platform=browser --minify \
+            --outfile=source/public/vendor/qrcode.min.js
+
       - name: Build
         run: npm run build
         env:

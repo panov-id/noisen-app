@@ -3,7 +3,8 @@
 // The short URL format is: https://noisen.space?s=CODE
 // Configure via VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
 
-import QRCode from 'qrcode';
+// qrcode is loaded as a pre-bundled IIFE vendor script (public/vendor/qrcode.min.js).
+// window.QRCode is available globally before this module runs.
 
 const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -69,6 +70,7 @@ export async function resolveShortCode(code) {
 }
 
 export async function generateQRDataURL(url, { size = 200, dark = '#ffffff', light = '#00000000' } = {}) {
+  const QRCode = window.QRCode;
   return QRCode.toDataURL(url, {
     width: size,
     margin: 1,
@@ -127,6 +129,7 @@ export async function showShareModal(longUrl) {
     input.value = shortUrl;
     status.textContent = '';
 
+    const QRCode = window.QRCode;
     await QRCode.toCanvas(qrCanvas, shortUrl, {
       width: 200, margin: 1,
       color: { dark: '#e8e8f0', light: '#00000000' },
@@ -135,6 +138,7 @@ export async function showShareModal(longUrl) {
   } catch (error) {
     status.textContent = `Error: ${error.message}`;
     input.value = longUrl;
+    const QRCode = window.QRCode;
     await QRCode.toCanvas(qrCanvas, longUrl, {
       width: 200, margin: 1,
       color: { dark: '#e8e8f0', light: '#00000000' },
