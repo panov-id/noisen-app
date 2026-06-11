@@ -484,6 +484,16 @@ function renderCometParams(comet) {
   document.getElementById('cp-gravity-val').textContent = `${(gravVal / 100).toFixed(1)}×`;
   setSliderPct(gravSlider, gravVal, 10, 400);
 
+  // shape: ry/rx ratio as percent (10–100)
+  const shapeVal = Math.round((comet.ry / comet.rx) * 100);
+  document.getElementById('cp-shape').value = shapeVal;
+  document.getElementById('cp-shape-val').textContent = `${shapeVal}%`;
+  setSliderPct(document.getElementById('cp-shape'), shapeVal, 10, 100);
+
+  // move center button
+  document.getElementById('cp-move-btn').classList.remove('active');
+  document.getElementById('cp-move-val').textContent = 'Tap';
+
   // fade speed
   const fadeVal = Math.round((comet.fadeSpeed ?? 1) * 100);
   document.getElementById('cp-fade').value = Math.min(500, Math.max(10, fadeVal));
@@ -514,7 +524,7 @@ function updateCometLifeDisplay(comet) {
   }
 }
 
-['cp-orbit', 'cp-speed', 'cp-gravity', 'cp-fade', 'cp-perm'].forEach(id => {
+['cp-orbit', 'cp-speed', 'cp-gravity', 'cp-shape', 'cp-fade', 'cp-perm'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     const comet = getSelectedComet();
     if (!comet) return;
@@ -534,6 +544,10 @@ function updateCometLifeDisplay(comet) {
       comet.influence = comet._baseInfluence * (v / 100);
       document.getElementById('cp-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
       setSliderPct(e.target, v, 10, 400);
+    } else if (id === 'cp-shape') {
+      comet.ry = comet.rx * (v / 100);
+      document.getElementById('cp-shape-val').textContent = `${v}%`;
+      setSliderPct(e.target, v, 10, 100);
     } else if (id === 'cp-fade') {
       comet.fadeSpeed = v / 100;
       document.getElementById('cp-fade-val').textContent = `${(v / 100).toFixed(1)}×`;
@@ -549,6 +563,15 @@ function updateCometLifeDisplay(comet) {
       }
     }
   });
+});
+
+let cometMoveMode = false;
+
+document.getElementById('cp-move-btn').addEventListener('click', () => {
+  cometMoveMode = !cometMoveMode;
+  const btn = document.getElementById('cp-move-btn');
+  btn.classList.toggle('active', cometMoveMode);
+  document.getElementById('cp-move-val').textContent = cometMoveMode ? 'Click canvas' : 'Tap';
 });
 
 document.getElementById('comet-add-btn').addEventListener('click', () => {
@@ -1612,6 +1635,21 @@ canvas.addEventListener('pointerdown', e => {
   }
   if (e.button === 2) return;
   if (e.clientY < TOP_H || e.clientY > canvas.height - state.panelHeight) return;
+
+  // comet move-center mode: next tap relocates orbit center
+  if (cometMoveMode) {
+    const comet = getSelectedComet();
+    if (comet) {
+      const w = screenToWorld(e.clientX, e.clientY);
+      comet.cx = w.x;
+      comet.cy = w.y;
+    }
+    cometMoveMode = false;
+    const btn = document.getElementById('cp-move-btn');
+    btn.classList.remove('active');
+    document.getElementById('cp-move-val').textContent = 'Tap';
+    return;
+  }
 
   const hit = hitTest(e.clientX, e.clientY);
 

@@ -275,6 +275,13 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 /* ── comet view ───────────────────────────────────────────── */
 #comet-view { gap:0; overflow:hidden; }
 .comet-perm-slider { accent-color: var(--accent); cursor:pointer; }
+.comet-move-btn {
+  width:100%; margin-top:2px; padding:5px 0; border-radius:6px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--text-dim); font-size:10px; cursor:pointer;
+  transition:background .15s, color .15s;
+}
+.comet-move-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
 #comet-header {
   display:flex; align-items:center; justify-content:space-between;

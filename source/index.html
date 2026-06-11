@@ -437,6 +437,22 @@
           <input type="range" class="card-slider comet-perm-slider" id="cp-perm" min="0" max="1" value="0" step="1" style="--pct:0%">
           <span class="card-label">Permanent</span>
         </div>
+        <div class="param-card" data-tip="Ellipse shape" data-tip-desc="Ratio of Y to X radius — 100% = circle, lower = flat ellipse">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="4"/></svg></span>
+            <span class="card-val" id="cp-shape-val">—</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-shape" min="10" max="100" value="50" style="--pct:44%">
+          <span class="card-label">Shape</span>
+        </div>
+        <div class="param-card" data-tip="Move center" data-tip-desc="Tap canvas to relocate the orbit center">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></span>
+            <span class="card-val" id="cp-move-val">Tap</span>
+          </div>
+          <button class="card-slider comet-move-btn" id="cp-move-btn">Move center</button>
+          <span class="card-label">Center</span>
+        </div>
       </div>
     </div>
 
