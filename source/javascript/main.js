@@ -1074,15 +1074,31 @@ function generateStochastic() {
 }
 
 // ── Drum preset archetypes ────────────────────────────────────
+// Base positions per drum type: xNorm=left→right, yNorm=top→bottom (low=high filter)
+const DRUM_NODE_LAYOUT = {
+  kick:  { x: 0.50, y: 0.78 },
+  snare: { x: 0.32, y: 0.52 },
+  clap:  { x: 0.68, y: 0.48 },
+  hihat: { x: 0.72, y: 0.18 },
+  perc:  { x: 0.22, y: 0.28 },
+};
+
 function makeDrumNode(type, steps, { volume = 0.7, tune = null, decay = null } = {}) {
   const defaults = { ...TYPE_DEFAULTS[type] };
   if (tune  !== null) defaults.tune  = tune;
   if (decay !== null) defaults.decay = decay;
+
+  const layout = DRUM_NODE_LAYOUT[type] ?? { x: 0.5, y: 0.5 };
+  const jx = (Math.random() - 0.5) * 0.18;
+  const jy = (Math.random() - 0.5) * 0.14;
+  const xNorm = Math.max(0.08, Math.min(0.92, layout.x + jx));
+  const yNorm = Math.max(0.06, Math.min(0.94, layout.y + jy));
+
   return {
     id: ++state.nodeSeq,
-    x: freqToWorldX(defaults.tune ?? 100),
-    y: canvas.height * 0.5,
-    filterNorm: 0.5,
+    x: xNorm * WORLD_WIDTH,
+    y: TOP_H + yNorm * WORLD_HEIGHT,
+    filterNorm: 1 - yNorm,
     type, muted: false, volume,
     panOverride: null,
     typeParams: defaults,
