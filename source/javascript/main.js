@@ -1606,18 +1606,8 @@ function updateComets(time) {
 
       node._cDx = (node._cDx ?? 0) + (dx / dist) * force;
       node._cDy = (node._cDy ?? 0) + (dy / dist) * force;
-      // cap displacement so nodes don't fly off screen
       const disp = Math.hypot(node._cDx, node._cDy);
       if (disp > 100) { node._cDx = node._cDx / disp * 100; node._cDy = node._cDy / disp * 100; }
-
-      // audio: pull filter toward comet Y position
-      const cometNorm = Math.max(0.02, Math.min(0.98, (pos.y - TOP_H) / WORLD_HEIGHT));
-      const baseNorm  = (node.y - TOP_H) / WORLD_HEIGHT;
-      node._cFilterOffset = Math.max(-0.45, Math.min(0.45,
-        (node._cFilterOffset ?? 0) + (cometNorm - baseNorm) * force * 0.006
-      ));
-      const effectiveNorm = Math.max(0.02, Math.min(0.98, (node.filterNorm ?? 0.5) + node._cFilterOffset));
-      if (node.audio?.filter) node.audio.filter.frequency.rampTo(filterFromNorm(effectiveNorm), 0.08);
     }
   }
 
@@ -1629,13 +1619,8 @@ function updateComets(time) {
     } else {
       node._cDx = (node._cDx ?? 0) * 0.84;
       node._cDy = (node._cDy ?? 0) * 0.84;
-      node._cFilterOffset = (node._cFilterOffset ?? 0) * 0.88;
       if (Math.abs(node._cDx) < 0.5) node._cDx = 0;
       if (Math.abs(node._cDy) < 0.5) node._cDy = 0;
-      if (Math.abs(node._cFilterOffset ?? 0) < 0.005) {
-        node._cFilterOffset = 0;
-        if (node.audio?.filter) node.audio.filter.frequency.rampTo(filterFromNorm(node.filterNorm ?? 0.5), 0.3);
-      }
     }
   }
 }
@@ -1725,25 +1710,26 @@ function loop(time = 0) {
   // ── Comet physics & audio influence ──────────────────────────
   updateComets(time);
 
+  // Apply comet displacement to node positions for this frame.
+  // All drawing, gravity, and audio calculations see the displaced coordinates.
+  for (const node of state.nodes) {
+    node.x += node._cDx ?? 0;
+    node.y += node._cDy ?? 0;
+  }
+
   context.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
   context.save();
   context.scale(state.zoom, state.zoom);
   context.translate(-state.viewX, -state.viewY);
-  for (const node of state.nodes) if (!node.muted) {
-    node.x += node._cDx ?? 0; node.y += node._cDy ?? 0;
-    drawNodeWaves(node, time);
-    node.x -= node._cDx ?? 0; node.y -= node._cDy ?? 0;
-  }
+  for (const node of state.nodes) if (!node.muted) drawNodeWaves(node, time);
   drawLinks();
   drawRipples();
   drawComets(context, time);
   for (const node of state.nodes) {
-    node.x += node._cDx ?? 0; node.y += node._cDy ?? 0;
     drawOrbits(node, time);
     drawNode(node, time);
-    node.x -= node._cDx ?? 0; node.y -= node._cDy ?? 0;
   }
   context.restore();
 
@@ -1761,7 +1747,6 @@ function loop(time = 0) {
       node.rippleTimer++;
       if (node.rippleTimer >= node._rippleNext) {
         const base = rippleInterval(node);
-        // interval driven by node's own slow oscillation (unique phase per node)
         node._rippleNext = base * (0.6 + Math.abs(Math.sin(time * 0.00031 + node.pulsePhase)) * 0.85);
         node.rippleTimer = 0;
         spawnRipple(node);
@@ -1770,11 +1755,25 @@ function loop(time = 0) {
   }
 
   if (time - lastSlow > 100) {
-    for (const node of state.nodes) updateAudio(node);
+    for (const node of state.nodes) {
+      // temporarily update filterNorm from displaced y so audio reflects comet position
+      const savedFilterNorm = node.filterNorm;
+      if (!DRUM_TYPES.has(node.type) && (node._cDy ?? 0) !== 0) {
+        node.filterNorm = Math.max(0.02, Math.min(0.98, (node.y - TOP_H) / WORLD_HEIGHT));
+      }
+      updateAudio(node);
+      node.filterNorm = savedFilterNorm;
+    }
     if (state.selectedNode) updateNodeInfoStrip(state.selectedNode);
     updateAnalytics();
     drawSpectrum();
     lastSlow = time;
+  }
+
+  // Restore actual node positions after frame is complete.
+  for (const node of state.nodes) {
+    node.x -= node._cDx ?? 0;
+    node.y -= node._cDy ?? 0;
   }
 }
 
