@@ -424,6 +424,7 @@ function showView(name) {
   document.getElementById('global-view').classList.toggle('active', name === 'global');
   document.getElementById('node-view').classList.toggle('active',   name === 'node');
   document.getElementById('comet-view').classList.toggle('active',  name === 'comet');
+  document.getElementById('comet-btn').classList.toggle('on', name === 'comet');
 }
 
 function renderCometList() {
@@ -445,8 +446,7 @@ function renderCometParams(comet) {
   const gravSlider   = document.getElementById('cp-gravity');
   const lifeSlider   = document.getElementById('cp-life');
 
-  // orbit: store relative to original rx as 10–400 slider (100 = baseline)
-  if (!comet._baseRx) comet._baseRx = comet.rx;
+  // orbit relative to spawn rx
   const orbitVal = Math.round((comet.rx / comet._baseRx) * 100);
   orbitSlider.value = orbitVal;
   document.getElementById('cp-orbit-val').textContent = `${(orbitVal / 100).toFixed(1)}×`;
@@ -459,9 +459,7 @@ function renderCometParams(comet) {
   document.getElementById('cp-speed-val').textContent = `${(speedVal / 100).toFixed(1)}×`;
   setSliderPct(speedSlider, speedVal, 10, 500);
 
-  // gravity: mass+influence on 10–400
-  if (!comet._baseMass) comet._baseMass = comet.mass;
-  if (!comet._baseInfluence) comet._baseInfluence = comet.influence;
+  // gravity relative to spawn mass
   const gravVal = Math.round((comet.mass / comet._baseMass) * 100);
   gravSlider.value = gravVal;
   document.getElementById('cp-gravity-val').textContent = `${(gravVal / 100).toFixed(1)}×`;
@@ -503,7 +501,6 @@ function updateCometLifeDisplay(comet) {
     if (!comet) return;
     const v = e.target.valueAsNumber;
     if (id === 'cp-orbit') {
-      if (!comet._baseRx) comet._baseRx = comet.rx;
       comet.rx = comet._baseRx * (v / 100);
       comet.ry = comet.rx * 0.55;
       document.getElementById('cp-orbit-val').textContent = `${(v / 100).toFixed(1)}×`;
@@ -514,8 +511,6 @@ function updateCometLifeDisplay(comet) {
       document.getElementById('cp-speed-val').textContent = `${(v / 100).toFixed(1)}×`;
       setSliderPct(e.target, v, 10, 500);
     } else if (id === 'cp-gravity') {
-      if (!comet._baseMass) comet._baseMass = comet.mass;
-      if (!comet._baseInfluence) comet._baseInfluence = comet.influence;
       comet.mass      = comet._baseMass      * (v / 100);
       comet.influence = comet._baseInfluence * (v / 100);
       document.getElementById('cp-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
@@ -1743,6 +1738,8 @@ function spawnComet() {
     life: maxLife, maxLife,
     permanent: false,
     fadeSpeed: 1,
+    // base values for slider display — fixed at spawn, never overwritten
+    _baseRx: rx, _baseMass: mass, _baseInfluence: influence,
   });
 }
 
