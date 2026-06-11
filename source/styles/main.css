@@ -274,6 +274,7 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* ── comet view ───────────────────────────────────────────── */
 #comet-view { gap:0; overflow:hidden; }
+.comet-perm-slider { accent-color: var(--accent); cursor:pointer; }
 
 #comet-header {
   display:flex; align-items:center; justify-content:space-between;

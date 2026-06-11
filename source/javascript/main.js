@@ -467,17 +467,37 @@ function renderCometParams(comet) {
   document.getElementById('cp-gravity-val').textContent = `${(gravVal / 100).toFixed(1)}×`;
   setSliderPct(gravSlider, gravVal, 10, 400);
 
+  // fade speed
+  const fadeVal = Math.round((comet.fadeSpeed ?? 1) * 100);
+  document.getElementById('cp-fade').value = Math.min(500, Math.max(10, fadeVal));
+  document.getElementById('cp-fade-val').textContent = `${(fadeVal / 100).toFixed(1)}×`;
+  setSliderPct(document.getElementById('cp-fade'), fadeVal, 10, 500);
+
+  // permanent toggle
+  const isPerm = comet.permanent ?? false;
+  document.getElementById('cp-perm').value = isPerm ? 1 : 0;
+  document.getElementById('cp-perm-val').textContent = isPerm ? 'On' : 'Off';
+  document.getElementById('cp-perm').style.setProperty('--pct', isPerm ? '100%' : '0%');
+  document.getElementById('cp-fade').disabled = isPerm;
+  document.getElementById('cp-life').disabled = true;
+
   updateCometLifeDisplay(comet);
 }
 
 function updateCometLifeDisplay(comet) {
-  const pct = Math.round((comet.life / comet.maxLife) * 100);
-  document.getElementById('cp-life').value = pct;
-  document.getElementById('cp-life-val').textContent = `${pct}%`;
-  setSliderPct(document.getElementById('cp-life'), pct, 0, 100);
+  if (comet.permanent) {
+    document.getElementById('cp-life-val').textContent = '∞';
+    document.getElementById('cp-life').value = 100;
+    setSliderPct(document.getElementById('cp-life'), 100, 0, 100);
+  } else {
+    const pct = Math.round((comet.life / comet.maxLife) * 100);
+    document.getElementById('cp-life').value = pct;
+    document.getElementById('cp-life-val').textContent = `${pct}%`;
+    setSliderPct(document.getElementById('cp-life'), pct, 0, 100);
+  }
 }
 
-['cp-orbit', 'cp-speed', 'cp-gravity'].forEach(id => {
+['cp-orbit', 'cp-speed', 'cp-gravity', 'cp-fade', 'cp-perm'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     const comet = getSelectedComet();
     if (!comet) return;
@@ -500,6 +520,19 @@ function updateCometLifeDisplay(comet) {
       comet.influence = comet._baseInfluence * (v / 100);
       document.getElementById('cp-gravity-val').textContent = `${(v / 100).toFixed(1)}×`;
       setSliderPct(e.target, v, 10, 400);
+    } else if (id === 'cp-fade') {
+      comet.fadeSpeed = v / 100;
+      document.getElementById('cp-fade-val').textContent = `${(v / 100).toFixed(1)}×`;
+      setSliderPct(e.target, v, 10, 500);
+    } else if (id === 'cp-perm') {
+      comet.permanent = v === 1;
+      document.getElementById('cp-perm-val').textContent = comet.permanent ? 'On' : 'Off';
+      e.target.style.setProperty('--pct', comet.permanent ? '100%' : '0%');
+      document.getElementById('cp-fade').disabled = comet.permanent;
+      if (comet.permanent) {
+        document.getElementById('cp-life-val').textContent = '∞';
+        setSliderPct(document.getElementById('cp-life'), 100, 0, 100);
+      }
     }
   });
 });
@@ -1699,6 +1732,7 @@ function spawnComet() {
   const color = COMET_COLORS[Math.floor(Math.random() * COMET_COLORS.length)];
   const lifeSeconds = 14 + Math.random() * 16;
 
+  const maxLife = Math.round(lifeSeconds * 60);
   state.comets.push({
     id: Date.now() + Math.random(),
     cx, cy, rx, ry, tilt,
@@ -1706,7 +1740,9 @@ function spawnComet() {
     speed, mass, influence, color,
     size: 4 + Math.random() * 4,
     trail: [],
-    life: Math.round(lifeSeconds * 60), maxLife: Math.round(lifeSeconds * 60),
+    life: maxLife, maxLife,
+    permanent: false,
+    fadeSpeed: 1,
   });
 }
 
@@ -1725,8 +1761,10 @@ function updateComets(time) {
 
   for (let i = state.comets.length - 1; i >= 0; i--) {
     const c = state.comets[i];
-    c.life--;
-    if (c.life <= 0) { state.comets.splice(i, 1); continue; }
+    if (!c.permanent) {
+      c.life -= (c.fadeSpeed ?? 1);
+      if (c.life <= 0) { state.comets.splice(i, 1); continue; }
+    }
 
     c.angle += c.speed;
     const pos = cometWorldPos(c);
@@ -1734,10 +1772,14 @@ function updateComets(time) {
     c.trail.unshift({ x: pos.x, y: pos.y });
     if (c.trail.length > COMET_TRAIL) c.trail.length = COMET_TRAIL;
 
-    const lifeRatio = c.life / c.maxLife;
-    const fadeIn  = 1 - Math.max(0, (lifeRatio - 0.85) / 0.15);
-    const fadeOut = Math.min(1, lifeRatio / 0.12);
-    c.alpha = fadeIn * fadeOut;
+    if (c.permanent) {
+      c.alpha = 1;
+    } else {
+      const lifeRatio = c.life / c.maxLife;
+      const fadeIn  = 1 - Math.max(0, (lifeRatio - 0.85) / 0.15);
+      const fadeOut = Math.min(1, lifeRatio / 0.12);
+      c.alpha = fadeIn * fadeOut;
+    }
 
     for (const node of state.nodes) {
       if (node === dragNode) continue;

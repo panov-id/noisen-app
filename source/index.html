@@ -413,13 +413,29 @@
           <input type="range" class="card-slider" id="cp-gravity" min="10" max="400" value="100" style="--pct:23%">
           <span class="card-label">Gravity</span>
         </div>
-        <div class="param-card" data-tip="Life" data-tip-desc="Remaining lifetime of this comet">
+        <div class="param-card" data-tip="Lifetime" data-tip-desc="How long the comet lives before fading out. Toggle to make it permanent.">
           <div class="card-top">
             <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></span>
             <span class="card-val" id="cp-life-val">—</span>
           </div>
           <input type="range" class="card-slider" id="cp-life" min="0" max="100" value="100" style="--pct:100%" disabled>
           <span class="card-label">Life</span>
+        </div>
+        <div class="param-card" data-tip="Fade speed" data-tip-desc="How fast the comet fades out. Slow = long tail, fast = quick disappear.">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2 Q18 12 12 22 Q6 12 12 2Z"/></svg></span>
+            <span class="card-val" id="cp-fade-val">1×</span>
+          </div>
+          <input type="range" class="card-slider" id="cp-fade" min="10" max="500" value="100" style="--pct:18%">
+          <span class="card-label">Fade</span>
+        </div>
+        <div class="param-card comet-permanent-card" data-tip="Permanent" data-tip-desc="Toggle permanent mode — comet never fades out">
+          <div class="card-top">
+            <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2 L15 9 L22 9 L17 14 L19 21 L12 17 L5 21 L7 14 L2 9 L9 9 Z"/></svg></span>
+            <span class="card-val" id="cp-perm-val">Off</span>
+          </div>
+          <input type="range" class="card-slider comet-perm-slider" id="cp-perm" min="0" max="1" value="0" step="1" style="--pct:0%">
+          <span class="card-label">Permanent</span>
         </div>
       </div>
     </div>
