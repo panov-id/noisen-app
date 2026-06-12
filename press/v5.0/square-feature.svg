@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <radialGradient id="bg-q" cx="50%" cy="45%" r="85%">
+      <stop offset="0%" stop-color="#0c0c20"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="gq1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gq2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gq3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1faa88" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#1faa88" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gq4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a035d8" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#a035d8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-q"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="glow-q"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg-q)"/>
+
+  <!-- Grid -->
+  <g opacity="0.04" stroke="#7080ff" stroke-width="0.6">
+    <line x1="0" y1="180" x2="1080" y2="180"/>
+    <line x1="0" y1="360" x2="1080" y2="360"/>
+    <line x1="0" y1="540" x2="1080" y2="540"/>
+    <line x1="0" y1="720" x2="1080" y2="720"/>
+    <line x1="0" y1="900" x2="1080" y2="900"/>
+    <line x1="180" y1="0" x2="180" y2="1080"/>
+    <line x1="360" y1="0" x2="360" y2="1080"/>
+    <line x1="540" y1="0" x2="540" y2="1080"/>
+    <line x1="720" y1="0" x2="720" y2="1080"/>
+    <line x1="900" y1="0" x2="900" y2="1080"/>
+  </g>
+
+  <!-- Node glows -->
+  <ellipse cx="270" cy="340" rx="130" ry="130" fill="url(#gq1)" filter="url(#blur-q)"/>
+  <ellipse cx="780" cy="280" rx="110" ry="110" fill="url(#gq3)" filter="url(#blur-q)"/>
+  <ellipse cx="810" cy="600" rx="100" ry="100" fill="url(#gq2)" filter="url(#blur-q)"/>
+  <ellipse cx="340" cy="560" rx="90" ry="90" fill="url(#gq4)" filter="url(#blur-q)"/>
+
+  <!-- Sync lines -->
+  <line x1="270" y1="340" x2="780" y2="280" stroke="#3a7bd5" stroke-width="1.2" stroke-dasharray="6 12" opacity="0.4"/>
+  <line x1="270" y1="340" x2="340" y2="560" stroke="#a035d8" stroke-width="1.2" stroke-dasharray="6 12" opacity="0.35"/>
+  <line x1="780" y1="280" x2="810" y2="600" stroke="#1faa88" stroke-width="1.2" stroke-dasharray="6 12" opacity="0.35"/>
+  <line x1="340" y1="560" x2="810" y2="600" stroke="#ff6b35" stroke-width="1.2" stroke-dasharray="6 12" opacity="0.3"/>
+
+  <!-- Nodes -->
+  <circle cx="270" cy="340" r="26" fill="none" stroke="#3a7bd5" stroke-width="2.5" filter="url(#glow-q)"/>
+  <circle cx="270" cy="340" r="11" fill="#3a7bd5" opacity="0.95"/>
+  <circle cx="270" cy="340" r="48" fill="none" stroke="#3a7bd5" stroke-width="0.7" opacity="0.28"/>
+  <circle cx="270" cy="340" r="75" fill="none" stroke="#3a7bd5" stroke-width="0.4" opacity="0.13"/>
+
+  <circle cx="780" cy="280" r="22" fill="none" stroke="#1faa88" stroke-width="2.5" filter="url(#glow-q)"/>
+  <circle cx="780" cy="280" r="9" fill="#1faa88" opacity="0.95"/>
+  <circle cx="780" cy="280" r="40" fill="none" stroke="#1faa88" stroke-width="0.7" opacity="0.26"/>
+
+  <circle cx="810" cy="600" r="20" fill="none" stroke="#ff6b35" stroke-width="2.5" filter="url(#glow-q)"/>
+  <circle cx="810" cy="600" r="8.5" fill="#ff6b35" opacity="0.95"/>
+  <circle cx="810" cy="600" r="36" fill="none" stroke="#ff6b35" stroke-width="0.7" opacity="0.24"/>
+
+  <circle cx="340" cy="560" r="18" fill="none" stroke="#a035d8" stroke-width="2.5" filter="url(#glow-q)"/>
+  <circle cx="340" cy="560" r="7.5" fill="#a035d8" opacity="0.95"/>
+  <circle cx="340" cy="560" r="32" fill="none" stroke="#a035d8" stroke-width="0.7" opacity="0.22"/>
+
+  <!-- Sync burst at center -->
+  <circle cx="540" cy="440" r="5" fill="#7090ff" opacity="0.9"/>
+  <circle cx="540" cy="440" r="14" fill="none" stroke="#7090ff" stroke-width="1" opacity="0.55"/>
+  <circle cx="540" cy="440" r="26" fill="none" stroke="#7090ff" stroke-width="0.6" opacity="0.28"/>
+
+  <!-- Headline -->
+  <text x="540" y="800" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="64" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-0.02em">Noisen 5.0</text>
+  <text x="540" y="876" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="30" fill="#5566aa" text-anchor="middle" letter-spacing="0.02em">Multiplayer · Drums · Full sync</text>
+
+  <!-- Feature row -->
+  <rect x="100" y="920" width="880" height="60" rx="30" fill="#10102a" stroke="#3a7bd5" stroke-width="1" opacity="0.85"/>
+  <text x="540" y="958" font-family="-apple-system, sans-serif" font-size="24" fill="#8899cc" text-anchor="middle">Share a link · Jam together · No account</text>
+
+  <!-- Logo -->
+  <text x="540" y="54" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="16" font-weight="300" fill="#ffffff" text-anchor="middle" opacity="0.35" letter-spacing="0.3em">NOISEN.SPACE</text>
+</svg>

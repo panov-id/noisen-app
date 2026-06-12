@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <radialGradient id="bg-s" cx="50%" cy="40%" r="80%">
+      <stop offset="0%" stop-color="#0d0d22"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="g1s" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2s" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1faa88" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#1faa88" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g3s" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a035d8" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#a035d8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-l"><feGaussianBlur stdDeviation="32"/></filter>
+    <filter id="glow-s"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg-s)"/>
+
+  <!-- Grid -->
+  <g opacity="0.035" stroke="#6080ee" stroke-width="0.8">
+    <line x1="0" y1="240" x2="1080" y2="240"/>
+    <line x1="0" y1="480" x2="1080" y2="480"/>
+    <line x1="0" y1="720" x2="1080" y2="720"/>
+    <line x1="0" y1="960" x2="1080" y2="960"/>
+    <line x1="0" y1="1200" x2="1080" y2="1200"/>
+    <line x1="0" y1="1440" x2="1080" y2="1440"/>
+    <line x1="0" y1="1680" x2="1080" y2="1680"/>
+    <line x1="216" y1="0" x2="216" y2="1920"/>
+    <line x1="432" y1="0" x2="432" y2="1920"/>
+    <line x1="648" y1="0" x2="648" y2="1920"/>
+    <line x1="864" y1="0" x2="864" y2="1920"/>
+  </g>
+
+  <!-- Top section — canvas preview -->
+  <ellipse cx="320" cy="500" rx="150" ry="150" fill="url(#g1s)" filter="url(#blur-l)"/>
+  <ellipse cx="760" cy="420" rx="130" ry="130" fill="url(#g2s)" filter="url(#blur-l)"/>
+  <ellipse cx="540" cy="650" rx="120" ry="120" fill="url(#g3s)" filter="url(#blur-l)"/>
+
+  <!-- Connection lines -->
+  <line x1="320" y1="500" x2="760" y2="420" stroke="#3a7bd5" stroke-width="1.5" stroke-dasharray="8 14" opacity="0.4"/>
+  <line x1="320" y1="500" x2="540" y2="650" stroke="#a035d8" stroke-width="1.5" stroke-dasharray="8 14" opacity="0.35"/>
+  <line x1="760" y1="420" x2="540" y2="650" stroke="#1faa88" stroke-width="1.5" stroke-dasharray="8 14" opacity="0.3"/>
+
+  <!-- Nodes -->
+  <circle cx="320" cy="500" r="28" fill="none" stroke="#3a7bd5" stroke-width="2.5" filter="url(#glow-s)"/>
+  <circle cx="320" cy="500" r="13" fill="#3a7bd5" opacity="0.95"/>
+  <circle cx="320" cy="500" r="52" fill="none" stroke="#3a7bd5" stroke-width="0.8" opacity="0.3"/>
+  <circle cx="320" cy="500" r="80" fill="none" stroke="#3a7bd5" stroke-width="0.4" opacity="0.15"/>
+
+  <circle cx="760" cy="420" r="24" fill="none" stroke="#1faa88" stroke-width="2.5" filter="url(#glow-s)"/>
+  <circle cx="760" cy="420" r="11" fill="#1faa88" opacity="0.95"/>
+  <circle cx="760" cy="420" r="44" fill="none" stroke="#1faa88" stroke-width="0.8" opacity="0.28"/>
+
+  <circle cx="540" cy="650" r="20" fill="none" stroke="#a035d8" stroke-width="2.5" filter="url(#glow-s)"/>
+  <circle cx="540" cy="650" r="9" fill="#a035d8" opacity="0.95"/>
+  <circle cx="540" cy="650" r="38" fill="none" stroke="#a035d8" stroke-width="0.8" opacity="0.25"/>
+
+  <!-- Center sync icon -->
+  <circle cx="540" cy="960" r="60" fill="#0a0a1e" stroke="#3a7bd5" stroke-width="1.5" opacity="0.8"/>
+  <text x="540" y="980" font-family="-apple-system, sans-serif" font-size="42" fill="#3a7bd5" text-anchor="middle" opacity="0.9">⟳</text>
+
+  <!-- Main text block -->
+  <text x="540" y="1120" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="72" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-0.03em">Play together.</text>
+  <text x="540" y="1210" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="72" font-weight="800" fill="#3a7bd5" text-anchor="middle" letter-spacing="-0.03em">In real time.</text>
+
+  <text x="540" y="1310" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="32" fill="#7788bb" text-anchor="middle" letter-spacing="0.01em">Share a link.</text>
+  <text x="540" y="1360" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="32" fill="#7788bb" text-anchor="middle" letter-spacing="0.01em">No account needed.</text>
+
+  <!-- Feature pills -->
+  <rect x="190" y="1440" width="700" height="56" rx="28" fill="#1a1a3a" stroke="#3a7bd5" stroke-width="1" opacity="0.9"/>
+  <text x="540" y="1475" font-family="-apple-system, sans-serif" font-size="24" fill="#aabbee" text-anchor="middle">Full sync — orbits · filter · steps · FX</text>
+
+  <rect x="240" y="1516" width="600" height="56" rx="28" fill="#1a1a3a" stroke="#1faa88" stroke-width="1" opacity="0.8"/>
+  <text x="540" y="1551" font-family="-apple-system, sans-serif" font-size="24" fill="#88ddbb" text-anchor="middle">Session survives page reload</text>
+
+  <rect x="290" y="1592" width="500" height="56" rx="28" fill="#1a1a3a" stroke="#a035d8" stroke-width="1" opacity="0.8"/>
+  <text x="540" y="1627" font-family="-apple-system, sans-serif" font-size="24" fill="#cc88ff" text-anchor="middle">Works on any device</text>
+
+  <!-- Version + logo -->
+  <text x="540" y="1760" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="26" font-weight="300" fill="#ffffff" text-anchor="middle" opacity="0.35" letter-spacing="0.3em">NOISEN</text>
+  <rect x="456" y="1790" width="168" height="40" rx="20" fill="#3a7bd5" opacity="0.15"/>
+  <rect x="456" y="1790" width="168" height="40" rx="20" fill="none" stroke="#3a7bd5" stroke-width="1" opacity="0.4"/>
+  <text x="540" y="1817" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#6aa3ff" text-anchor="middle" letter-spacing="0.05em">v5.0 · noisen.space</text>
+</svg>

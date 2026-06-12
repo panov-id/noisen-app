@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <radialGradient id="bg-d" cx="50%" cy="35%" r="85%">
+      <stop offset="0%" stop-color="#120818"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="gkd" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ghd" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#44ddaa" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#44ddaa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gsd" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffcc44" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#ffcc44" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gcm" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#8888ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-xl"><feGaussianBlur stdDeviation="40"/></filter>
+    <filter id="glow-d"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg-d)"/>
+
+  <!-- Grid -->
+  <g opacity="0.03" stroke="#ff6655" stroke-width="0.8">
+    <line x1="0" y1="200" x2="1080" y2="200"/>
+    <line x1="0" y1="400" x2="1080" y2="400"/>
+    <line x1="0" y1="600" x2="1080" y2="600"/>
+    <line x1="0" y1="800" x2="1080" y2="800"/>
+    <line x1="0" y1="1000" x2="1080" y2="1000"/>
+    <line x1="0" y1="1200" x2="1080" y2="1200"/>
+    <line x1="0" y1="1400" x2="1080" y2="1400"/>
+    <line x1="0" y1="1600" x2="1080" y2="1600"/>
+    <line x1="270" y1="0" x2="270" y2="1920"/>
+    <line x1="540" y1="0" x2="540" y2="1920"/>
+    <line x1="810" y1="0" x2="810" y2="1920"/>
+  </g>
+
+  <!-- Drum node glows -->
+  <ellipse cx="280" cy="450" rx="160" ry="160" fill="url(#gkd)" filter="url(#blur-xl)"/>
+  <ellipse cx="800" cy="360" rx="130" ry="130" fill="url(#ghd)" filter="url(#blur-xl)"/>
+  <ellipse cx="540" cy="600" rx="140" ry="140" fill="url(#gsd)" filter="url(#blur-xl)"/>
+
+  <!-- Comet -->
+  <ellipse cx="750" cy="200" rx="50" ry="50" fill="url(#gcm)" filter="url(#blur-xl)"/>
+  <circle cx="750" cy="200" r="7" fill="#ffffff" opacity="0.98"/>
+  <line x1="750" y1="200" x2="630" y2="290" stroke="#ffffff" stroke-width="4" opacity="0.5"/>
+  <line x1="630" y1="290" x2="540" y2="370" stroke="#ffffff" stroke-width="2.5" opacity="0.28"/>
+  <line x1="540" y1="370" x2="460" y2="440" stroke="#ffffff" stroke-width="1.5" opacity="0.12"/>
+
+  <!-- Drum nodes -->
+  <circle cx="280" cy="450" r="36" fill="none" stroke="#ff6b35" stroke-width="3" filter="url(#glow-d)"/>
+  <circle cx="280" cy="450" r="16" fill="#ff6b35" opacity="0.95"/>
+  <circle cx="280" cy="450" r="66" fill="none" stroke="#ff6b35" stroke-width="0.8" opacity="0.3"/>
+  <circle cx="280" cy="450" r="100" fill="none" stroke="#ff6b35" stroke-width="0.4" opacity="0.14"/>
+  <text x="280" y="510" font-family="-apple-system, sans-serif" font-size="14" fill="#ff9966" text-anchor="middle" opacity="0.8" letter-spacing="0.08em">KICK</text>
+
+  <circle cx="800" cy="360" r="30" fill="none" stroke="#44ddaa" stroke-width="3" filter="url(#glow-d)"/>
+  <circle cx="800" cy="360" r="13" fill="#44ddaa" opacity="0.95"/>
+  <circle cx="800" cy="360" r="54" fill="none" stroke="#44ddaa" stroke-width="0.8" opacity="0.28"/>
+  <text x="800" y="412" font-family="-apple-system, sans-serif" font-size="14" fill="#66ffcc" text-anchor="middle" opacity="0.8" letter-spacing="0.08em">HIHAT</text>
+
+  <!-- Comet hit ripple on hihat -->
+  <circle cx="800" cy="360" r="70" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
+  <circle cx="800" cy="360" r="90" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.18"/>
+
+  <circle cx="540" cy="600" r="26" fill="none" stroke="#ffcc44" stroke-width="3" filter="url(#glow-d)"/>
+  <circle cx="540" cy="600" r="11" fill="#ffcc44" opacity="0.95"/>
+  <circle cx="540" cy="600" r="48" fill="none" stroke="#ffcc44" stroke-width="0.8" opacity="0.25"/>
+  <text x="540" y="645" font-family="-apple-system, sans-serif" font-size="14" fill="#ffdd88" text-anchor="middle" opacity="0.8" letter-spacing="0.08em">SNARE</text>
+
+  <!-- Step sequencer -->
+  <g>
+    <rect x="80" y="780" width="920" height="4" rx="2" fill="#2a1a30" opacity="0.8"/>
+    <!-- 16 step buttons, 2 rows -->
+    <rect x="80"  y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.9"/>
+    <rect x="140" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="200" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="260" y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.9"/>
+    <rect x="320" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="380" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="440" y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.9"/>
+    <rect x="500" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="560" y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.75"/>
+    <rect x="620" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="680" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="740" y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.9"/>
+    <rect x="800" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="860" y="800" width="52" height="46" rx="8" fill="#ff6b35" opacity="0.75"/>
+    <rect x="920" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+    <rect x="980" y="800" width="52" height="46" rx="8" fill="#1a1025" opacity="0.7" stroke="#3a2040" stroke-width="0.8"/>
+  </g>
+
+  <!-- Headline -->
+  <text x="540" y="1020" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="76" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-0.03em">Comets hit</text>
+  <text x="540" y="1108" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="76" font-weight="800" fill="#ff6b35" text-anchor="middle" letter-spacing="-0.03em">your drums.</text>
+
+  <text x="540" y="1200" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="30" fill="#997766" text-anchor="middle">Orbit a comet through the kit</text>
+  <text x="540" y="1248" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="30" fill="#997766" text-anchor="middle">for live, unpredictable rhythm.</text>
+
+  <!-- Feature pills -->
+  <rect x="140" y="1340" width="800" height="58" rx="29" fill="#1a1020" stroke="#ff6b35" stroke-width="1" opacity="0.9"/>
+  <text x="540" y="1377" font-family="-apple-system, sans-serif" font-size="26" fill="#ffaa88" text-anchor="middle">Euclidean patterns on placement</text>
+
+  <rect x="190" y="1418" width="700" height="58" rx="29" fill="#1a1020" stroke="#ffcc44" stroke-width="1" opacity="0.85"/>
+  <text x="540" y="1455" font-family="-apple-system, sans-serif" font-size="26" fill="#ffdd88" text-anchor="middle">Steps sync in multiplayer</text>
+
+  <rect x="240" y="1496" width="600" height="58" rx="29" fill="#1a1020" stroke="#44ddaa" stroke-width="1" opacity="0.8"/>
+  <text x="540" y="1533" font-family="-apple-system, sans-serif" font-size="26" fill="#88ffcc" text-anchor="middle">Drum params sync live</text>
+
+  <!-- Logo + version -->
+  <text x="540" y="1760" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="24" font-weight="300" fill="#ffffff" text-anchor="middle" opacity="0.35" letter-spacing="0.3em">NOISEN</text>
+  <rect x="416" y="1790" width="248" height="42" rx="21" fill="#ff6b35" opacity="0.14"/>
+  <rect x="416" y="1790" width="248" height="42" rx="21" fill="none" stroke="#ff6b35" stroke-width="1" opacity="0.45"/>
+  <text x="540" y="1818" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#ff9966" text-anchor="middle" letter-spacing="0.05em">v5.0 · noisen.space</text>
+</svg>

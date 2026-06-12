@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#0c0a1e"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="gn1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a035d8" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#a035d8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gn2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity=".38"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gn3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1faa88" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#1faa88" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="bl"><feGaussianBlur stdDeviation="26"/></filter>
+    <filter id="gw"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+
+  <!-- Node 1 — purple, filter orbit + pan orbit -->
+  <ellipse cx="280" cy="280" rx="120" ry="120" fill="url(#gn1)" filter="url(#bl)"/>
+  <!-- orbit ellipses -->
+  <ellipse cx="280" cy="280" rx="88" ry="52" fill="none" stroke="#78c8ff" stroke-width="1.2" opacity=".45" stroke-dasharray="3 6"/>
+  <ellipse cx="280" cy="280" rx="120" ry="36" fill="none" stroke="#8cffa0" stroke-width="1"   opacity=".35" stroke-dasharray="2 7"/>
+  <!-- orbit satellite dots -->
+  <circle cx="368" cy="280" r="5" fill="#78c8ff" opacity=".8"/>
+  <circle cx="280" cy="316" r="4" fill="#8cffa0" opacity=".7"/>
+  <!-- node -->
+  <circle cx="280" cy="280" r="26" fill="none" stroke="#a035d8" stroke-width="2.5" filter="url(#gw)"/>
+  <circle cx="280" cy="280" r="11" fill="#a035d8"/>
+  <circle cx="280" cy="280" r="50" fill="none" stroke="#a035d8" stroke-width=".7" opacity=".25"/>
+  <!-- labels -->
+  <text x="378" y="278" font-family="-apple-system,sans-serif" font-size="11" fill="#78c8ff" opacity=".75">filter</text>
+  <text x="288" y="328" font-family="-apple-system,sans-serif" font-size="11" fill="#8cffa0" opacity=".65">pan</text>
+
+  <!-- Node 2 — blue, volume orbit -->
+  <ellipse cx="640" cy="240" rx="105" ry="105" fill="url(#gn2)" filter="url(#bl)"/>
+  <ellipse cx="640" cy="240" rx="75" ry="75" fill="none" stroke="#ffb450" stroke-width="1.3" opacity=".5" stroke-dasharray="4 6"/>
+  <circle cx="715" cy="240" r="5.5" fill="#ffb450" opacity=".85"/>
+  <circle cx="640" cy="240" r="23" fill="none" stroke="#3a7bd5" stroke-width="2.5" filter="url(#gw)"/>
+  <circle cx="640" cy="240" r="9"  fill="#3a7bd5"/>
+  <circle cx="640" cy="240" r="44" fill="none" stroke="#3a7bd5" stroke-width=".7" opacity=".22"/>
+  <text x="724" y="238" font-family="-apple-system,sans-serif" font-size="11" fill="#ffb450" opacity=".75">volume</text>
+
+  <!-- Node 3 — green, delay + filter orbit -->
+  <ellipse cx="960" cy="300" rx="110" ry="110" fill="url(#gn3)" filter="url(#bl)"/>
+  <ellipse cx="960" cy="300" rx="95" ry="48" fill="none" stroke="#78c8ff" stroke-width="1.2" opacity=".42" stroke-dasharray="3 6"/>
+  <ellipse cx="960" cy="300" rx="60" ry="80" fill="none" stroke="#ffb450" stroke-width="1"   opacity=".35" stroke-dasharray="2 7"/>
+  <circle cx="960" cy="252" r="5"   fill="#78c8ff" opacity=".75"/>
+  <circle cx="1020" cy="300" r="4.5" fill="#ffb450" opacity=".7"/>
+  <circle cx="960" cy="300" r="21" fill="none" stroke="#1faa88" stroke-width="2.5" filter="url(#gw)"/>
+  <circle cx="960" cy="300" r="8"  fill="#1faa88"/>
+  <circle cx="960" cy="300" r="40" fill="none" stroke="#1faa88" stroke-width=".7" opacity=".22"/>
+  <text x="968" y="247" font-family="-apple-system,sans-serif" font-size="11" fill="#78c8ff" opacity=".75">filter</text>
+  <text x="1028" y="303" font-family="-apple-system,sans-serif" font-size="11" fill="#ffb450" opacity=".7">delay</text>
+
+  <!-- waveform hint lines under nodes (audio activity) -->
+  <g opacity=".18">
+    <path d="M 80 460 Q 120 430 160 460 Q 200 490 240 460 Q 280 430 320 460 Q 360 490 400 460 Q 440 430 480 460" fill="none" stroke="#a035d8" stroke-width="1.5"/>
+    <path d="M 440 440 Q 490 410 540 440 Q 590 470 640 440 Q 690 410 740 440 Q 790 470 840 440" fill="none" stroke="#3a7bd5" stroke-width="1.5"/>
+    <path d="M 760 455 Q 810 425 860 455 Q 910 485 960 455 Q 1010 425 1060 455 Q 1110 485 1140 455" fill="none" stroke="#1faa88" stroke-width="1.5"/>
+  </g>
+
+  <!-- headline -->
+  <text x="600" y="542" font-family="-apple-system,'Helvetica Neue',sans-serif" font-size="46" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="-.02em">Orbits keep sound alive.</text>
+  <text x="600" y="585" font-family="-apple-system,sans-serif" font-size="17" fill="rgba(255,255,255,.4)" text-anchor="middle">Independent LFOs on filter · pan · volume · delay — up to 3 per node</text>
+  <text x="600" y="616" font-family="-apple-system,sans-serif" font-size="17" fill="rgba(255,255,255,.4)" text-anchor="middle">Different rates create evolving interference that never repeats exactly</text>
+
+  <text x="600" y="660" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".25em">NOISEN · noisen.space</text>
+</svg>

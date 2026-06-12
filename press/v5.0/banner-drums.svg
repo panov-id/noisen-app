@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="bg2" cx="50%" cy="60%" r="85%">
+      <stop offset="0%" stop-color="#0f0a1e"/>
+      <stop offset="100%" stop-color="#05050e"/>
+    </radialGradient>
+    <radialGradient id="gk" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gs" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffcc44" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffcc44" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gh" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#44ddaa" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#44ddaa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gcomet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#8088ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-md"><feGaussianBlur stdDeviation="22"/></filter>
+    <filter id="glow2"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg2)"/>
+
+  <!-- Grid -->
+  <g opacity="0.035" stroke="#aa88ff" stroke-width="0.5">
+    <line x1="0" y1="126" x2="1200" y2="126"/>
+    <line x1="0" y1="252" x2="1200" y2="252"/>
+    <line x1="0" y1="378" x2="1200" y2="378"/>
+    <line x1="0" y1="504" x2="1200" y2="504"/>
+    <line x1="150" y1="0" x2="150" y2="630"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="450" y1="0" x2="450" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="750" y1="0" x2="750" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+    <line x1="1050" y1="0" x2="1050" y2="630"/>
+  </g>
+
+  <!-- Step sequencer grid (visual metaphor) -->
+  <g opacity="0.12">
+    <rect x="200" y="440" width="800" height="2" fill="#aa88ff"/>
+  </g>
+
+  <!-- Step buttons row (visual) -->
+  <g>
+    <!-- 16 steps -->
+    <rect x="200" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.85"/>
+    <rect x="252" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="304" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="356" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.85"/>
+    <rect x="408" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="460" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="512" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.85"/>
+    <rect x="564" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="616" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.7"/>
+    <rect x="668" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="720" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="772" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.85"/>
+    <rect x="824" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="876" y="460" width="44" height="36" rx="6" fill="#ff6b35" opacity="0.7"/>
+    <rect x="928" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+    <rect x="980" y="460" width="44" height="36" rx="6" fill="#1a1428" opacity="0.6" stroke="#444" stroke-width="0.5"/>
+  </g>
+
+  <!-- Drum node glows -->
+  <ellipse cx="310" cy="290" rx="90" ry="90" fill="url(#gk)" filter="url(#blur-md)"/>
+  <ellipse cx="580" cy="220" rx="75" ry="75" fill="url(#gs)" filter="url(#blur-md)"/>
+  <ellipse cx="850" cy="300" rx="70" ry="70" fill="url(#gh)" filter="url(#blur-md)"/>
+  <ellipse cx="460" cy="340" rx="60" ry="60" fill="url(#gk)" filter="url(#blur-md)" opacity="0.6"/>
+  <ellipse cx="720" cy="260" rx="55" ry="55" fill="url(#gs)" filter="url(#blur-md)" opacity="0.6"/>
+
+  <!-- Comet trail -->
+  <g opacity="0.9">
+    <ellipse cx="900" cy="150" rx="30" ry="30" fill="url(#gcomet)" filter="url(#blur-md)"/>
+    <circle cx="900" cy="150" r="5" fill="#ffffff" opacity="0.95"/>
+    <!-- trail -->
+    <line x1="900" y1="150" x2="820" y2="195" stroke="url(#gcomet)" stroke-width="3" opacity="0.6"/>
+    <line x1="820" y1="195" x2="740" y2="230" stroke="url(#gcomet)" stroke-width="2" opacity="0.35"/>
+    <line x1="740" y1="230" x2="660" y2="258" stroke="url(#gcomet)" stroke-width="1.5" opacity="0.18"/>
+    <line x1="660" y1="258" x2="580" y2="280" stroke="url(#gcomet)" stroke-width="1" opacity="0.08"/>
+  </g>
+
+  <!-- Drum nodes -->
+  <circle cx="310" cy="290" r="22" fill="none" stroke="#ff6b35" stroke-width="2" filter="url(#glow2)"/>
+  <circle cx="310" cy="290" r="10" fill="#ff6b35" opacity="0.95"/>
+  <circle cx="310" cy="290" r="40" fill="none" stroke="#ff6b35" stroke-width="0.6" opacity="0.25"/>
+  <text x="310" y="330" font-family="-apple-system, sans-serif" font-size="10" fill="#ff6b35" text-anchor="middle" opacity="0.7" letter-spacing="0.05em">KICK</text>
+
+  <circle cx="580" cy="220" r="18" fill="none" stroke="#ffcc44" stroke-width="2" filter="url(#glow2)"/>
+  <circle cx="580" cy="220" r="8" fill="#ffcc44" opacity="0.95"/>
+  <circle cx="580" cy="220" r="34" fill="none" stroke="#ffcc44" stroke-width="0.6" opacity="0.25"/>
+  <text x="580" y="258" font-family="-apple-system, sans-serif" font-size="10" fill="#ffcc44" text-anchor="middle" opacity="0.7" letter-spacing="0.05em">SNARE</text>
+
+  <!-- Comet hit ripple on snare -->
+  <circle cx="580" cy="220" r="48" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="580" cy="220" r="64" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.2"/>
+
+  <circle cx="850" cy="300" r="16" fill="none" stroke="#44ddaa" stroke-width="2" filter="url(#glow2)"/>
+  <circle cx="850" cy="300" r="7" fill="#44ddaa" opacity="0.95"/>
+  <circle cx="850" cy="300" r="28" fill="none" stroke="#44ddaa" stroke-width="0.6" opacity="0.25"/>
+  <text x="850" y="334" font-family="-apple-system, sans-serif" font-size="10" fill="#44ddaa" text-anchor="middle" opacity="0.7" letter-spacing="0.05em">HIHAT</text>
+
+  <circle cx="460" cy="340" r="14" fill="none" stroke="#ff6b35" stroke-width="1.5" filter="url(#glow2)" opacity="0.8"/>
+  <circle cx="460" cy="340" r="6" fill="#ff6b35" opacity="0.8"/>
+
+  <circle cx="720" cy="260" r="13" fill="none" stroke="#ffcc44" stroke-width="1.5" filter="url(#glow2)" opacity="0.75"/>
+  <circle cx="720" cy="260" r="5.5" fill="#ffcc44" opacity="0.75"/>
+
+  <!-- Version badge -->
+  <rect x="48" y="44" width="90" height="32" rx="16" fill="#ff6b35" opacity="0.18"/>
+  <rect x="48" y="44" width="90" height="32" rx="16" fill="none" stroke="#ff6b35" stroke-width="1" opacity="0.5"/>
+  <text x="93" y="65" font-family="'SF Mono', 'Fira Mono', monospace" font-size="14" fill="#ff9966" text-anchor="middle" letter-spacing="0.04em">v5.0</text>
+
+  <!-- Headline -->
+  <text x="600" y="116" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="54" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-0.02em">Drums that react to comets.</text>
+  <text x="600" y="165" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="21" fill="#aa8888" text-anchor="middle" letter-spacing="0.01em">Orbit a comet through your kit · Euclidean patterns on placement</text>
+
+  <!-- Logo -->
+  <text x="600" y="590" font-family="-apple-system, 'Helvetica Neue', sans-serif" font-size="16" font-weight="300" fill="#ffffff" text-anchor="middle" opacity="0.4" letter-spacing="0.3em">NOISEN</text>
+</svg>

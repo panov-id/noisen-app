@@ -42,7 +42,7 @@ import {
 import { toggle as toggleDebug, patchConsole as patchDebugConsole } from './debug.js';
 import { resolveShortCode, showShareModal } from './links.js';
 import {
-  createSession, joinSession, leaveSession,
+  createSession, createSessionWithCode, joinSession, leaveSession,
   broadcast, onRemoteEvent, onParticipantChange,
   sessionActive, sessionCode, participantCount,
 } from './session.js';
@@ -134,11 +134,18 @@ function syncCount() {
 function addNode(worldX, worldY, filterNorm = 0.5) {
   if (state.beatMode) {
     const drumType = selectedDrumType;
+    const defaultSteps = {
+      kick:  euclidean(16, 4),
+      snare: euclidean(16, 2),
+      hihat: euclidean(16, 8),
+      clap:  euclidean(16, 2),
+      perc:  euclidean(16, 3),
+    };
     const node = {
       id: ++state.nodeSeq, x: worldX, y: worldY, filterNorm,
       type: drumType, muted: false, volume: .7, panOverride: null,
       typeParams: { ...TYPE_DEFAULTS[drumType] },
-      steps: Array(16).fill(false),
+      steps: defaultSteps[drumType] ?? Array(16).fill(false),
       orbits: [],
       pulsePhase: Math.random() * Math.PI * 2, rippleTimer: 0, _rippleNext: 20 + Math.random() * 60, audio: null,
     };
@@ -192,6 +199,10 @@ function applyPreset(preset) {
   }
   syncCount();
   fitAllNodes();
+  // Sync play state from session host
+  if (preset.isPlaying != null && preset.isPlaying !== state.isPlaying) {
+    document.getElementById('play-btn').click();
+  }
 }
 
 registerApplyPreset(applyPreset);
@@ -216,11 +227,14 @@ document.getElementById('large-toggle').addEventListener('click', () => {
 document.getElementById('version-btn').textContent = `v${APP_VERSION}`;
 document.getElementById('version-btn').addEventListener('click', () => showWhatsNew(APP_VERSION));
 
-// auto-show whats-new on first load with this version
+// auto-show whats-new for returning users who haven't seen this version yet.
+// New users see the wizard instead — don't show both at once.
 (function checkVersion() {
   const seen = loadSettings().lastSeenVersion;
   if (seen !== APP_VERSION) {
-    setTimeout(() => showWhatsNew(APP_VERSION), 600);
+    setTimeout(() => {
+      if (!window.__isNewUser) showWhatsNew(APP_VERSION);
+    }, 600);
   }
 })();
 
@@ -242,6 +256,15 @@ document.getElementById('whatsnew-close-btn').addEventListener('click', () => {
 })();
 
 // ── Global sliders ────────────────────────────────────────────
+function broadcastGlobal() {
+  if (sessionActive()) broadcast('global_param', {
+    vol:    Math.round(state.masterVolume    * 100),
+    grav:   Math.round(state.gravityStrength * 100),
+    tone:   Math.round(state.masterTone      * 100),
+    spread: Math.round(state.waveSpread      * 100),
+  });
+}
+
 document.getElementById('vol').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
   state.masterVolume = v / 100;
@@ -249,6 +272,7 @@ document.getElementById('vol').addEventListener('input', e => {
   document.getElementById('gv-vol-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
   saveSettings({ vol: v });
+  broadcastGlobal();
 });
 document.getElementById('grav').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
@@ -257,6 +281,7 @@ document.getElementById('grav').addEventListener('input', e => {
   document.getElementById('an-grav').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
   saveSettings({ grav: v });
+  broadcastGlobal();
 });
 document.getElementById('tone').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
@@ -265,6 +290,7 @@ document.getElementById('tone').addEventListener('input', e => {
   document.getElementById('gv-tone-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
   saveSettings({ tone: v });
+  broadcastGlobal();
 });
 document.getElementById('spread').addEventListener('input', e => {
   const v = e.target.valueAsNumber;
@@ -272,6 +298,7 @@ document.getElementById('spread').addEventListener('input', e => {
   document.getElementById('gv-spread-val').textContent = `${v}%`;
   setSliderPct(e.target, v, 0, 100);
   saveSettings({ spread: v });
+  broadcastGlobal();
 });
 
 // ── Reset view ────────────────────────────────────────────────
@@ -423,43 +450,74 @@ onRemoteEvent((type, data) => {
   if (type === 'node_param') {
     const node = state.nodes.find(n => n.id === data.id);
     if (!node) return;
-    const { key, value } = data;
+    const { key, value, rebuild } = data;
     if (key.startsWith('typeParams.')) {
       node.typeParams[key.slice(11)] = value;
     } else {
       node[key] = value;
     }
-    updateAudio(node);
+    if (rebuild) rebuildAudio(node); else updateAudio(node);
+    // Refresh panel if this node is selected
+    if (state.selectedNode?.id === node.id) buildNodeCards(node);
+    return;
+  }
+  if (type === 'node_type') {
+    const node = state.nodes.find(n => n.id === data.id);
+    if (!node) return;
+    node.type       = data.nodeType;
+    node.typeParams = { ...data.typeParams };
+    node.steps      = data.steps ?? node.steps;
+    if (DRUM_TYPES.has(node.type)) { destroyAudio(node); }
+    else rebuildAudio(node);
+    if (state.selectedNode?.id === node.id) { buildTypeButtons(node); buildNodeCards(node); }
     return;
   }
   if (type === 'global_param') {
-    const { key, value } = data;
-    state[key] = value;
-    applyGlobal(key, value);
+    applyGlobal(data);
     return;
   }
-  if (type === 'play_state') {
-    // sync play/stop without re-triggering broadcast
-    if (data.isPlaying !== state.isPlaying) {
-      if (data.isPlaying) {
-        state.isPlaying = true;
-        startAll();
-        if (state.beatMode) startBeat(state.bpm);
-      } else {
-        state.isPlaying = false;
-        stopAll();
-        if (state.beatMode) stopBeat();
-      }
-    }
+  // play_state is intentionally not synced — each participant controls playback independently
+  if (type === 'comet_add') {
+    const c = data.comet;
+    if (!c) return;
+    if (state.comets.length >= COMET_MAX) state.comets.shift();
+    state.comets.push({ ...c, trail: [], _drumHit: new Set() });
     return;
   }
 });
 
+const LAST_SESSION_KEY      = 'noisen_last_session';
+const LAST_SESSION_ROLE_KEY = 'noisen_last_session_role';
+
+function saveLastSession(code, role) {
+  localStorage.setItem(LAST_SESSION_KEY, code);
+  localStorage.setItem(LAST_SESSION_ROLE_KEY, role);
+}
+function clearLastSession() {
+  localStorage.removeItem(LAST_SESSION_KEY);
+  localStorage.removeItem(LAST_SESSION_ROLE_KEY);
+}
+function getLastSession() { return localStorage.getItem(LAST_SESSION_KEY); }
+function getLastSessionRole() { return localStorage.getItem(LAST_SESSION_ROLE_KEY) ?? 'guest'; }
+
+function updateRejoinUI() {
+  const code = getLastSession();
+  const row  = document.getElementById('session-rejoin-row');
+  if (code && !sessionActive()) {
+    document.getElementById('session-rejoin-code').textContent = code;
+    row.style.display = '';
+  } else {
+    row.style.display = 'none';
+  }
+}
+
 document.getElementById('session-btn').addEventListener('click', () => {
+  updateRejoinUI();
   openSessionOverlay();
   updateSessionUI();
 });
 document.getElementById('session-btn-m').addEventListener('click', () => {
+  updateRejoinUI();
   openSessionOverlay();
   updateSessionUI();
   document.getElementById('topbar-dropdown').classList.remove('open');
@@ -469,10 +527,30 @@ document.getElementById('session-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeSessionOverlay();
 });
 
+async function doJoin(code, asHost = false, isRejoin = false) {
+  setSessionPane('connecting');
+  try {
+    if (asHost) {
+      await createSessionWithCode(code);
+    } else {
+      await joinSession(code);
+    }
+    saveLastSession(code, asHost ? 'host' : 'guest');
+    updateSessionUI();
+    showToast(isRejoin ? `Rejoined session ${code}` : `Joined session ${code}`);
+  } catch (err) {
+    setSessionPane('idle');
+    updateRejoinUI();
+    showToast('Could not join session');
+    console.error(err);
+  }
+}
+
 document.getElementById('session-create-btn').addEventListener('click', async () => {
   setSessionPane('connecting');
   try {
     const code = await createSession();
+    saveLastSession(code, 'host');
     updateSessionUI();
     showToast(`Session created: ${code}`);
   } catch (err) {
@@ -482,30 +560,54 @@ document.getElementById('session-create-btn').addEventListener('click', async ()
   }
 });
 
-document.getElementById('session-join-btn').addEventListener('click', async () => {
+document.getElementById('session-join-btn').addEventListener('click', () => {
   const code = document.getElementById('session-code-input').value.trim();
   if (code.length < 4) { showToast('Enter a valid session code'); return; }
-  setSessionPane('connecting');
-  try {
-    await joinSession(code);
-    updateSessionUI();
-    showToast(`Joined session ${code}`);
-  } catch (err) {
-    setSessionPane('idle');
-    showToast('Could not join session');
-    console.error(err);
-  }
+  doJoin(code, false, false);
+});
+
+document.getElementById('session-rejoin-btn').addEventListener('click', () => {
+  const code = getLastSession();
+  const role = getLastSessionRole();
+  if (code) doJoin(code, role === 'host', true);
 });
 
 document.getElementById('session-copy-btn').addEventListener('click', () => {
   navigator.clipboard?.writeText(sessionCode() ?? '').then(() => showToast('Code copied'));
 });
 
+document.getElementById('session-copy-link-btn').addEventListener('click', () => {
+  const code = sessionCode();
+  if (!code) return;
+  const url = `${location.origin}${location.pathname}?s=${code}`;
+  navigator.clipboard?.writeText(url).then(() => showToast('Link copied'));
+});
+
 document.getElementById('session-leave-btn').addEventListener('click', () => {
   leaveSession();
+  clearLastSession();
   updateSessionUI();
   showToast('Left session');
 });
+
+// ── Auto-join from URL ?s=CODE or localStorage on page load ──────
+updateRejoinUI();
+(function autoJoinOnLoad() {
+  const params      = new URLSearchParams(location.search);
+  const codeFromUrl = params.get('s');
+  if (codeFromUrl) {
+    const cleanUrl = location.pathname + (params.get('p') ? `?p=${params.get('p')}` : '');
+    history.replaceState(null, '', cleanUrl);
+    // Slight delay so ?p= preset loads first (both run at page load)
+    setTimeout(() => doJoin(codeFromUrl.toLowerCase().trim(), false, false), 200);
+    return;
+  }
+  const saved = getLastSession();
+  const role  = getLastSessionRole();
+  if (saved) {
+    setTimeout(() => doJoin(saved, role === 'host', true), 200);
+  }
+})();
 
 // Wrap addNode / removeNode to broadcast changes
 const _addNode = addNode;
@@ -592,6 +694,7 @@ document.getElementById('act-mute').addEventListener('click', () => {
   const btn = document.getElementById('act-mute');
   btn.classList.toggle('muted', state.selectedNode.muted);
   btn.dataset.tip = state.selectedNode.muted ? 'Unmute' : 'Mute';
+  if (sessionActive()) broadcast('node_param', { id: state.selectedNode.id, key: 'muted', value: state.selectedNode.muted, rebuild: false });
 });
 document.getElementById('act-delete').addEventListener('click', () => {
   if (!state.selectedNode) return;
@@ -869,7 +972,7 @@ playBtn.addEventListener('click', async () => {
     if (state.beatMode) stopBeat();
   }
   setupMediaSession(state.isPlaying);
-  if (sessionActive()) broadcast('play_state', { isPlaying: state.isPlaying, beatMode: state.beatMode, bpm: state.bpm });
+  // Play state is local — each participant controls their own playback independently
 });
 
 // ── Beat mode ─────────────────────────────────────────────────
@@ -1831,7 +1934,10 @@ function generateHarmonicPreset() {
   if (nameInput) nameInput.value = name;
 }
 
-document.getElementById('random-btn').addEventListener('click', generateHarmonicPreset);
+document.getElementById('random-btn').addEventListener('click', () => {
+  if (sessionActive()) { showToast('Leave the session first to shuffle'); return; }
+  generateHarmonicPreset();
+});
 
 // ── Pointer interaction ───────────────────────────────────────
 let dragNode          = null;
@@ -2020,7 +2126,7 @@ function spawnComet() {
   const lifeSeconds = 14 + Math.random() * 16;
 
   const maxLife = Math.round(lifeSeconds * 60);
-  state.comets.push({
+  const cometData = {
     id: Date.now() + Math.random(),
     cx, cy, rx, ry, tilt,
     angle: Math.random() * Math.PI * 2,
@@ -2030,9 +2136,10 @@ function spawnComet() {
     life: maxLife, maxLife,
     permanent: false,
     fadeSpeed: 1,
-    // base values for slider display — fixed at spawn, never overwritten
     _baseRx: rx, _baseMass: mass, _baseInfluence: influence,
-  });
+  };
+  state.comets.push(cometData);
+  if (sessionActive()) broadcast('comet_add', { comet: cometData });
 }
 
 function cometWorldPos(c) {
@@ -2070,12 +2177,27 @@ function updateComets(time) {
       c.alpha = fadeIn * fadeOut;
     }
 
+    if (!c._drumHit) c._drumHit = new Set();
+
     for (const node of state.nodes) {
       if (node === dragNode) continue;
       const dx = pos.x - node.x;
       const dy = pos.y - node.y;
       const dist = Math.hypot(dx, dy);
       if (dist < 4 || dist > c.influence) continue;
+
+      // Trigger drum nodes when comet enters their hit radius (once per pass).
+      if (DRUM_TYPES.has(node.type) && state.isPlaying && !node.muted) {
+        const hitRadius = 40 + (node.volume ?? 0.7) * 30;
+        if (dist < hitRadius) {
+          if (!c._drumHit.has(node.id)) {
+            c._drumHit.add(node.id);
+            triggerDrumNode(node, undefined);
+          }
+        } else {
+          c._drumHit.delete(node.id);
+        }
+      }
 
       touchedNodes.add(node);
       const t     = 1 - dist / c.influence;
@@ -2140,8 +2262,14 @@ function drawComets(ctx, time) {
   }
 }
 
+let loadingHidden = false;
 function loop(time = 0) {
   requestAnimationFrame(loop);
+  if (!loadingHidden) {
+    loadingHidden = true;
+    const ls = document.getElementById('loading-screen');
+    if (ls) { ls.classList.add('hidden'); setTimeout(() => ls.remove(), 600); }
+  }
 
   const elapsed = time - lastFrame;
   if (elapsed < FRAME_TARGET_MS) return;

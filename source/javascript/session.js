@@ -10,6 +10,9 @@
 //   node_param   — any node param changed (key/value)
 //   global_param — masterVolume, gravityStrength, masterTone, waveSpread changed
 //   play_state   — isPlaying, beatMode, bpm changed
+//
+// Participant counting uses broadcast-based tracking (not Phoenix presence)
+// because Supabase Cloud presence_diff requires additional auth setup.
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -28,19 +31,27 @@ let peerId     = null;   // unique ID for this participant
 let isHost     = false;
 let onEvent    = null;   // callback(type, payload) → called for remote events
 let onPresence = null;   // callback(count) → participant count changed
-let presenceCount = 0;
 
 const participantIds = new Set();
 
 export function sessionActive() { return socket !== null && socket.readyState === WebSocket.OPEN; }
-export function sessionCode()   { return channel ? channel.replace('noisen:', '') : null; }
-export function participantCount() { return presenceCount; }
+export function sessionCode()   { return channel ? channel.split(':').slice(1).join(':') : null; }
+export function participantCount() { return participantIds.size + 1; } // +1 for self
 
 // ── WebSocket Supabase Realtime connection ────────────────────
 
 function realtimeUrl() {
   const base = SUPABASE_URL.replace(/^https?/, 'wss');
-  return `${base}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`;
+  // Supabase Cloud and local Kong stack route through Kong → /realtime/v1/websocket.
+  // Self-hosted Realtime exposed directly → /socket/websocket.
+  const throughKong = SUPABASE_URL.includes(':8000') || SUPABASE_URL.includes('supabase.co');
+  const path = throughKong ? '/realtime/v1/websocket' : '/socket/websocket';
+  return `${base}${path}?apikey=${SUPABASE_KEY}&vsn=1.0.0`;
+}
+
+// Supabase Cloud requires "realtime:" prefix; self-hosted accepts any namespace.
+function channelNamespace() {
+  return SUPABASE_URL.includes('supabase.co') ? 'realtime' : 'noisen';
 }
 
 function sendRaw(msg) {
@@ -56,12 +67,7 @@ function joinChannel(channelName) {
   sendRaw({
     topic: channel,
     event: 'phx_join',
-    payload: {
-      config: {
-        broadcast: { self: false },
-        presence: { key: peerId },
-      },
-    },
+    payload: { config: { broadcast: { self: false } } },
     ref: '1',
   });
 }
@@ -79,7 +85,6 @@ function connectAndJoin(channelName, hostMode) {
 
     socket.onopen = () => {
       clearTimeout(timeout);
-      // Supabase Realtime heartbeat
       const heartbeat = setInterval(() => {
         sendRaw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null });
       }, 25000);
@@ -95,28 +100,38 @@ function connectAndJoin(channelName, hostMode) {
       if (topic !== channel && topic !== 'phoenix') return;
 
       if (event === 'phx_reply' && payload?.status === 'ok') {
-        resolve();
-        return;
-      }
-
-      if (event === 'presence_diff') {
-        const joins  = Object.keys(payload?.joins  ?? {});
-        const leaves = Object.keys(payload?.leaves ?? {});
-        joins.forEach(id  => participantIds.add(id));
-        leaves.forEach(id => participantIds.delete(id));
-        presenceCount = participantIds.size + 1; // +1 for self
-        onPresence?.(presenceCount);
-
-        // New joiner: host sends full state sync
-        if (isHost && joins.length > 0) {
-          onEvent?.('_request_sync', {});
+        // Joined successfully. If guest, announce presence so host triggers sync.
+        if (!isHost) {
+          sendRaw({
+            topic: channel,
+            event: 'broadcast',
+            payload: { type: '_peer_join', payload: {}, sender: peerId },
+            ref: null,
+          });
         }
+        resolve();
         return;
       }
 
       if (event === 'broadcast') {
         const { type, payload: data, sender } = payload ?? {};
         if (!type || sender === peerId) return;
+
+        // Broadcast-based participant tracking.
+        if (type === '_peer_join') {
+          participantIds.add(sender);
+          onPresence?.(participantCount());
+          // Host triggers state sync when a new peer joins.
+          if (isHost) onEvent?.('_request_sync', {});
+          return;
+        }
+        if (type === '_peer_leave') {
+          participantIds.delete(sender);
+          onPresence?.(participantCount());
+          return;
+        }
+
+        participantIds.add(sender);
         onEvent?.(type, data ?? {});
       }
     };
@@ -130,7 +145,6 @@ function connectAndJoin(channelName, hostMode) {
       clearInterval(socket._heartbeat);
       socket   = null;
       channel  = null;
-      presenceCount = 0;
       participantIds.clear();
       onPresence?.(0);
     };
@@ -142,17 +156,29 @@ function connectAndJoin(channelName, hostMode) {
 export async function createSession() {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Supabase not configured');
   const code = generateSessionCode();
-  await connectAndJoin(`noisen:${code}`, true);
+  await connectAndJoin(`${channelNamespace()}:${code}`, true);
   return code;
+}
+
+// Rejoin an existing session as the host (e.g., after page reload).
+export async function createSessionWithCode(code) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Supabase not configured');
+  await connectAndJoin(`${channelNamespace()}:${code.toLowerCase().trim()}`, true);
 }
 
 export async function joinSession(code) {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Supabase not configured');
-  await connectAndJoin(`noisen:${code.toLowerCase().trim()}`, false);
+  await connectAndJoin(`${channelNamespace()}:${code.toLowerCase().trim()}`, false);
 }
 
 export function leaveSession() {
   if (!socket) return;
+  sendRaw({
+    topic: channel,
+    event: 'broadcast',
+    payload: { type: '_peer_leave', payload: {}, sender: peerId },
+    ref: null,
+  });
   sendRaw({ topic: channel, event: 'phx_leave', payload: {}, ref: '99' });
   socket.close();
 }
@@ -169,5 +195,5 @@ export function broadcast(type, payload) {
 }
 
 // Register callbacks from main.js
-export function onRemoteEvent(fn)    { onEvent    = fn; }
+export function onRemoteEvent(fn)       { onEvent    = fn; }
 export function onParticipantChange(fn) { onPresence = fn; }

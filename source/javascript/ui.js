@@ -98,7 +98,7 @@ function makeCard(opts) {
   return card;
 }
 
-function makeNoiseColorCard(node) {
+function makeNoiseColorCard(node, onColorChange = null) {
   const card = document.createElement('div');
   card.className     = 'param-card';
   card.dataset.tip    = 'Noise color';
@@ -119,6 +119,7 @@ function makeNoiseColorCard(node) {
       card.querySelector('.card-val').textContent = btn.dataset.c;
       card.querySelectorAll('.nc-btn').forEach(b => b.classList.toggle('active', b.dataset.c === btn.dataset.c));
       rebuildAudio(node);
+      onColorChange?.(btn.dataset.c);
     });
   });
   return card;
@@ -142,6 +143,8 @@ document.querySelectorAll('.node-tab').forEach(btn => {
 
 // targetLabelOverrides: { filter: 'Pitch', delay: 'Decay' } for drum nodes
 function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, defaultTarget = 'filter') {
+  const broadcastOrbits = (orbits) =>
+    window.__sessionBroadcast?.('node_param', { id: node.id, key: 'orbits', value: orbits, rebuild: false });
   const orbitSection = document.createElement('div');
   orbitSection.className = 'orbit-section';
   orbitSection.innerHTML = `<div class="orbit-section-header">
@@ -186,15 +189,18 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
         orbit.direction = (orbit.direction ?? 1) === 1 ? -1 : 1;
         e.target.textContent = orbit.direction === 1 ? '↻' : '↺';
         syncFn(index);
+        broadcastOrbits?.(node.orbits);
       });
       card.querySelector('.orbit-toggle').addEventListener('click', () => {
         orbit.enabled = !orbit.enabled;
         syncFn(index);
+        broadcastOrbits?.(node.orbits);
         renderOrbitCards();
       });
       card.querySelector('.orbit-remove-btn').addEventListener('click', () => {
         node.orbits.splice(index, 1);
         syncFn(index);
+        broadcastOrbits?.(node.orbits);
         orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 5;
         renderOrbitCards();
       });
@@ -202,6 +208,7 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
         btn.addEventListener('click', () => {
           orbit.target = btn.dataset.target;
           syncFn(index);
+          broadcastOrbits?.(node.orbits);
           card.querySelectorAll('.orbit-target-btn').forEach(b => b.classList.toggle('active', b.dataset.target === orbit.target));
         });
       });
@@ -210,12 +217,14 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
         card.querySelector('.orbit-rate-val').textContent = `${orbit.rate.toFixed(2)}Hz`;
         setSliderPct(e.target, orbit.rate, 0.02, 2);
         syncFn(index);
+        broadcastOrbits?.(node.orbits);
       });
       card.querySelector('.orbit-depth').addEventListener('input', e => {
         orbit.depth = parseInt(e.target.value);
         card.querySelector('.orbit-depth-val').textContent = `${orbit.depth}%`;
         setSliderPct(e.target, orbit.depth, 0, 100);
         syncFn(index);
+        broadcastOrbits?.(node.orbits);
       });
       cards.appendChild(card);
     });
@@ -234,6 +243,7 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
     }
     node.orbits.push(newOrbit);
     syncFn(node.orbits.length - 1);
+    broadcastOrbits?.(node.orbits);
     orbitSection.querySelector('.orbit-add-btn').disabled = node.orbits.length >= 5;
     renderOrbitCards();
   });
@@ -243,6 +253,8 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
 }
 
 function buildDrumSequencer(node, container, color) {
+  const broadcastSteps = (steps) =>
+    window.__sessionBroadcast?.('node_param', { id: node.id, key: 'steps', value: steps, rebuild: false });
   const steps = (node.steps = node.steps ?? Array(16).fill(false));
 
   const sequencer = document.createElement('div');
@@ -260,6 +272,7 @@ function buildDrumSequencer(node, container, color) {
       btn.addEventListener('click', () => {
         steps[i] = !steps[i];
         btn.classList.toggle('on', steps[i]);
+        broadcastSteps?.(steps);
       });
       row.appendChild(btn);
     }
@@ -294,6 +307,11 @@ export function buildNodeCards(node) {
   nodeCards.style.setProperty('--card-accent',     color);
   nodeCards.style.setProperty('--card-accent-dim', colorDim);
 
+  // Broadcast param change to session peers via the bridge set in main.js.
+  // rebuild=true signals the receiver must call rebuildAudio instead of updateAudio.
+  const s = (key, value, rebuild = false) =>
+    window.__sessionBroadcast?.('node_param', { id: node.id, key, value, rebuild });
+
   const mkC = (id, iconKey, label, tip, tipDesc, min, max, step, val, fmt, onChange) =>
     makeCard({ id, icon: PARAM_ICONS[iconKey] || iconKey, label, tip, tipDesc, min, max, step, value: val, fmt, onChange });
 
@@ -310,40 +328,40 @@ export function buildNodeCards(node) {
     const params = node.typeParams ?? {};
     if (activeNodeTab === 'sound') {
       nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
-        5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; }));
+        5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; s('volume',v/100); }));
       nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right position in stereo field',
-        -100,100,1,Math.round((node.panOverride??0)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; }));
+        -100,100,1,Math.round((node.panOverride??0)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; s('panOverride',v/100); }));
       if (node.type === 'kick') {
         nodeCards.appendChild(mkC('tune','tune','Tune','Pitch','Fundamental frequency of the kick',
-          20,200,1,params.tune??60,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+          20,200,1,params.tune??60,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; s('typeParams.tune',v); }));
         nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
-          0.02,1.5,0.01,params.decay??0.35,fmtMs,v=>{ params.decay=v; }));
+          0.02,1.5,0.01,params.decay??0.35,fmtMs,v=>{ params.decay=v; s('typeParams.decay',v); }));
         nodeCards.appendChild(mkC('dep','dep','Pitch↓','Pitch fall speed','How fast pitch drops after hit',
-          0.01,0.4,0.01,params.pitchDecay??0.07,fmtMs,v=>{ params.pitchDecay=v; }));
+          0.01,0.4,0.01,params.pitchDecay??0.07,fmtMs,v=>{ params.pitchDecay=v; s('typeParams.pitchDecay',v); }));
       } else if (node.type === 'snare') {
         nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
-          0.02,0.8,0.01,params.decay??0.18,fmtMs,v=>{ params.decay=v; }));
+          0.02,0.8,0.01,params.decay??0.18,fmtMs,v=>{ params.decay=v; s('typeParams.decay',v); }));
         nodeCards.appendChild(mkC('res','res','Tone','Tone color','Dark (brown) → bright (white) noise',
-          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; }));
+          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; s('typeParams.tone',v/100); }));
       } else if (node.type === 'hihat') {
         nodeCards.appendChild(mkC('tune','tune','Tune','Frequency','Metal resonance frequency',
-          100,6000,50,params.tune??400,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+          100,6000,50,params.tune??400,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; s('typeParams.tune',v); }));
         nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Closed hat length',
-          0.01,0.5,0.01,params.decay??0.06,fmtMs,v=>{ params.decay=v; }));
+          0.01,0.5,0.01,params.decay??0.06,fmtMs,v=>{ params.decay=v; s('typeParams.decay',v); }));
         const isOpen = (params.open??0) > 0.5;
         const openCard = mkC('open','vol','Open','Open/closed','Open hat plays full decay',
-          0,1,1,isOpen?1:0,v=>v>0.5?'open':'closed',v=>{ params.open=v; });
+          0,1,1,isOpen?1:0,v=>v>0.5?'open':'closed',v=>{ params.open=v; s('typeParams.open',v); });
         nodeCards.appendChild(openCard);
       } else if (node.type === 'clap') {
         nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
-          0.02,0.6,0.01,params.decay??0.12,fmtMs,v=>{ params.decay=v; }));
+          0.02,0.6,0.01,params.decay??0.12,fmtMs,v=>{ params.decay=v; s('typeParams.decay',v); }));
         nodeCards.appendChild(mkC('res','res','Tone','Tone color','Dark → bright noise character',
-          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; }));
+          0,100,1,Math.round((params.tone??0.5)*100),v=>`${v}%`,v=>{ params.tone=v/100; s('typeParams.tone',v/100); }));
       } else if (node.type === 'perc') {
         nodeCards.appendChild(mkC('tune','tune','Tune','Pitch','Metal resonance frequency',
-          60,2000,10,params.tune??200,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; }));
+          60,2000,10,params.tune??200,v=>`${Math.round(v)}Hz`,v=>{ params.tune=v; s('typeParams.tune',v); }));
         nodeCards.appendChild(mkC('dcy','dcy','Decay','Decay time','Envelope length',
-          0.02,1.0,0.01,params.decay??0.25,fmtMs,v=>{ params.decay=v; }));
+          0.02,1.0,0.01,params.decay??0.25,fmtMs,v=>{ params.decay=v; s('typeParams.decay',v); }));
       }
 
     } else if (activeNodeTab === 'envelope') {
@@ -351,9 +369,9 @@ export function buildNodeCards(node) {
 
     } else if (activeNodeTab === 'fx') {
       nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
-        0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; }));
+        0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; s('reverbSend',v/100); }));
       nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
-        0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; }));
+        0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; s('delaySend',v/100); }));
 
     } else if (activeNodeTab === 'orbits') {
       buildOrbitSection(node, nodeCards, (idx) => syncDrumOrbitLFO(node, idx),
@@ -369,45 +387,45 @@ export function buildNodeCards(node) {
 
   if (activeNodeTab === 'sound') {
     nodeCards.appendChild(mkC('vol','vol','Volume','Node volume','Loudness and visual size',
-      5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; updateAudio(node); }));
+      5,100,1,Math.round(node.volume*100),v=>`${v}%`,v=>{ node.volume=v/100; updateAudio(node); s('volume',v/100); }));
     nodeCards.appendChild(mkC('pan','pan','Pan','Stereo pan','Left/right, overrides X-axis',
-      -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); }));
+      -100,100,1,Math.round(effectivePan(node)*100),v=>fmtPan(v/100),v=>{ node.panOverride=v/100; updateAudio(node); s('panOverride',v/100); }));
     nodeCards.appendChild(mkC('fcut','fcut','Filter','Filter cutoff','Lowpass cutoff frequency',
-      0,100,1,Math.round((node.filterNorm??0.5)*100),v=>`${Math.round(filterFromNorm(v/100))}Hz`,v=>{ node.filterNorm=v/100; updateAudio(node); }));
+      0,100,1,Math.round((node.filterNorm??0.5)*100),v=>`${Math.round(filterFromNorm(v/100))}Hz`,v=>{ node.filterNorm=v/100; updateAudio(node); s('filterNorm',v/100); }));
     if (node.type === 'sine' || node.type === 'triangle') {
-      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
-      nodeCards.appendChild(mkC('vib','vib','Vibrato Hz','Vibrato rate','LFO speed',0,20,.1,node.typeParams.vibratoRate,v=>`${(+v).toFixed(1)}Hz`,v=>{ node.typeParams.vibratoRate=v; rebuildAudio(node); }));
-      nodeCards.appendChild(mkC('dep','dep','Vib depth','Vibrato depth','Depth in cents',0,400,1,node.typeParams.vibratoDepth,v=>`${v}¢`,v=>{ node.typeParams.vibratoDepth=v; rebuildAudio(node); }));
+      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); s('typeParams.detune',v); }));
+      nodeCards.appendChild(mkC('vib','vib','Vibrato Hz','Vibrato rate','LFO speed',0,20,.1,node.typeParams.vibratoRate,v=>`${(+v).toFixed(1)}Hz`,v=>{ node.typeParams.vibratoRate=v; rebuildAudio(node); s('typeParams.vibratoRate',v,true); }));
+      nodeCards.appendChild(mkC('dep','dep','Vib depth','Vibrato depth','Depth in cents',0,400,1,node.typeParams.vibratoDepth,v=>`${v}¢`,v=>{ node.typeParams.vibratoDepth=v; rebuildAudio(node); s('typeParams.vibratoDepth',v,true); }));
     } else if (node.type === 'square' || node.type === 'sawtooth') {
-      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); }));
-      nodeCards.appendChild(mkC('vcs','vcs','Voices','Voices','Detuned copies',1,5,1,node.typeParams.voices,v=>`×${v}`,v=>{ node.typeParams.voices=v; rebuildAudio(node); }));
-      nodeCards.appendChild(mkC('spr','spr','Spread','Spread','Cents between voices',0,100,1,node.typeParams.spread,v=>`${v}¢`,v=>{ node.typeParams.spread=v; rebuildAudio(node); }));
+      nodeCards.appendChild(mkC('det','det','Detune','Detune','Fine pitch in cents',-1200,1200,1,node.typeParams.detune,v=>`${v}¢`,v=>{ node.typeParams.detune=v; updateAudio(node); s('typeParams.detune',v); }));
+      nodeCards.appendChild(mkC('vcs','vcs','Voices','Voices','Detuned copies',1,5,1,node.typeParams.voices,v=>`×${v}`,v=>{ node.typeParams.voices=v; rebuildAudio(node); s('typeParams.voices',v,true); }));
+      nodeCards.appendChild(mkC('spr','spr','Spread','Spread','Cents between voices',0,100,1,node.typeParams.spread,v=>`${v}¢`,v=>{ node.typeParams.spread=v; rebuildAudio(node); s('typeParams.spread',v,true); }));
     } else if (node.type === 'noise') {
-      nodeCards.appendChild(makeNoiseColorCard(node));
-      nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); }));
+      nodeCards.appendChild(makeNoiseColorCard(node, (c) => s('typeParams.color', c, true)));
+      nodeCards.appendChild(mkC('res','res','Resonance','Resonance','Filter Q',.5,20,.5,node.typeParams.resonance,v=>`Q${(+v).toFixed(1)}`,v=>{ node.typeParams.resonance=v; updateAudio(node); s('typeParams.resonance',v); }));
     }
 
   } else if (activeNodeTab === 'envelope') {
     nodeCards.appendChild(mkC('atk','atk','Attack','Envelope attack','Fade-in time',
-      0.01,10,.01,node.attack??0.3,fmtSec,v=>{ node.attack=+v; if(node.audio) node.audio.envelope.attack=+v; }));
+      0.01,10,.01,node.attack??0.3,fmtSec,v=>{ node.attack=+v; if(node.audio) node.audio.envelope.attack=+v; s('attack',+v); }));
     nodeCards.appendChild(mkC('dcy','dcy','Decay','Envelope decay','Fall to sustain level',
-      0.01,5,.01,node.decay??0.1,fmtSec,v=>{ node.decay=+v; if(node.audio) node.audio.envelope.decay=+v; }));
+      0.01,5,.01,node.decay??0.1,fmtSec,v=>{ node.decay=+v; if(node.audio) node.audio.envelope.decay=+v; s('decay',+v); }));
     nodeCards.appendChild(mkC('sus','sus','Sustain','Envelope sustain','Held level',
-      0,100,1,node.sustain??100,v=>`${v}%`,v=>{ node.sustain=+v; if(node.audio) node.audio.envelope.sustain=v/100; }));
+      0,100,1,node.sustain??100,v=>`${v}%`,v=>{ node.sustain=+v; if(node.audio) node.audio.envelope.sustain=v/100; s('sustain',+v); }));
     nodeCards.appendChild(mkC('rel','rel','Release','Envelope release','Fade-out time',
-      0.01,10,.01,node.release??0.8,fmtSec,v=>{ node.release=+v; if(node.audio) node.audio.envelope.release=+v; }));
+      0.01,10,.01,node.release??0.8,fmtSec,v=>{ node.release=+v; if(node.audio) node.audio.envelope.release=+v; s('release',+v); }));
 
   } else if (activeNodeTab === 'fx') {
     nodeCards.appendChild(mkC('rsnd','rsnd','Reverb','Reverb send','Amount routed to master reverb bus',
-      0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); }));
+      0,100,1,Math.round((node.reverbSend??0)*100),v=>`${v}%`,v=>{ node.reverbSend=v/100; if(node.audio) node.audio.reverbSend.gain.rampTo(node.reverbSend,.1); s('reverbSend',v/100); }));
     nodeCards.appendChild(mkC('dsnd','dsnd','Bus Dly','Delay bus send','Amount routed to master delay bus',
-      0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); }));
+      0,100,1,Math.round((node.delaySend??0)*100),v=>`${v}%`,v=>{ node.delaySend=v/100; if(node.audio) node.audio.delaySend.gain.rampTo(node.delaySend,.1); s('delaySend',v/100); }));
     nodeCards.appendChild(mkC('ndly','ndly','Dly Time','Node delay time','Local echo delay in ms',
-      10,1000,10,node.nodeDelayTime??250,v=>`${v}ms`,v=>{ node.nodeDelayTime=v; if(node.audio) node.audio.nodeDelay.delayTime.rampTo(v/1000,.1); }));
+      10,1000,10,node.nodeDelayTime??250,v=>`${v}ms`,v=>{ node.nodeDelayTime=v; if(node.audio) node.audio.nodeDelay.delayTime.rampTo(v/1000,.1); s('nodeDelayTime',v); }));
     nodeCards.appendChild(mkC('nfdb','nfdb','Dly Fbk','Node delay feedback','Echo repeat amount',
-      0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); }));
+      0,90,1,node.nodeDelayFeedback??0,v=>`${v}%`,v=>{ node.nodeDelayFeedback=v; if(node.audio) node.audio.nodeDelay.feedback.rampTo(v/100,.1); s('nodeDelayFeedback',v); }));
     nodeCards.appendChild(mkC('nwet','nwet','Dly Wet','Node delay wet','Local echo mix',
-      0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); }));
+      0,100,1,node.nodeDelayWet??0,v=>`${v}%`,v=>{ node.nodeDelayWet=v; if(node.audio) node.audio.nodeDelay.wet.rampTo(v/100,.1); s('nodeDelayWet',v); }));
 
   } else if (activeNodeTab === 'orbits') {
     buildOrbitSection(node, nodeCards, (idx) => syncOrbitLFO(node, idx));
@@ -440,6 +458,9 @@ export function buildTypeButtons(node) {
         destroyAudio(node);
         if (typeof window.__setSelectedDrumType === 'function') window.__setSelectedDrumType(type);
       }
+      window.__sessionBroadcast?.('node_type', {
+        id: node.id, nodeType: node.type, typeParams: { ...node.typeParams }, steps: node.steps,
+      });
       selectNode(node);
     });
     row.appendChild(btn);
@@ -560,6 +581,30 @@ export function hideTooltip() {
 
 // ── What's new overlay ────────────────────────────────────────
 const WHATSNEW = {
+  '5.0': {
+    title: 'Multiplayer · Full sync · Smarter drums',
+    items: [
+      { section: 'Multiplayer sessions', changes: [
+        'Create a session and share a link — anyone who opens it joins your sound canvas in real time',
+        'All parameters sync instantly: volume, filter, orbits, step sequencer, FX sends, node type changes',
+        'Session persists across page reloads — rejoins automatically as the same role (host or guest)',
+        'Host reconnects to the same session code after reload; guests get a full state sync on join',
+        'Copy link button generates a ?s= URL for one-tap mobile sharing',
+      ]},
+      { section: 'Drum improvements', changes: [
+        'New drum nodes get a sensible euclidean step pattern immediately — no more silent nodes on placement',
+        'Comets now trigger drum nodes on flyby — orbit a comet through your kit for live percussion',
+        'All drum parameters (tune, decay, tone, open/closed) sync to session peers in real time',
+        'Drum step grid syncs across multiplayer — tap a step and everyone hears it',
+      ]},
+      { section: 'Sync coverage', changes: [
+        'Global sliders (Volume, Gravity, Tone, Spread) now broadcast to all session peers',
+        'Orbit changes (add/remove/rate/depth/target/direction) sync in real time',
+        'Node mute and type switching broadcast instantly to all participants',
+        'rebuild-audio params (vibrato rate/depth, voices, spread, noise color) sync correctly',
+      ]},
+    ],
+  },
   '4.0': {
     title: 'Master FX panel · Comet controls · Stable canvas',
     items: [
@@ -755,40 +800,56 @@ export function showChangelog() {
 // ── Onboarding wizard ─────────────────────────────────────────
 const WIZARD_STEPS = [
   { icon: '✦', title: 'Welcome to Noisen', highlight: null,
+    image: `<svg viewBox="0 0 352 140" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0d0d20"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="140" fill="url(#wbg)"/><circle cx="88" cy="62" r="36" fill="none" stroke="#3a7bd5" stroke-width=".8" opacity=".18"/><circle cx="88" cy="62" r="16" fill="none" stroke="#3a7bd5" stroke-width="1.6" opacity=".7"/><circle cx="88" cy="62" r="6" fill="#3a7bd5"/><circle cx="176" cy="78" r="48" fill="none" stroke="#a035d8" stroke-width=".8" opacity=".14"/><circle cx="176" cy="78" r="20" fill="none" stroke="#a035d8" stroke-width="1.6" opacity=".65"/><circle cx="176" cy="78" r="8" fill="#a035d8"/><circle cx="272" cy="55" r="30" fill="none" stroke="#1faa88" stroke-width=".8" opacity=".16"/><circle cx="272" cy="55" r="13" fill="none" stroke="#1faa88" stroke-width="1.6" opacity=".7"/><circle cx="272" cy="55" r="5" fill="#1faa88"/><path d="M 20 120 Q 50 108 80 120 Q 110 132 140 120 Q 170 108 200 120 Q 230 132 260 120 Q 290 108 330 120" fill="none" stroke="#3a7bd5" stroke-width="1" opacity=".2"/><text x="176" y="130" font-family="-apple-system,sans-serif" font-size="10" fill="rgba(255,255,255,.25)" text-anchor="middle" letter-spacing=".2em">DRAW SOUND · PLACE NODES · HEAR SPACE</text></svg>`,
     body: 'A generative sound canvas. No accounts, no menus to dig through — you draw sound by placing nodes directly on screen. Every position is a unique sonic texture. Tap anywhere on the dark canvas to place your first node. Use the ? button anytime to reopen this guide.' },
 
   { icon: '↔', title: 'X axis — frequency', highlight: 'main',
+    image: `<svg viewBox="0 0 352 120" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg2" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#060610"/></radialGradient><linearGradient id="fgrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2244aa" stop-opacity=".5"/><stop offset="50%" stop-color="#3a7bd5" stop-opacity=".3"/><stop offset="100%" stop-color="#88ccff" stop-opacity=".5"/></linearGradient></defs><rect width="352" height="120" fill="url(#wbg2)"/><rect x="20" y="50" width="312" height="3" rx="1.5" fill="url(#fgrad)"/><circle cx="52"  cy="52" r="9"  fill="#2244aa" opacity=".9"/><circle cx="52"  cy="52" r="18" fill="none" stroke="#2244aa" stroke-width="1" opacity=".4"/><circle cx="140" cy="52" r="11" fill="#3a7bd5" opacity=".9"/><circle cx="140" cy="52" r="22" fill="none" stroke="#3a7bd5" stroke-width="1" opacity=".35"/><circle cx="240" cy="52" r="9"  fill="#55aaee" opacity=".9"/><circle cx="240" cy="52" r="18" fill="none" stroke="#55aaee" stroke-width="1" opacity=".35"/><circle cx="316" cy="52" r="7"  fill="#aaddff" opacity=".9"/><circle cx="316" cy="52" r="14" fill="none" stroke="#aaddff" stroke-width="1" opacity=".3"/><text x="52"  y="88" font-family="'SF Mono',monospace" font-size="9"  fill="rgba(255,255,255,.35)" text-anchor="middle">8 Hz</text><text x="140" y="88" font-family="'SF Mono',monospace" font-size="9"  fill="rgba(255,255,255,.35)" text-anchor="middle">200 Hz</text><text x="240" y="88" font-family="'SF Mono',monospace" font-size="9"  fill="rgba(255,255,255,.35)" text-anchor="middle">4 kHz</text><text x="316" y="88" font-family="'SF Mono',monospace" font-size="9"  fill="rgba(255,255,255,.35)" text-anchor="middle">20 kHz</text><text x="20"  y="108" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.2)">← sub-bass</text><text x="332" y="108" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.2)" text-anchor="end">highs →</text></svg>`,
     body: 'Horizontal position sets pitch. Far left → deep sub-bass (8 Hz). Far right → ultrasonic highs (40 kHz). The scale is logarithmic: center canvas ≈ 600 Hz (human voice range). Drag a node left or right and hear the pitch sweep in real time. Frequency is always world-absolute — zooming in doesn\'t change pitch.' },
 
   { icon: '↕', title: 'Y axis — filter brightness', highlight: 'main',
+    image: `<svg viewBox="0 0 352 120" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg3" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#060610"/></radialGradient><linearGradient id="vgrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffdd88" stop-opacity=".6"/><stop offset="100%" stop-color="#334488" stop-opacity=".4"/></linearGradient></defs><rect width="352" height="120" fill="url(#wbg3)"/><rect x="170" y="10" width="3" height="100" rx="1.5" fill="url(#vgrad)"/><circle cx="171" cy="22"  r="10" fill="#ffcc44" opacity=".9"/><circle cx="171" cy="22"  r="20" fill="none" stroke="#ffcc44" stroke-width="1" opacity=".3"/><circle cx="171" cy="60"  r="10" fill="#88aadd" opacity=".9"/><circle cx="171" cy="60"  r="20" fill="none" stroke="#88aadd" stroke-width="1" opacity=".3"/><circle cx="171" cy="98"  r="10" fill="#334488" opacity=".9"/><circle cx="171" cy="98"  r="20" fill="none" stroke="#334488" stroke-width="1" opacity=".3"/><text x="196" y="25"  font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,220,100,.7)">open filter — bright, airy</text><text x="196" y="63"  font-family="-apple-system,sans-serif" font-size="9" fill="rgba(150,180,255,.6)">mid filter — balanced</text><text x="196" y="101" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(100,130,200,.5)">closed filter — dark, muffled</text><text x="20" y="18"  font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.2)">top ↑</text><text x="20" y="105" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.2)">↓ bottom</text></svg>`,
     body: 'Vertical position controls a low-pass filter cutoff. Top → filter wide open, full harmonic content. Bottom → filter almost closed, muffled sub-rumble only. A high-pitched node placed low = dark filtered sine. Same node placed high = bright, open tone. Combine both axes to sculpt timbre spatially.' },
 
   { icon: '◎', title: 'Gravity between nodes', highlight: 'grav',
+    image: `<svg viewBox="0 0 352 130" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg4" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#080818"/><stop offset="100%" stop-color="#060610"/></radialGradient><marker id="arr" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="rgba(58,123,213,.55)"/></marker></defs><rect width="352" height="130" fill="url(#wbg4)"/><circle cx="176" cy="65" r="55" fill="none" stroke="#3a7bd5" stroke-width=".5" opacity=".1"/><circle cx="176" cy="65" r="32" fill="none" stroke="#3a7bd5" stroke-width=".5" opacity=".08"/><line x1="58" y1="38" x2="148" y2="60" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="4 5" opacity=".35" marker-end="url(#arr)"/><line x1="294" y1="38" x2="204" y2="60" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="4 5" opacity=".35" marker-end="url(#arr)"/><line x1="58" y1="95" x2="148" y2="70" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="4 5" opacity=".3"  marker-end="url(#arr)"/><line x1="294" y1="95" x2="204" y2="70" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="4 5" opacity=".3"  marker-end="url(#arr)"/><circle cx="58"  cy="38" r="8"  fill="none" stroke="#3a7bd5" stroke-width="1.4" opacity=".7"/><circle cx="58"  cy="38" r="3"  fill="#3a7bd5" opacity=".7"/><circle cx="294" cy="38" r="8"  fill="none" stroke="#3a7bd5" stroke-width="1.4" opacity=".7"/><circle cx="294" cy="38" r="3"  fill="#3a7bd5" opacity=".7"/><circle cx="58"  cy="95" r="7"  fill="none" stroke="#3a7bd5" stroke-width="1.4" opacity=".65"/><circle cx="58"  cy="95" r="3"  fill="#3a7bd5" opacity=".65"/><circle cx="294" cy="95" r="7"  fill="none" stroke="#3a7bd5" stroke-width="1.4" opacity=".65"/><circle cx="294" cy="95" r="3"  fill="#3a7bd5" opacity=".65"/><circle cx="160" cy="62" r="12" fill="none" stroke="#3a7bd5" stroke-width="1.8"/><circle cx="160" cy="62" r="5"  fill="#3a7bd5"/><circle cx="180" cy="68" r="10" fill="none" stroke="#3a7bd5" stroke-width="1.6" opacity=".9"/><circle cx="180" cy="68" r="4"  fill="#3a7bd5" opacity=".9"/><circle cx="172" cy="54" r="8"  fill="none" stroke="#3a7bd5" stroke-width="1.4" opacity=".85"/><circle cx="172" cy="54" r="3"  fill="#3a7bd5" opacity=".85"/><text x="176" y="118" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.25)" text-anchor="middle" letter-spacing=".15em">HIGH GRAVITY → NODES CONVERGE → UNISON DRONE</text></svg>`,
     body: 'Nodes pull each other\'s pitch toward each other. The closer two nodes are, the stronger the pull. High gravity + tight cluster = unison drone as all frequencies converge. Low gravity = each node stays on its own pitch. Use the Gravity slider in the global panel to set how strongly nodes interact. Works while playing in real time.' },
 
   { icon: '◈', title: 'Node types', highlight: null,
+    image: `<svg viewBox="0 0 352 110" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg5" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="110" fill="url(#wbg5)"/><text x="36" y="22" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle">sine</text><path d="M 16 55 Q 26 35 36 55 Q 46 75 56 55" fill="none" stroke="#3a7bd5" stroke-width="1.8"/><text x="88" y="22" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle">triangle</text><path d="M 68 55 L 78 35 L 88 55 L 98 75 L 108 55" fill="none" stroke="#1faa88" stroke-width="1.8"/><text x="148" y="22" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle">square</text><path d="M 120 38 L 120 55 L 140 55 L 140 38 L 160 38 L 160 55 L 176 55" fill="none" stroke="#a035d8" stroke-width="1.8"/><text x="214" y="22" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle">sawtooth</text><path d="M 188 55 L 200 35 L 200 55 L 212 35 L 212 55 L 224 35 L 224 55 L 236 55" fill="none" stroke="#d87a20" stroke-width="1.8"/><text x="296" y="22" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.3)" text-anchor="middle">noise</text><path d="M 256 55 L 262 42 L 266 60 L 270 38 L 275 65 L 280 48 L 284 58 L 288 40 L 292 62 L 296 50 L 300 58 L 304 44 L 308 60 L 312 52 L 316 58 L 320 55 L 330 55" fill="none" stroke="#cc4444" stroke-width="1.5"/><line x1="16" y1="90" x2="336" y2="90" stroke="rgba(255,255,255,.06)" stroke-width="1"/><text x="176" y="104" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.18)" text-anchor="middle" letter-spacing=".15em">SELECT TYPE IN NODE PANEL · EACH HAS UNIQUE PARAMETERS</text></svg>`,
     body: 'Tap a node to open its panel. Five wave types:\n• Sine — pure tone, single frequency\n• Triangle — soft and hollow, weak overtones\n• Square — buzzy and hollow, odd harmonics only\n• Sawtooth — bright and rich, full harmonic series\n• Noise — textural (white/pink/brown), great for beds\nEach type has unique parameters: detune, vibrato, voice stacking, resonance Q.' },
 
   { icon: '≋', title: 'Orbits — living modulation', highlight: null,
+    image: `<svg viewBox="0 0 352 130" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg6" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0818"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="130" fill="url(#wbg6)"/><ellipse cx="90" cy="62" rx="52" ry="30" fill="none" stroke="#78c8ff" stroke-width="1.1" stroke-dasharray="3 5" opacity=".55"/><ellipse cx="90" cy="62" rx="36" ry="48" fill="none" stroke="#8cffa0" stroke-width="1"   stroke-dasharray="2 6" opacity=".45"/><circle cx="142" cy="62" r="5" fill="#78c8ff" opacity=".85"/><circle cx="90"  cy="14" r="4" fill="#8cffa0" opacity=".75"/><circle cx="90"  cy="62" r="14" fill="none" stroke="#a035d8" stroke-width="1.8"/><circle cx="90"  cy="62" r="6"  fill="#a035d8"/><text x="148" y="60" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(120,200,255,.7)">filter</text><text x="96"  y="12" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(140,255,160,.6)">pan</text><ellipse cx="262" cy="62" rx="60" ry="28" fill="none" stroke="#ffb450" stroke-width="1.1" stroke-dasharray="3 5" opacity=".5"/><circle cx="322" cy="62" r="4.5" fill="#ffb450" opacity=".8"/><circle cx="262" cy="62" r="14" fill="none" stroke="#3a7bd5" stroke-width="1.8"/><circle cx="262" cy="62" r="6"  fill="#3a7bd5"/><text x="328" y="60" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,180,80,.7)">volume</text><text x="176" y="115" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".15em">UP TO 3 ORBITS PER NODE · RATE + DEPTH + TARGET</text></svg>`,
     body: 'Every node supports up to 3 independent Orbits — slow LFOs that continuously animate a parameter. Targets: Filter cutoff · Pan (stereo position) · Volume (tremolo) · Delay wet. Set Rate (0.02–2 Hz) and Depth (0–100%). Multiple nodes with different orbit rates create evolving interference textures that never repeat exactly.' },
 
   { icon: '⟳', title: 'Stereo field', highlight: null,
+    image: `<svg viewBox="0 0 352 110" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg7" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#060610"/></radialGradient><linearGradient id="pangrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3a7bd5" stop-opacity=".4"/><stop offset="50%" stop-color="rgba(255,255,255,.05)"/><stop offset="100%" stop-color="#a035d8" stop-opacity=".4"/></linearGradient></defs><rect width="352" height="110" fill="url(#wbg7)"/><rect x="20" y="52" width="312" height="2" rx="1" fill="url(#pangrad)"/><text x="22"  y="46" font-family="-apple-system,sans-serif" font-size="10" fill="rgba(100,150,255,.6)">L</text><text x="330" y="46" font-family="-apple-system,sans-serif" font-size="10" fill="rgba(180,100,255,.6)" text-anchor="end">R</text><circle cx="68"  cy="53" r="12" fill="none" stroke="#3a7bd5" stroke-width="1.8"/><circle cx="68"  cy="53" r="5"  fill="#3a7bd5"/><circle cx="68"  cy="53" r="26" fill="none" stroke="#3a7bd5" stroke-width=".6" opacity=".25"/><circle cx="284" cy="53" r="12" fill="none" stroke="#a035d8" stroke-width="1.8"/><circle cx="284" cy="53" r="5"  fill="#a035d8"/><circle cx="284" cy="53" r="26" fill="none" stroke="#a035d8" stroke-width=".6" opacity=".25"/><circle cx="176" cy="53" r="10" fill="none" stroke="#1faa88" stroke-width="1.6"/><circle cx="176" cy="53" r="4"  fill="#1faa88"/><text x="68"  y="82" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(100,150,255,.55)" text-anchor="middle">left speaker</text><text x="284" y="82" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(180,100,255,.55)" text-anchor="middle">right speaker</text><text x="176" y="82" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(80,200,150,.5)" text-anchor="middle">center</text><text x="176" y="102" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.18)" text-anchor="middle" letter-spacing=".1em">POSITION SETS PAN AUTOMATICALLY · OVERRIDE IN PANEL</text></svg>`,
     body: 'A node\'s horizontal position automatically sets its stereo pan — left side = left speaker, right side = right speaker. You can override this per node in the panel. Add a Pan orbit to a node for a slow auto-pan sweep. Two detuned nodes on opposite sides create a lush, wide stereo effect without any effects chain.' },
 
   { icon: '⚄', title: 'Intelligent preset generator', highlight: 'random-btn',
+    image: `<svg viewBox="0 0 352 110" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg8" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="110" fill="url(#wbg8)"/><rect x="12"  y="12" width="100" height="44" rx="8" fill="#0d1428" stroke="#3a7bd5" stroke-width=".8" opacity=".9"/><text x="62" y="30" font-family="-apple-system,sans-serif" font-size="9" fill="#6aabff" text-anchor="middle">🧠 Binaural</text><text x="62" y="46" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle">delta · theta · alpha</text><rect x="126" y="12" width="100" height="44" rx="8" fill="#0d1a14" stroke="#1faa88" stroke-width=".8" opacity=".9"/><text x="176" y="30" font-family="-apple-system,sans-serif" font-size="9" fill="#44ddaa" text-anchor="middle">✦ Solfeggio</text><text x="176" y="46" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle">396 · 528 · 741 Hz</text><rect x="240" y="12" width="100" height="44" rx="8" fill="#18100e" stroke="#d87a20" stroke-width=".8" opacity=".9"/><text x="290" y="30" font-family="-apple-system,sans-serif" font-size="9" fill="#ffaa44" text-anchor="middle">〜 Harmonic</text><text x="290" y="46" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle">overtone series</text><rect x="12"  y="64" width="100" height="36" rx="8" fill="#140e20" stroke="#a035d8" stroke-width=".8" opacity=".8"/><text x="62" y="84" font-family="-apple-system,sans-serif" font-size="9" fill="#cc66ff" text-anchor="middle">◈ Fibonacci</text><rect x="126" y="64" width="100" height="36" rx="8" fill="#0e1810" stroke="#44dd88" stroke-width=".8" opacity=".8"/><text x="176" y="84" font-family="-apple-system,sans-serif" font-size="9" fill="#66ffaa" text-anchor="middle">∿ Gamelan</text><rect x="240" y="64" width="100" height="36" rx="8" fill="#180808" stroke="#cc3333" stroke-width=".8" opacity=".8"/><text x="290" y="84" font-family="-apple-system,sans-serif" font-size="9" fill="#ff7777" text-anchor="middle">≈ Drone Swarm</text><text x="176" y="104" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.18)" text-anchor="middle" letter-spacing=".12em">10 ARCHETYPES · HIT SHUFFLE REPEATEDLY · ALWAYS UNIQUE</text></svg>`,
     body: 'The shuffle button picks from 10 scientific archetypes:\n• Binaural beats — delta/theta/alpha/beta brain entrainment\n• Solfeggio — 174, 285, 396, 528 Hz healing frequencies\n• Harmonic series — natural overtone stack\n• Full spectrum — sub · bass · mid · air simultaneously\n• Pentatonic pulse, Polyrhythm, Gamelan bells, Fibonacci, Drone swarm, Scale\nEach archetype bakes in matching orbits. Hit it repeatedly — every result is unique.' },
 
   { icon: '▶', title: 'Play & audio unlock', highlight: 'play-btn',
+    image: `<svg viewBox="0 0 352 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg9" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#08100a"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="100" fill="url(#wbg9)"/><circle cx="176" cy="46" r="34" fill="#0d1f10" stroke="#1faa88" stroke-width="1.5"/><polygon points="168,34 196,46 168,58" fill="#1faa88"/><path d="M 30 75 Q 50 60 70 75 Q 90 90 110 75 Q 130 60 150 75" fill="none" stroke="#1faa88" stroke-width="1" opacity=".25"/><path d="M 202 75 Q 222 60 242 75 Q 262 90 282 75 Q 302 60 322 75" fill="none" stroke="#1faa88" stroke-width="1" opacity=".25"/><text x="176" y="93" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".15em">WORKS ON LOCK SCREEN · PLAYS IN SILENT MODE</text></svg>`,
     body: 'Press ▶ to start audio. On iOS, the first tap unlocks the Web Audio context — after that sound plays even with the mute switch on. All node positions and parameters are preserved when stopped. Lock screen controls work via MediaSession API so you can control playback without unlocking your phone.' },
 
   { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:28px;height:28px;display:block"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>', title: 'Save & share', highlight: 'presets-btn',
+    image: `<svg viewBox="0 0 352 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg10" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a18"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="100" fill="url(#wbg10)"/><rect x="20" y="14" width="140" height="72" rx="10" fill="#0d0d20" stroke="#3a7bd5" stroke-width=".8" opacity=".8"/><text x="90" y="36" font-family="-apple-system,sans-serif" font-size="9" fill="rgba(255,255,255,.4)" text-anchor="middle">Binaural Drift</text><text x="90" y="52" font-family="'SF Mono',monospace" font-size="7" fill="rgba(100,150,255,.5)" text-anchor="middle">saved locally</text><rect x="90" y="60" width="60" height="18" rx="6" fill="#1a2040" stroke="#3a7bd5" stroke-width=".8" cx="90"/><text x="120" y="72" font-family="-apple-system,sans-serif" font-size="8" fill="#6aabff" text-anchor="middle">Share ↗</text><rect x="192" y="14" width="140" height="72" rx="10" fill="#0d0d20" stroke="#1faa88" stroke-width=".8" opacity=".8"/><text x="262" y="32" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.3)" text-anchor="middle">noisen.space/?p=</text><text x="262" y="46" font-family="'SF Mono',monospace" font-size="7" fill="rgba(80,200,150,.55)" text-anchor="middle">eJyVkEFuw...</text><text x="262" y="64" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(80,200,150,.4)" text-anchor="middle">full state encoded</text><text x="262" y="78" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(80,200,150,.3)" text-anchor="middle">no server needed</text></svg>`,
     body: 'The floppy icon opens Presets. Save configurations to this device (localStorage). The share button generates a URL — the entire state is encoded as compressed base64. Anyone who opens the link gets your exact nodes, types, volumes, and FX. No server, no account, works offline. QR code is generated automatically for mobile sharing.' },
 
   { icon: '⌂', title: 'FX chain', highlight: 'fx-btn',
+    image: `<svg viewBox="0 0 352 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg11" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a18"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="100" fill="url(#wbg11)"/><g font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.35)"><text x="24"  y="26">Lo Cut</text><text x="24"  y="50">Hi Cut</text><text x="24"  y="74">Reverb</text><text x="120" y="26">Delay</text><text x="120" y="50">Tone</text><text x="120" y="74">Spread</text></g><rect x="70"  y="16" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#3a7bd5" stroke-width=".7"/><rect x="70"  y="16" width="16" height="14" rx="4" fill="#3a7bd5" opacity=".6"/><rect x="70"  y="40" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#3a7bd5" stroke-width=".7"/><rect x="70"  y="40" width="28" height="14" rx="4" fill="#3a7bd5" opacity=".5"/><rect x="70"  y="64" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#a035d8" stroke-width=".7"/><rect x="70"  y="64" width="22" height="14" rx="4" fill="#a035d8" opacity=".5"/><rect x="168" y="16" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#1faa88" stroke-width=".7"/><rect x="168" y="16" width="20" height="14" rx="4" fill="#1faa88" opacity=".5"/><rect x="168" y="40" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#d87a20" stroke-width=".7"/><rect x="168" y="40" width="26" height="14" rx="4" fill="#d87a20" opacity=".5"/><rect x="168" y="64" width="38" height="14" rx="4" fill="#1a1a2e" stroke="#d87a20" stroke-width=".7"/><rect x="168" y="64" width="30" height="14" rx="4" fill="#d87a20" opacity=".45"/><text x="230" y="26" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)">per-node:</text><text x="230" y="42" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)">Reverb Send</text><text x="230" y="58" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)">Delay Send</text><text x="230" y="74" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)">Local Delay</text><text x="176" y="94" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.15)" text-anchor="middle" letter-spacing=".1em">MASTER FX + PER-NODE ROUTING</text></svg>`,
     body: 'The ⚌ button opens the master FX panel:\n• Lo Cut / Hi Cut — shape the overall frequency range\n• Reverb — room size and wet mix\n• Delay — echo with time, feedback, wet\n• Tone, Spread — global timbre and stereo width\nPer-node: each node has its own Reverb Send, Delay Send, and local delay unit — route selectively for depth without affecting other nodes.' },
 
   { icon: '∞', title: 'Infinite canvas', highlight: 'reset-view',
+    image: `<svg viewBox="0 0 352 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg12" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#0a0a18"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="100" fill="url(#wbg12)"/><g opacity=".06" stroke="#7080ee" stroke-width=".6"><line x1="20" y1="20" x2="332" y2="20"/><line x1="20" y1="50" x2="332" y2="50"/><line x1="20" y1="80" x2="332" y2="80"/><line x1="60"  y1="10" x2="60"  y2="90"/><line x1="120" y1="10" x2="120" y2="90"/><line x1="176" y1="10" x2="176" y2="90"/><line x1="232" y1="10" x2="232" y2="90"/><line x1="292" y1="10" x2="292" y2="90"/></g><rect x="60" y="14" width="232" height="72" rx="8" fill="none" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="4 4" opacity=".4"/><text x="176" y="8" font-family="-apple-system,sans-serif" font-size="7" fill="rgba(100,150,255,.4)" text-anchor="middle" letter-spacing=".1em">VIEWPORT</text><circle cx="100" cy="38" r="8" fill="none" stroke="#3a7bd5" stroke-width="1.5"/><circle cx="100" cy="38" r="3" fill="#3a7bd5"/><circle cx="200" cy="55" r="8" fill="none" stroke="#a035d8" stroke-width="1.5"/><circle cx="200" cy="55" r="3" fill="#a035d8"/><circle cx="260" cy="30" r="7" fill="none" stroke="#1faa88" stroke-width="1.5"/><circle cx="260" cy="30" r="3" fill="#1faa88"/><circle cx="24"  cy="65" r="5" fill="none" stroke="#d87a20" stroke-width="1.2" opacity=".5"/><circle cx="316" cy="20" r="5" fill="none" stroke="#3a7bd5" stroke-width="1.2" opacity=".4"/><text x="176" y="94" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.18)" text-anchor="middle" letter-spacing=".12em">PAN · PINCH · SCROLL TO ZOOM · ×0.25–×4</text></svg>`,
     body: 'The workspace is infinite — drag the background to pan, scroll to zoom. Momentum carries the view after release. Use the crosshair button to snap back to origin. Zoom range ×0.25 – ×4. The frequency scale is world-absolute regardless of zoom level — a node at the A3 position is always 220 Hz on any device.' },
+
+  { icon: '⟳', title: 'Multiplayer — share sound live', highlight: 'session-btn',
+    image: `<svg viewBox="0 0 352 110" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="wbg13" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#080818"/><stop offset="100%" stop-color="#060610"/></radialGradient></defs><rect width="352" height="110" fill="url(#wbg13)"/><rect x="20" y="16" width="130" height="70" rx="10" fill="#0d0d20" stroke="#3a7bd5" stroke-width=".9" opacity=".9"/><circle cx="56"  cy="40" r="8"  fill="none" stroke="#3a7bd5" stroke-width="1.5"/><circle cx="56"  cy="40" r="3"  fill="#3a7bd5"/><circle cx="100" cy="55" r="8"  fill="none" stroke="#a035d8" stroke-width="1.5"/><circle cx="100" cy="55" r="3"  fill="#a035d8"/><circle cx="128" cy="34" r="7"  fill="none" stroke="#1faa88" stroke-width="1.3"/><circle cx="128" cy="34" r="3"  fill="#1faa88"/><text x="85" y="78" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(100,150,255,.5)" text-anchor="middle">Host</text><line x1="150" y1="51" x2="202" y2="51" stroke="#3a7bd5" stroke-width="1" stroke-dasharray="3 4" opacity=".5"/><text x="176" y="48" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.2)" text-anchor="middle">sync</text><rect x="202" y="16" width="130" height="70" rx="10" fill="#0d0d20" stroke="#a035d8" stroke-width=".9" opacity=".9"/><circle cx="238" cy="40" r="8"  fill="none" stroke="#3a7bd5" stroke-width="1.5"/><circle cx="238" cy="40" r="3"  fill="#3a7bd5"/><circle cx="282" cy="55" r="8"  fill="none" stroke="#a035d8" stroke-width="1.5"/><circle cx="282" cy="55" r="3"  fill="#a035d8"/><circle cx="310" cy="34" r="7"  fill="none" stroke="#1faa88" stroke-width="1.3"/><circle cx="310" cy="34" r="3"  fill="#1faa88"/><text x="267" y="78" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(180,100,255,.5)" text-anchor="middle">Guest</text><text x="176" y="102" font-family="-apple-system,sans-serif" font-size="8" fill="rgba(255,255,255,.18)" text-anchor="middle" letter-spacing=".12em">SHARE LINK → INSTANT JOIN → REAL-TIME SYNC</text></svg>`,
+    body: 'Tap the session button (↗) to create a shared session. Share the link — anyone who opens it joins your canvas in real time. Every parameter syncs: filter, volume, orbits, step sequences, FX. The session survives page reload — you reconnect automatically. Perfect for live collaboration or remote listening together.' },
 ];
 
 let wizardStep   = 0;
@@ -812,6 +873,7 @@ function wizardRender() {
   }
   document.getElementById('wiz-icon').innerHTML  = step.icon;
   document.getElementById('wiz-title').textContent = step.title;
+  document.getElementById('wiz-image').innerHTML   = step.image ?? '';
   document.getElementById('wiz-body').textContent  = step.body;
   document.getElementById('wiz-next').textContent  = wizardStep === total - 1 ? 'Let\'s go ✓' : 'Next →';
   document.getElementById('wiz-prev').style.visibility = wizardStep === 0 ? 'hidden' : 'visible';
@@ -859,13 +921,18 @@ export function initWizard() {
   document.getElementById('help-btn').addEventListener('click', wizardOpen);
   document.getElementById('help-btn-m')?.addEventListener('click', wizardOpen);
 
-  const alwaysShow = localStorage.getItem('noisen-wizard-always') === '1';
-  const done       = localStorage.getItem('noisen-wizard-done') === '1';
-  if (!done || alwaysShow) {
+  const alwaysShow  = localStorage.getItem('noisen-wizard-always') === '1';
+  const done        = localStorage.getItem('noisen-wizard-done') === '1';
+  const isNewUser   = !done && !alwaysShow;
+
+  if (alwaysShow || isNewUser) {
     wizardRender();
   } else {
     document.getElementById('wizard').style.display = 'none';
   }
+
+  // Export new-user flag so main.js can skip what's-new for first-time visitors.
+  window.__isNewUser = isNewUser;
 }
 
 // ── Nodes overview overlay ────────────────────────────────────
@@ -991,6 +1058,7 @@ export function captureState(name) {
       tone:   Math.round(state.masterTone      * 100),
       spread: Math.round(state.waveSpread      * 100),
     },
+    isPlaying: state.isPlaying,
     nodes: state.nodes.map(n => ({
       x: Math.round(n.x), y: Math.round(n.y),
       filterNorm: +(n.filterNorm ?? 0.5).toFixed(4),
@@ -1000,6 +1068,8 @@ export function captureState(name) {
       reverbSend: n.reverbSend ?? 0, delaySend: n.delaySend ?? 0,
       nodeDelayTime: n.nodeDelayTime ?? 250, nodeDelayFeedback: n.nodeDelayFeedback ?? 0, nodeDelayWet: n.nodeDelayWet ?? 0,
       typeParams: { ...n.typeParams },
+      orbits: n.orbits ? [...n.orbits] : [],
+      steps: n.steps ? [...n.steps] : undefined,
     })),
   };
 }

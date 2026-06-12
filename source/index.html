@@ -25,6 +25,54 @@
 
 <canvas id="main"></canvas>
 
+<!-- loading screen — pure CSS, no JS dependency, hidden by main.js on first frame -->
+<div id="loading-screen">
+  <div id="ls-inner">
+    <div id="ls-logo">NOISEN</div>
+    <div id="ls-nodes" aria-hidden="true">
+      <div class="ls-node" style="--x:38%;--y:42%;--c:#3a7bd5;--r:22px;--d:0s"></div>
+      <div class="ls-node" style="--x:62%;--y:36%;--c:#1faa88;--r:16px;--d:.4s"></div>
+      <div class="ls-node" style="--x:50%;--y:58%;--c:#a035d8;--r:18px;--d:.8s"></div>
+      <div class="ls-node" style="--x:28%;--y:54%;--c:#d87a20;--r:14px;--d:.2s"></div>
+      <div class="ls-node" style="--x:72%;--y:52%;--c:#44ddaa;--r:12px;--d:.6s"></div>
+    </div>
+    <div id="ls-features">
+      <div class="ls-feature ls-f1">
+        <span class="ls-fi">↔↕</span>
+        <span class="ls-ft">Place nodes. Shape sound.</span>
+        <span class="ls-fd">X axis = frequency · Y axis = filter brightness</span>
+      </div>
+      <div class="ls-feature ls-f2">
+        <span class="ls-fi">◎</span>
+        <span class="ls-ft">Gravity pulls frequencies together.</span>
+        <span class="ls-fd">Nodes interact — cluster for unison, spread for texture</span>
+      </div>
+      <div class="ls-feature ls-f3">
+        <span class="ls-fi">≋</span>
+        <span class="ls-ft">Orbits keep sound alive.</span>
+        <span class="ls-fd">LFO modulation on filter · pan · volume · delay</span>
+      </div>
+      <div class="ls-feature ls-f4">
+        <span class="ls-fi">⚄</span>
+        <span class="ls-ft">One tap. Infinite variety.</span>
+        <span class="ls-fd">10 scientific archetypes — binaural, solfeggio, harmonic</span>
+      </div>
+      <div class="ls-feature ls-f5">
+        <span class="ls-fi">⟳</span>
+        <span class="ls-ft">Play sound together.</span>
+        <span class="ls-fd">Real-time multiplayer · Share a link · No account needed</span>
+      </div>
+    </div>
+    <div id="ls-dots">
+      <div class="ls-dot ld1"></div>
+      <div class="ls-dot ld2"></div>
+      <div class="ls-dot ld3"></div>
+      <div class="ls-dot ld4"></div>
+      <div class="ls-dot ld5"></div>
+    </div>
+  </div>
+</div>
+
 <!-- top bar -->
 <div id="topbar">
   <div id="topbar-left">
@@ -528,6 +576,7 @@
     <div class="wiz-step-bar" id="wiz-bar"></div>
     <span class="wiz-icon" id="wiz-icon"></span>
     <div class="wiz-title" id="wiz-title"></div>
+    <div class="wiz-image" id="wiz-image"></div>
     <div class="wiz-body"  id="wiz-body"></div>
     <div class="wiz-footer">
       <button class="wiz-changelog-btn" id="wiz-changelog-btn">Changelog ↗</button>
@@ -600,7 +649,11 @@
     <div id="session-idle">
       <p class="session-hint">Share sound with other devices in real time. One person creates a session, others join with the code.</p>
       <button class="preset-action-btn primary" id="session-create-btn">Create session</button>
-      <div class="session-divider">or join existing</div>
+      <div id="session-rejoin-row" style="display:none">
+        <div class="session-divider">or rejoin last session</div>
+        <button class="preset-action-btn" id="session-rejoin-btn">Rejoin <span id="session-rejoin-code"></span></button>
+      </div>
+      <div class="session-divider" id="session-divider-join">or join existing</div>
       <div class="session-join-row">
         <input id="session-code-input" class="session-code-input" placeholder="enter code" maxlength="6" spellcheck="false" autocomplete="off"/>
         <button class="preset-action-btn" id="session-join-btn">Join</button>
@@ -615,7 +668,10 @@
       <div class="session-code-display">
         <span class="session-code-label">Session code</span>
         <span id="session-code-value" class="session-code-value"></span>
-        <button class="preset-action-btn" id="session-copy-btn">Copy</button>
+        <div class="session-code-actions">
+          <button class="preset-action-btn" id="session-copy-btn">Copy code</button>
+          <button class="preset-action-btn" id="session-copy-link-btn">Copy link</button>
+        </div>
       </div>
       <p id="session-participants" class="session-hint"></p>
       <button class="preset-action-btn danger" id="session-leave-btn">Leave session</button>
