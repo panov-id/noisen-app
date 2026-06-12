@@ -41,6 +41,11 @@ import {
 
 import { toggle as toggleDebug, patchConsole as patchDebugConsole } from './debug.js';
 import { resolveShortCode, showShareModal } from './links.js';
+import {
+  createSession, joinSession, leaveSession,
+  broadcast, onRemoteEvent, onParticipantChange,
+  sessionActive, sessionCode, participantCount,
+} from './session.js';
 // expose showShareModal globally so ui.js can call it without circular import
 window.__showShareModal = showShareModal;
 import { trackPresetGenerated, trackPlayToggled, trackNodeCreated } from './analytics.js';
@@ -333,6 +338,204 @@ initPresetsOverlay();
 // ── Wizard ────────────────────────────────────────────────────
 initWizard();
 
+// ── Session (multiplayer) ─────────────────────────────────────
+const sessionOverlay     = document.getElementById('session-overlay');
+const sessionIdle        = document.getElementById('session-idle');
+const sessionConnecting  = document.getElementById('session-connecting');
+const sessionActivePane  = document.getElementById('session-active');
+const sessionDot         = document.getElementById('session-dot');
+
+function openSessionOverlay() { sessionOverlay.classList.add('open'); }
+function closeSessionOverlay() { sessionOverlay.classList.remove('open'); }
+
+function setSessionPane(name) {
+  sessionIdle.style.display        = name === 'idle'        ? '' : 'none';
+  sessionConnecting.style.display  = name === 'connecting'  ? '' : 'none';
+  sessionActivePane.style.display  = name === 'active'      ? '' : 'none';
+}
+
+function updateSessionUI() {
+  const active = sessionActive();
+  sessionDot.style.display = active ? '' : 'none';
+  document.getElementById('session-btn').classList.toggle('on', active);
+  if (active) {
+    document.getElementById('session-code-value').textContent = sessionCode();
+    document.getElementById('session-participants').textContent =
+      `${participantCount()} participant${participantCount() === 1 ? '' : 's'} connected`;
+    setSessionPane('active');
+  } else {
+    setSessionPane('idle');
+  }
+}
+
+onParticipantChange(() => {
+  if (sessionActivePane.style.display !== 'none') {
+    document.getElementById('session-participants').textContent =
+      `${participantCount()} participant${participantCount() === 1 ? '' : 's'} connected`;
+  }
+});
+
+// Remote event handler — apply incoming changes to local state
+onRemoteEvent((type, data) => {
+  if (type === '_request_sync') {
+    // Another peer joined; broadcast full state
+    broadcast('full_sync', { preset: captureState('session') });
+    return;
+  }
+  if (type === 'full_sync') {
+    try { applyPreset(data.preset); } catch {}
+    return;
+  }
+  if (type === 'node_add') {
+    const nd = data.node;
+    const node = {
+      id: nd.id, x: nd.x, y: nd.y,
+      filterNorm: nd.filterNorm ?? 0.5,
+      type: nd.type, volume: nd.volume ?? 0.7,
+      muted: nd.muted ?? false,
+      panOverride: nd.panOverride ?? null,
+      attack: nd.attack ?? 0.3, decay: nd.decay ?? 0.1,
+      sustain: nd.sustain ?? 100, release: nd.release ?? 0.8,
+      reverbSend: nd.reverbSend ?? 0, delaySend: nd.delaySend ?? 0,
+      nodeDelayTime: nd.nodeDelayTime ?? 250,
+      nodeDelayFeedback: nd.nodeDelayFeedback ?? 0,
+      nodeDelayWet: nd.nodeDelayWet ?? 0,
+      typeParams: { ...nd.typeParams },
+      orbits: nd.orbits ?? [], steps: nd.steps ?? Array(16).fill(false),
+    };
+    createAudio(node);
+    state.nodes.push(node);
+    if (state.nodeSeq < node.id) state.nodeSeq = node.id;
+    return;
+  }
+  if (type === 'node_remove') {
+    const node = state.nodes.find(n => n.id === data.id);
+    if (node) removeNode(node);
+    return;
+  }
+  if (type === 'node_move') {
+    const node = state.nodes.find(n => n.id === data.id);
+    if (!node) return;
+    node.x = data.x; node.y = data.y; node.filterNorm = data.filterNorm;
+    updateAudio(node);
+    return;
+  }
+  if (type === 'node_param') {
+    const node = state.nodes.find(n => n.id === data.id);
+    if (!node) return;
+    const { key, value } = data;
+    if (key.startsWith('typeParams.')) {
+      node.typeParams[key.slice(11)] = value;
+    } else {
+      node[key] = value;
+    }
+    updateAudio(node);
+    return;
+  }
+  if (type === 'global_param') {
+    const { key, value } = data;
+    state[key] = value;
+    applyGlobal(key, value);
+    return;
+  }
+  if (type === 'play_state') {
+    // sync play/stop without re-triggering broadcast
+    if (data.isPlaying !== state.isPlaying) {
+      if (data.isPlaying) {
+        state.isPlaying = true;
+        startAll();
+        if (state.beatMode) startBeat(state.bpm);
+      } else {
+        state.isPlaying = false;
+        stopAll();
+        if (state.beatMode) stopBeat();
+      }
+    }
+    return;
+  }
+});
+
+document.getElementById('session-btn').addEventListener('click', () => {
+  openSessionOverlay();
+  updateSessionUI();
+});
+document.getElementById('session-btn-m').addEventListener('click', () => {
+  openSessionOverlay();
+  updateSessionUI();
+  document.getElementById('topbar-dropdown').classList.remove('open');
+});
+document.getElementById('session-overlay-close').addEventListener('click', closeSessionOverlay);
+document.getElementById('session-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeSessionOverlay();
+});
+
+document.getElementById('session-create-btn').addEventListener('click', async () => {
+  setSessionPane('connecting');
+  try {
+    const code = await createSession();
+    updateSessionUI();
+    showToast(`Session created: ${code}`);
+  } catch (err) {
+    setSessionPane('idle');
+    showToast('Could not create session');
+    console.error(err);
+  }
+});
+
+document.getElementById('session-join-btn').addEventListener('click', async () => {
+  const code = document.getElementById('session-code-input').value.trim();
+  if (code.length < 4) { showToast('Enter a valid session code'); return; }
+  setSessionPane('connecting');
+  try {
+    await joinSession(code);
+    updateSessionUI();
+    showToast(`Joined session ${code}`);
+  } catch (err) {
+    setSessionPane('idle');
+    showToast('Could not join session');
+    console.error(err);
+  }
+});
+
+document.getElementById('session-copy-btn').addEventListener('click', () => {
+  navigator.clipboard?.writeText(sessionCode() ?? '').then(() => showToast('Code copied'));
+});
+
+document.getElementById('session-leave-btn').addEventListener('click', () => {
+  leaveSession();
+  updateSessionUI();
+  showToast('Left session');
+});
+
+// Wrap addNode / removeNode to broadcast changes
+const _addNode = addNode;
+function addNodeAndBroadcast(worldX, worldY, filterNorm) {
+  _addNode(worldX, worldY, filterNorm);
+  if (sessionActive()) {
+    const node = state.nodes[state.nodes.length - 1];
+    broadcast('node_add', { node: serializeNode(node) });
+  }
+}
+
+function serializeNode(node) {
+  return {
+    id: node.id, x: node.x, y: node.y, filterNorm: node.filterNorm,
+    type: node.type, volume: node.volume, muted: node.muted,
+    panOverride: node.panOverride,
+    attack: node.attack, decay: node.decay, sustain: node.sustain, release: node.release,
+    reverbSend: node.reverbSend, delaySend: node.delaySend,
+    nodeDelayTime: node.nodeDelayTime, nodeDelayFeedback: node.nodeDelayFeedback,
+    nodeDelayWet: node.nodeDelayWet,
+    typeParams: { ...node.typeParams },
+    orbits: node.orbits ?? [], steps: node.steps ?? Array(16).fill(false),
+  };
+}
+
+// broadcast helper exposed for ui.js calls (global param changes)
+window.__sessionBroadcast = (type, payload) => {
+  if (sessionActive()) broadcast(type, payload);
+};
+
 // ── Hamburger menu ────────────────────────────────────────────
 const hamburgerBtn      = document.getElementById('hamburger-btn');
 const hamburgerDropdown = document.getElementById('topbar-dropdown');
@@ -392,8 +595,10 @@ document.getElementById('act-mute').addEventListener('click', () => {
 });
 document.getElementById('act-delete').addEventListener('click', () => {
   if (!state.selectedNode) return;
+  const id = state.selectedNode.id;
   removeNode(state.selectedNode);
   deselectNode();
+  if (sessionActive()) broadcast('node_remove', { id });
 });
 document.getElementById('node-close').addEventListener('click', deselectNode);
 
@@ -664,6 +869,7 @@ playBtn.addEventListener('click', async () => {
     if (state.beatMode) stopBeat();
   }
   setupMediaSession(state.isPlaying);
+  if (sessionActive()) broadcast('play_state', { isPlaying: state.isPlaying, beatMode: state.beatMode, bpm: state.bpm });
 });
 
 // ── Beat mode ─────────────────────────────────────────────────
@@ -1754,12 +1960,12 @@ canvas.addEventListener('pointerup', e => {
   if (activePointers.size < 2) isPinching = false;
   const dt = Date.now() - pDown;
   if (dragNode) {
-    // node position already updated during move
+    if (sessionActive()) broadcast('node_move', { id: dragNode.id, x: dragNode.x, y: dragNode.y, filterNorm: dragNode.filterNorm });
   } else if (isPanning) {
     const { y: pupCanvasY } = toCanvasCoords(e.clientX, e.clientY);
     if (!didDrag && dt < 350 && pupCanvasY > TOP_H && pupCanvasY < canvas.height - state.panelHeight) {
       const world = screenToWorld(e.clientX, e.clientY);
-      addNode(world.x, world.y, computeFilterNorm(e.clientY));
+      addNodeAndBroadcast(world.x, world.y, computeFilterNorm(e.clientY));
     }
   }
   if (pNode && !didDrag && dt < 400) selectNode(pNode);
