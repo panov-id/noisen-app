@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0e0c1e"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="g1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity=".5"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a035d8" stop-opacity=".45"/>
+      <stop offset="100%" stop-color="#a035d8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1faa88" stop-opacity=".4"/>
+      <stop offset="100%" stop-color="#1faa88" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="bl"><feGaussianBlur stdDeviation="40"/></filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- ambient glows -->
+  <ellipse cx="300" cy="420" rx="220" ry="220" fill="url(#g1)" filter="url(#bl)"/>
+  <ellipse cx="680" cy="340" rx="200" ry="200" fill="url(#g2)" filter="url(#bl)"/>
+  <ellipse cx="820" cy="650" rx="180" ry="180" fill="url(#g3)" filter="url(#bl)"/>
+
+  <!-- orbit rings -->
+  <ellipse cx="300" cy="420" rx="130" ry="78" fill="none" stroke="#78c8ff" stroke-width="1.5" stroke-dasharray="4 7" opacity=".5"/>
+  <ellipse cx="680" cy="340" rx="110" ry="110" fill="none" stroke="#cc88ff" stroke-width="1.5" stroke-dasharray="3 7" opacity=".45"/>
+  <ellipse cx="820" cy="650" rx="95"  ry="55"  fill="none" stroke="#55ffbb" stroke-width="1.2" stroke-dasharray="3 6" opacity=".4"/>
+
+  <!-- orbit satellites -->
+  <circle cx="430" cy="420" r="7" fill="#78c8ff" opacity=".85"/>
+  <circle cx="680" cy="230" r="6" fill="#cc88ff" opacity=".8"/>
+  <circle cx="915" cy="650" r="5" fill="#55ffbb" opacity=".75"/>
+
+  <!-- nodes -->
+  <circle cx="300" cy="420" r="34" fill="none" stroke="#3a7bd5" stroke-width="3" filter="url(#glow)"/>
+  <circle cx="300" cy="420" r="14" fill="#3a7bd5"/>
+  <circle cx="300" cy="420" r="65" fill="none" stroke="#3a7bd5" stroke-width=".8" opacity=".22"/>
+
+  <circle cx="680" cy="340" r="28" fill="none" stroke="#a035d8" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="680" cy="340" r="11" fill="#a035d8"/>
+  <circle cx="680" cy="340" r="55" fill="none" stroke="#a035d8" stroke-width=".8" opacity=".2"/>
+
+  <circle cx="820" cy="650" r="24" fill="none" stroke="#1faa88" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="820" cy="650" r="9"  fill="#1faa88"/>
+  <circle cx="820" cy="650" r="45" fill="none" stroke="#1faa88" stroke-width=".8" opacity=".2"/>
+
+  <!-- comet trail -->
+  <path d="M 920 180 Q 700 380 480 520" fill="none" stroke="rgba(255,220,80,.18)" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="480" cy="520" r="6" fill="rgba(255,220,80,.55)"/>
+  <circle cx="480" cy="520" r="12" fill="none" stroke="rgba(255,220,80,.3)" stroke-width="1"/>
+
+  <!-- link lines between nodes -->
+  <line x1="300" y1="420" x2="680" y2="340" stroke="rgba(255,255,255,.07)" stroke-width="1"/>
+  <line x1="680" y1="340" x2="820" y2="650" stroke="rgba(255,255,255,.07)" stroke-width="1"/>
+
+  <!-- headline -->
+  <text x="540" y="830" font-family="-apple-system,'Helvetica Neue',sans-serif" font-size="82" font-weight="800" fill="#fff" text-anchor="middle" letter-spacing="-.03em">Noisen 5.0</text>
+  <text x="540" y="890" font-family="-apple-system,sans-serif" font-size="26" fill="rgba(255,255,255,.45)" text-anchor="middle" letter-spacing=".02em">Draw sound. Live collaboration. No accounts.</text>
+
+  <!-- version tag -->
+  <rect x="460" y="940" width="160" height="38" rx="19" fill="#1a1a2e" stroke="#3a7bd5" stroke-width="1"/>
+  <text x="540" y="964" font-family="-apple-system,sans-serif" font-size="14" font-weight="600" fill="#6aabff" text-anchor="middle" letter-spacing=".15em">noisen.space</text>
+
+  <!-- slide indicator -->
+  <text x="540" y="1058" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".2em">1 / 5</text>
+</svg>

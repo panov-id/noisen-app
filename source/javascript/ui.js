@@ -51,7 +51,7 @@ export function applyGlobal(globalParams) {
   state.gravityStrength = globalParams.grav   / 100;
   state.masterTone      = globalParams.tone   / 100;
   state.waveSpread      = globalParams.spread / 100;
-  masterGain.gain.value = state.masterVolume;
+  if (state.isPlaying) masterGain.gain.rampTo(state.masterVolume, 0.05);
   masterFilter.frequency.value = toneHz(state.masterTone);
 
   const syncSlider = (id, labelId, value) => {

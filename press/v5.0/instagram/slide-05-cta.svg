@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0c0c20"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <radialGradient id="gc" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a7bd5" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#3a7bd5" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="bl"><feGaussianBlur stdDeviation="50"/></filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- big center glow -->
+  <ellipse cx="540" cy="420" rx="300" ry="300" fill="url(#gc)" filter="url(#bl)"/>
+
+  <!-- constellation of nodes -->
+  <circle cx="540" cy="340" r="40" fill="none" stroke="#3a7bd5" stroke-width="3" filter="url(#glow)"/>
+  <circle cx="540" cy="340" r="16" fill="#3a7bd5"/>
+  <circle cx="540" cy="340" r="75" fill="none" stroke="#3a7bd5" stroke-width="1" opacity=".2"/>
+
+  <circle cx="380" cy="460" r="28" fill="none" stroke="#a035d8" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="380" cy="460" r="11" fill="#a035d8"/>
+  <circle cx="380" cy="460" r="55" fill="none" stroke="#a035d8" stroke-width=".8" opacity=".2"/>
+
+  <circle cx="700" cy="440" r="32" fill="none" stroke="#1faa88" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="700" cy="440" r="13" fill="#1faa88"/>
+  <circle cx="700" cy="440" r="60" fill="none" stroke="#1faa88" stroke-width=".8" opacity=".2"/>
+
+  <circle cx="480" cy="540" r="20" fill="none" stroke="#d87a20" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="480" cy="540" r="8"  fill="#d87a20"/>
+
+  <circle cx="620" cy="520" r="18" fill="none" stroke="#cc3355" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="620" cy="520" r="7"  fill="#cc3355"/>
+
+  <!-- links -->
+  <line x1="540" y1="340" x2="380" y2="460" stroke="rgba(255,255,255,.06)" stroke-width="1.5"/>
+  <line x1="540" y1="340" x2="700" y2="440" stroke="rgba(255,255,255,.06)" stroke-width="1.5"/>
+  <line x1="380" y1="460" x2="480" y2="540" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+  <line x1="700" y1="440" x2="620" y2="520" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+
+  <!-- orbit -->
+  <ellipse cx="540" cy="340" rx="150" ry="88" fill="none" stroke="#78c8ff" stroke-width="1.5" stroke-dasharray="5 8" opacity=".45"/>
+  <circle cx="690" cy="340" r="7" fill="#78c8ff" opacity=".8"/>
+
+  <!-- comet -->
+  <path d="M 900 160 Q 720 280 580 380" fill="none" stroke="rgba(255,220,80,.2)" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="580" cy="380" r="7" fill="rgba(255,220,80,.65)"/>
+
+  <!-- feature pills -->
+  <g font-family="-apple-system,sans-serif" font-size="16" font-weight="500">
+    <rect x="160" y="650" width="200" height="40" rx="20" fill="rgba(58,123,213,.12)" stroke="rgba(58,123,213,.35)" stroke-width="1"/>
+    <text x="260" y="674" fill="rgba(100,160,255,.8)" text-anchor="middle">Multiplayer</text>
+
+    <rect x="380" y="650" width="160" height="40" rx="20" fill="rgba(31,170,136,.1)" stroke="rgba(31,170,136,.35)" stroke-width="1"/>
+    <text x="460" y="674" fill="rgba(80,210,170,.8)" text-anchor="middle">Orbits</text>
+
+    <rect x="560" y="650" width="140" height="40" rx="20" fill="rgba(204,51,85,.1)" stroke="rgba(204,51,85,.35)" stroke-width="1"/>
+    <text x="630" y="674" fill="rgba(255,100,130,.75)" text-anchor="middle">Drums</text>
+
+    <rect x="720" y="650" width="200" height="40" rx="20" fill="rgba(216,122,32,.1)" stroke="rgba(216,122,32,.35)" stroke-width="1"/>
+    <text x="820" y="674" fill="rgba(255,180,80,.75)" text-anchor="middle">10 Presets</text>
+  </g>
+
+  <!-- main CTA -->
+  <text x="540" y="790" font-family="-apple-system,'Helvetica Neue',sans-serif" font-size="80" font-weight="800" fill="#fff" text-anchor="middle" letter-spacing="-.03em">Free. Forever.</text>
+  <text x="540" y="862" font-family="-apple-system,sans-serif" font-size="28" fill="rgba(255,255,255,.4)" text-anchor="middle">No account. Works offline. Open in browser.</text>
+
+  <!-- URL button -->
+  <rect x="340" y="900" width="400" height="68" rx="34" fill="#1a1a32" stroke="#3a7bd5" stroke-width="1.5"/>
+  <text x="540" y="942" font-family="-apple-system,sans-serif" font-size="26" font-weight="600" fill="#6aabff" text-anchor="middle" letter-spacing=".02em">noisen.space</text>
+
+  <text x="540" y="1012" font-family="-apple-system,sans-serif" font-size="16" fill="rgba(255,255,255,.2)" text-anchor="middle">Link in bio ↑</text>
+
+  <text x="540" y="1058" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".2em">5 / 5</text>
+</svg>

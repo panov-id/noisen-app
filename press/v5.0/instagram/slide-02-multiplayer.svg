@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#080818"/>
+      <stop offset="100%" stop-color="#04040c"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="bl"><feGaussianBlur stdDeviation="35"/></filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7 Z" fill="rgba(90,162,255,.6)"/>
+    </marker>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- left device canvas -->
+  <rect x="60" y="180" width="430" height="560" rx="24" fill="#0a0a18" stroke="#3a7bd5" stroke-width="1.5" opacity=".9"/>
+  <text x="275" y="224" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(100,150,255,.45)" text-anchor="middle" letter-spacing=".2em">DEVICE A · HOST</text>
+  <!-- nodes on left canvas -->
+  <ellipse cx="180" cy="390" rx="80" ry="80" fill="#3a7bd5" opacity=".12" filter="url(#bl)"/>
+  <circle cx="180" cy="390" r="22" fill="none" stroke="#3a7bd5" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="180" cy="390" r="9"  fill="#3a7bd5"/>
+  <ellipse cx="180" cy="390" rx="68" ry="40" fill="none" stroke="#78c8ff" stroke-width="1" stroke-dasharray="3 5" opacity=".5"/>
+  <circle cx="248" cy="390" r="5" fill="#78c8ff" opacity=".8"/>
+
+  <ellipse cx="360" cy="500" rx="70" ry="70" fill="#a035d8" opacity=".12" filter="url(#bl)"/>
+  <circle cx="360" cy="500" r="18" fill="none" stroke="#a035d8" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="360" cy="500" r="7"  fill="#a035d8"/>
+
+  <ellipse cx="280" cy="310" rx="55" ry="55" fill="#1faa88" opacity=".1" filter="url(#bl)"/>
+  <circle cx="280" cy="310" r="15" fill="none" stroke="#1faa88" stroke-width="1.8" filter="url(#glow)"/>
+  <circle cx="280" cy="310" r="6"  fill="#1faa88"/>
+
+  <!-- sync arrows center -->
+  <line x1="495" y1="460" x2="585" y2="460" stroke="#3a7bd5" stroke-width="2" stroke-dasharray="5 6" opacity=".6" marker-end="url(#arr)"/>
+  <line x1="585" y1="500" x2="495" y2="500" stroke="#3a7bd5" stroke-width="2" stroke-dasharray="5 6" opacity=".5" marker-end="url(#arr)"/>
+  <text x="540" y="490" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(100,150,255,.5)" text-anchor="middle">live sync</text>
+
+  <!-- right device canvas -->
+  <rect x="590" y="180" width="430" height="560" rx="24" fill="#0a0a18" stroke="#a035d8" stroke-width="1.5" opacity=".9"/>
+  <text x="805" y="224" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(180,100,255,.45)" text-anchor="middle" letter-spacing=".2em">DEVICE B · GUEST</text>
+  <!-- same nodes mirrored -->
+  <ellipse cx="710" cy="390" rx="80" ry="80" fill="#3a7bd5" opacity=".12" filter="url(#bl)"/>
+  <circle cx="710" cy="390" r="22" fill="none" stroke="#3a7bd5" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="710" cy="390" r="9"  fill="#3a7bd5"/>
+  <ellipse cx="710" cy="390" rx="68" ry="40" fill="none" stroke="#78c8ff" stroke-width="1" stroke-dasharray="3 5" opacity=".5"/>
+  <circle cx="778" cy="390" r="5" fill="#78c8ff" opacity=".8"/>
+
+  <ellipse cx="890" cy="500" rx="70" ry="70" fill="#a035d8" opacity=".12" filter="url(#bl)"/>
+  <circle cx="890" cy="500" r="18" fill="none" stroke="#a035d8" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="890" cy="500" r="7"  fill="#a035d8"/>
+
+  <ellipse cx="810" cy="310" rx="55" ry="55" fill="#1faa88" opacity=".1" filter="url(#bl)"/>
+  <circle cx="810" cy="310" r="15" fill="none" stroke="#1faa88" stroke-width="1.8" filter="url(#glow)"/>
+  <circle cx="810" cy="310" r="6"  fill="#1faa88"/>
+
+  <!-- feature callouts -->
+  <rect x="60" y="800" width="430" height="52" rx="12" fill="rgba(58,123,213,.08)" stroke="rgba(58,123,213,.25)" stroke-width="1"/>
+  <text x="275" y="831" font-family="-apple-system,sans-serif" font-size="15" fill="rgba(255,255,255,.55)" text-anchor="middle">nodes · orbits · FX · comets</text>
+
+  <rect x="590" y="800" width="430" height="52" rx="12" fill="rgba(160,53,216,.08)" stroke="rgba(160,53,216,.25)" stroke-width="1"/>
+  <text x="805" y="831" font-family="-apple-system,sans-serif" font-size="15" fill="rgba(255,255,255,.55)" text-anchor="middle">instant join · no account</text>
+
+  <!-- headline -->
+  <text x="540" y="930" font-family="-apple-system,'Helvetica Neue',sans-serif" font-size="68" font-weight="800" fill="#fff" text-anchor="middle" letter-spacing="-.03em">Multiplayer</text>
+  <text x="540" y="990" font-family="-apple-system,sans-serif" font-size="24" fill="rgba(255,255,255,.4)" text-anchor="middle">Share a link. Make sound together in real time.</text>
+
+  <text x="540" y="1058" font-family="-apple-system,sans-serif" font-size="13" fill="rgba(255,255,255,.2)" text-anchor="middle" letter-spacing=".2em">2 / 5</text>
+</svg>

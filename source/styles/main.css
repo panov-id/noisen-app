@@ -439,21 +439,26 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 }
 .card-slider {
   -webkit-appearance:none; appearance:none;
-  width:100%; height:4px; border-radius:2px; border:none;
+  width:100%; height:2px; border-radius:1px; border:none;
   outline:none; cursor:pointer; touch-action:none;
   background:linear-gradient(to right,
-    var(--card-accent, var(--thumb)) 0%,
-    var(--card-accent, var(--thumb)) var(--pct,50%),
+    var(--card-accent, var(--accent)) 0%,
+    var(--card-accent, var(--accent)) var(--pct,50%),
     var(--track) var(--pct,50%), var(--track) 100%
   );
 }
 .card-slider::-webkit-slider-thumb {
-  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
-  background:var(--card-accent, var(--thumb)); box-shadow:0 1px 5px rgba(0,0,0,.2); cursor:pointer;
+  -webkit-appearance:none;
+  width:3px; height:20px; border-radius:2px;
+  background:var(--card-accent, var(--accent));
+  box-shadow:0 0 0 3px var(--bg2), 0 0 0 4px var(--card-accent, var(--accent));
+  cursor:pointer;
 }
 .card-slider::-moz-range-thumb {
-  width:18px; height:18px; border-radius:50%; border:none;
-  background:var(--card-accent, var(--thumb)); cursor:pointer;
+  width:3px; height:20px; border-radius:2px; border:none;
+  background:var(--card-accent, var(--accent));
+  box-shadow:0 0 0 3px var(--bg2), 0 0 0 4px var(--card-accent, var(--accent));
+  cursor:pointer;
 }
 .card-label { font-size:var(--card-label-fs,10px); text-transform:uppercase; letter-spacing:.13em; color:var(--text-faint); }
 
@@ -871,10 +876,9 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
   .param-card { min-width: 68px; padding: 7px 8px 6px; }
   .card-val { font-size: var(--card-val-fs); }
 
-  /* slider: bigger thumb for finger touch */
-  .card-slider { height: 4px; border-radius: 3px; }
-  .card-slider::-webkit-slider-thumb { width: 20px; height: 20px; }
-  .card-slider::-moz-range-thumb    { width: 20px; height: 20px; }
+  /* slider: taller thumb for finger touch */
+  .card-slider::-webkit-slider-thumb { width: 4px; height: 26px; }
+  .card-slider::-moz-range-thumb    { width: 4px; height: 26px; }
 
   /* action buttons: bigger touch targets */
   .action-btn { width: 40px; height: 40px; }
@@ -908,8 +912,8 @@ canvas#main { position:fixed; inset:0; cursor:crosshair; touch-action:none; }
 
 /* ── touch device: even bigger slider thumb ───────────────── */
 @media (hover: none) and (pointer: coarse) {
-  .card-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
-  .card-slider::-moz-range-thumb    { width: 22px; height: 22px; }
+  .card-slider::-webkit-slider-thumb { width: 4px; height: 28px; }
+  .card-slider::-moz-range-thumb    { width: 4px; height: 28px; }
 }
 
 /* noise color buttons inside card */
