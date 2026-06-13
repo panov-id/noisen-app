@@ -206,7 +206,7 @@ Tone.setContext(new Tone.Context({ latencyHint: 'balanced' }));
 Tone.context.lookAhead = 0.3;
 Tone.context.updateInterval = 0.05;
 
-export const masterGain   = new Tone.Gain(state.masterVolume);
+export const masterGain   = new Tone.Gain(0);
 export const masterFilter = new Tone.Filter(toneHz(state.masterTone), 'lowpass');
 export const locut        = new Tone.Filter(20, 'highpass');
 export const hiCut        = new Tone.Filter(20000, 'lowpass');
@@ -356,7 +356,7 @@ export function rebuildAudio(node) {
 export function startAll() {
   const now = Tone.now();
   masterGain.gain.cancelScheduledValues(now);
-  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
   masterGain.gain.linearRampToValueAtTime(state.masterVolume, now + CLICK_FADE);
   for (const node of state.nodes) {
     if (DRUM_TYPES.has(node.type)) continue;
@@ -576,7 +576,7 @@ export function startBeat(bpm) {
   initDrumSynths();
   const now = Tone.now();
   masterGain.gain.cancelScheduledValues(now);
-  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
   masterGain.gain.linearRampToValueAtTime(state.masterVolume, now + CLICK_FADE);
   // start orbit LFOs for all drum nodes that have orbits defined
   for (const node of state.nodes) {
@@ -614,7 +614,6 @@ export function stopBeat() {
     for (const node of state.nodes) {
       if (DRUM_TYPES.has(node.type)) destroyDrumOrbitLFOs(node);
     }
-    masterGain.gain.setValueAtTime(0, Tone.now());
   }, CLICK_FADE * 1000 + 5);
 }
 

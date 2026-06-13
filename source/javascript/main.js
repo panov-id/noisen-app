@@ -35,7 +35,7 @@ import {
   initWizard, wizardOpen, wizardClose,
   openNodesOverlay, closeNodesOverlay,
   initFxOverlay,
-  captureState, decodePreset, registerApplyPreset,
+  captureState, decodePreset, registerApplyPreset, scheduleAutosave, loadAutosave,
   openPresetsOverlay, closePresetsOverlay, initPresetsOverlay,
 } from './ui.js';
 
@@ -197,6 +197,9 @@ function applyPreset(preset) {
     state.nodes.push(node);
     if (!DRUM_TYPES.has(node.type)) createAudio(node);
   }
+  if (preset.comets?.length) {
+    state.comets = preset.comets.map(c => ({ ...c, trail: [], _drumHit: new Set() }));
+  }
   syncCount();
   fitAllNodes();
   // Sync play state from session host
@@ -263,6 +266,7 @@ function broadcastGlobal() {
     tone:   Math.round(state.masterTone      * 100),
     spread: Math.round(state.waveSpread      * 100),
   });
+  scheduleAutosave();
 }
 
 document.getElementById('vol').addEventListener('input', e => {
@@ -349,16 +353,23 @@ document.getElementById('fx-view-close').addEventListener('click', () => {
 // ── Presets ───────────────────────────────────────────────────
 initPresetsOverlay();
 
-// auto-load from URL ?p=
+// auto-load from URL ?p= or restore last session from localStorage
 (function loadFromUrl() {
   const params  = new URLSearchParams(location.search);
   const encoded = params.get('p');
-  if (!encoded) return;
-  try {
-    const preset = decodePreset(encoded);
-    setTimeout(() => applyPreset(preset), 80);
-  } catch (err) {
-    console.warn('Failed to decode preset from URL', err);
+  if (encoded) {
+    try {
+      const preset = decodePreset(encoded);
+      setTimeout(() => applyPreset(preset), 80);
+    } catch (err) {
+      console.warn('Failed to decode preset from URL', err);
+    }
+    return;
+  }
+  // No URL preset — restore autosaved state if available
+  const saved = loadAutosave();
+  if (saved?.nodes?.length) {
+    setTimeout(() => applyPreset(saved), 80);
   }
 })();
 
@@ -406,7 +417,7 @@ onParticipantChange(() => {
 onRemoteEvent((type, data) => {
   if (type === '_request_sync') {
     // Another peer joined; broadcast full state
-    broadcast('full_sync', { preset: captureState('session') });
+    broadcast('full_sync', { preset: captureState('session', { includeComets: true }) });
     return;
   }
   if (type === 'full_sync') {
@@ -617,6 +628,7 @@ function addNodeAndBroadcast(worldX, worldY, filterNorm) {
     const node = state.nodes[state.nodes.length - 1];
     broadcast('node_add', { node: serializeNode(node) });
   }
+  scheduleAutosave();
 }
 
 function serializeNode(node) {
@@ -637,6 +649,7 @@ function serializeNode(node) {
 window.__sessionBroadcast = (type, payload) => {
   if (sessionActive()) broadcast(type, payload);
 };
+window.__scheduleAutosave = () => scheduleAutosave();
 
 // ── Hamburger menu ────────────────────────────────────────────
 const hamburgerBtn      = document.getElementById('hamburger-btn');
@@ -702,6 +715,7 @@ document.getElementById('act-delete').addEventListener('click', () => {
   removeNode(state.selectedNode);
   deselectNode();
   if (sessionActive()) broadcast('node_remove', { id });
+  scheduleAutosave();
 });
 document.getElementById('node-close').addEventListener('click', deselectNode);
 
@@ -2067,6 +2081,7 @@ canvas.addEventListener('pointerup', e => {
   const dt = Date.now() - pDown;
   if (dragNode) {
     if (sessionActive()) broadcast('node_move', { id: dragNode.id, x: dragNode.x, y: dragNode.y, filterNorm: dragNode.filterNorm });
+    scheduleAutosave();
   } else if (isPanning) {
     const { y: pupCanvasY } = toCanvasCoords(e.clientX, e.clientY);
     if (!didDrag && dt < 350 && pupCanvasY > TOP_H && pupCanvasY < canvas.height - state.panelHeight) {

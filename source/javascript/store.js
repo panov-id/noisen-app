@@ -1,6 +1,6 @@
 // ── Shared reactive state ─────────────────────────────────────
 
-export const APP_VERSION = '5.0';
+export const APP_VERSION = '5.1';
 
 export const TYPES = {
   sine:     { color:'#3a7bd5', rgb:[58,123,213]   },
@@ -125,6 +125,9 @@ export const state = {
   cometOrbitScale:   1,
   cometSpeedScale:   1,
   cometGravityScale: 1,
+
+  // 0 = max quality, 1 = balanced, 2 = performance
+  perfLevel: 0,
 };
 
 export const WORLD_WIDTH  = 1920;

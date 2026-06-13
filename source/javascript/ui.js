@@ -143,8 +143,10 @@ document.querySelectorAll('.node-tab').forEach(btn => {
 
 // targetLabelOverrides: { filter: 'Pitch', delay: 'Decay' } for drum nodes
 function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, defaultTarget = 'filter') {
-  const broadcastOrbits = (orbits) =>
+  const broadcastOrbits = (orbits) => {
     window.__sessionBroadcast?.('node_param', { id: node.id, key: 'orbits', value: orbits, rebuild: false });
+    window.__scheduleAutosave?.();
+  };
   const orbitSection = document.createElement('div');
   orbitSection.className = 'orbit-section';
   orbitSection.innerHTML = `<div class="orbit-section-header">
@@ -253,8 +255,10 @@ function buildOrbitSection(node, container, syncFn, targetLabelOverrides = {}, d
 }
 
 function buildDrumSequencer(node, container, color) {
-  const broadcastSteps = (steps) =>
+  const broadcastSteps = (steps) => {
     window.__sessionBroadcast?.('node_param', { id: node.id, key: 'steps', value: steps, rebuild: false });
+    window.__scheduleAutosave?.();
+  };
   const steps = (node.steps = node.steps ?? Array(16).fill(false));
 
   const sequencer = document.createElement('div');
@@ -309,8 +313,10 @@ export function buildNodeCards(node) {
 
   // Broadcast param change to session peers via the bridge set in main.js.
   // rebuild=true signals the receiver must call rebuildAudio instead of updateAudio.
-  const s = (key, value, rebuild = false) =>
+  const s = (key, value, rebuild = false) => {
     window.__sessionBroadcast?.('node_param', { id: node.id, key, value, rebuild });
+    window.__scheduleAutosave?.();
+  };
 
   const mkC = (id, iconKey, label, tip, tipDesc, min, max, step, val, fmt, onChange) =>
     makeCard({ id, icon: PARAM_ICONS[iconKey] || iconKey, label, tip, tipDesc, min, max, step, value: val, fmt, onChange });
@@ -461,6 +467,7 @@ export function buildTypeButtons(node) {
       window.__sessionBroadcast?.('node_type', {
         id: node.id, nodeType: node.type, typeParams: { ...node.typeParams }, steps: node.steps,
       });
+      window.__scheduleAutosave?.();
       selectNode(node);
     });
     row.appendChild(btn);
@@ -1048,8 +1055,8 @@ export function decodePreset(str) {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
-export function captureState(name) {
-  return {
+export function captureState(name, { includeComets = false } = {}) {
+  const preset = {
     name: name || 'Untitled',
     v: 1,
     global: {
@@ -1072,6 +1079,36 @@ export function captureState(name) {
       steps: n.steps ? [...n.steps] : undefined,
     })),
   };
+  if (includeComets && state.comets.length) {
+    preset.comets = state.comets.map(c => ({
+      id: c.id, cx: c.cx, cy: c.cy, rx: c.rx, ry: c.ry, tilt: c.tilt,
+      angle: c.angle, speed: c.speed, mass: c.mass, influence: c.influence,
+      color: c.color, size: c.size, life: c.life, maxLife: c.maxLife,
+      permanent: c.permanent, fadeSpeed: c.fadeSpeed ?? 1,
+      _baseRx: c._baseRx, _baseMass: c._baseMass, _baseInfluence: c._baseInfluence,
+    }));
+  }
+  return preset;
+}
+
+const AUTOSAVE_KEY = 'noisen-autosave';
+let _autosaveTimer = null;
+
+export function scheduleAutosave() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(() => {
+    try {
+      const encoded = encodePreset(captureState('autosave'));
+      localStorage.setItem(AUTOSAVE_KEY, encoded);
+    } catch {}
+  }, 1000);
+}
+
+export function loadAutosave() {
+  try {
+    const encoded = localStorage.getItem(AUTOSAVE_KEY);
+    return encoded ? decodePreset(encoded) : null;
+  } catch { return null; }
 }
 
 function getSavedPresets() {

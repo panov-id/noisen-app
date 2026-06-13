@@ -1,0 +1,68 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    environment: uat
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_PLAUSIBLE_URL: ${{ secrets.VITE_PLAUSIBLE_URL }}
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Install CocoaPods
+        working-directory: ios/App
+        run: pod install
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/App/Pods
+          key: pods-${{ hashFiles('ios/App/Podfile.lock') }}
+          restore-keys: pods-
+
+      - name: Build iOS (simulator)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: noisen-ios-${{ github.sha }}
+          path: ios/build/Build/Products/Debug-iphonesimulator/App.app
+          retention-days: 14
+
+# To build for a real device or App Store, add these secrets to your GitHub environment:
+#   APPLE_CERTIFICATE_BASE64       — p12 certificate (base64)
+#   APPLE_CERTIFICATE_PASSWORD     — p12 password
+#   APPLE_PROVISIONING_PROFILE     — .mobileprovision (base64)
+#   APPLE_TEAM_ID                  — 10-character Team ID
+# Then replace the build step with xcodebuild archive + exportArchive.

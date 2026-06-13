@@ -1,0 +1,15 @@
+{
+  "appId": "space.noisen.app",
+  "appName": "Noisen",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#08080e"
+  },
+  "ios": {
+    "backgroundColor": "#08080e",
+    "contentInset": "always"
+  }
+}
